@@ -1,0 +1,52 @@
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background-image: url('../elements/images/storefront.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.main-content {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 80vh;
+  padding-top: 120px;
+  padding-right: 2rem;
+  box-sizing: border-box;
+}
+
+.login-container {
+  width: 300px;
+  background-color: #f9f9f9;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.login-container h2 {
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.login-container input,
+.login-container button {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 1rem;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.login-container button {
+  background-color: #F4D9D0;
+}
+
+.login-container button:hover {
+  background-color: #D9ABAB;
+  cursor: pointer;
+}
