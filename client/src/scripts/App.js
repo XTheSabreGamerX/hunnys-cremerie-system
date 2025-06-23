@@ -1,17 +1,40 @@
 import React from 'react';
-import Header from '../scripts/Header';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Header from './Header';
+import Footer from './Footer';
 import Login from '../pages/Login';
-import Footer from '../scripts/Footer'
+import Dashboard from '../pages/Dashboard';
+import DashboardHeader from './DashboardHeader';
+import ProtectedRoute from '../components/ProtectedRoute';
 
 function App() {
-  console.log("App component is rendering");
   return (
-    <div>
-      <Header />
-      <Login />
-      <Footer />
-    </div>
+    <Router>
+      <Routes>
+        <Route //Login Route
+          path="/login"
+          element={
+            <>
+              <Header />
+              <Login />
+              <Footer />
+            </>
+          }
+        />
+
+        <Route //Dashboard route
+          path="/dashboard"
+          element={
+            <>
+              <ProtectedRoute>                
+                <DashboardHeader />
+                <Dashboard />
+              </ProtectedRoute>
+            </>
+          }
+        />
+      </Routes>
+    </Router>
   );
 }
-
 export default App;

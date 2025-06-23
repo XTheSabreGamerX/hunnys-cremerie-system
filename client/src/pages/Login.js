@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import '../styles/Login.css'
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -18,8 +20,10 @@ const Login = () => {
       const data = await res.json();
       
       if (res.ok) {
+        localStorage.setItem('isLoggedIn', 'true');
         alert('Login successful!');
         console.log(data);
+        navigate('/dashboard');
       } else {
         alert(data.message || 'Login failed');
       }
