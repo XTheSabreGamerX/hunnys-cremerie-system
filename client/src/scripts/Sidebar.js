@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import '../styles/Sidebar.css';
 import Logo from '../elements/images/icon32x32.png'
-import { Menu, LogOut } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
 const Sidebar = () => {
