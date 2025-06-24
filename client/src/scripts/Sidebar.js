@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import '../styles/Sidebar.css';
 import Logo from '../elements/images/icon32x32.png'
 import { Menu, LogOut } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -26,18 +26,18 @@ const Sidebar = () => {
         </button>
       </div>
       <nav className="sidebar-nav">
-        <a href="#"><span className="label">Dashboard</span></a>
-        <a href="#"><span className="label">User Management</span></a>
-        <a href="#"><span className="label">Inventory</span></a>
-        <a href="#"><span className="label">Sales Management</span></a>
-        <a href="#"><span className="label">Sales Report</span></a>
-        <a href="#"><span className="label">Profitability Dashboard</span></a>
-        <a href="#"><span className="label">Supplier Management</span></a>
-        <a href="#"><span className="label">Customer Management</span></a>
-        <a href="#"><span className="label">Activity Log</span></a>
-        <a href="#"><span className="label">Pricing Management</span></a>
-        <a href="#"><span className="label">Backup and Restore</span></a>
-        <a href="#"><span className="label">Notifications</span></a>
+        <Link to="/dashboard"><span className="label">Dashboard</span></Link>
+        <Link to="/dashboard"><span className="label">User Management</span></Link>
+        <Link to="/dashboard"><span className="label">Inventory</span></Link>
+        <Link to="/dashboard"><span className="label">Sales Management</span></Link>
+        <Link to="/dashboard"><span className="label">Sales Report</span></Link>
+        <Link to="/dashboard"><span className="label">Profitability Dashboard</span></Link>
+        <Link to="/dashboard"><span className="label">Supplier Management</span></Link>
+        <Link to="/dashboard"><span className="label">Customer Management</span></Link>
+        <Link to="/dashboard"><span className="label">Activity Log</span></Link>
+        <Link to="/dashboard"><span className="label">Pricing Management</span></Link>
+        <Link to="/dashboard"><span className="label">Backup and Restore</span></Link>
+        <Link to="/dashboard"><span className="label">Notifications</span></Link>
       </nav>
       {!isCollapsed && (
       <button onClick={logout} className="logout-button">Logout</button>
