@@ -1,16 +1,19 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
 import Login from '../pages/Login';
 import Dashboard from '../pages/Dashboard';
 import DashboardHeader from './DashboardHeader';
 import ProtectedRoute from '../components/ProtectedRoute';
+import { Sidebar } from 'lucide-react';
 
 function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/" element={<Navigate to="/login" />} />
+
         <Route //Login Route
           path="/login"
           element={

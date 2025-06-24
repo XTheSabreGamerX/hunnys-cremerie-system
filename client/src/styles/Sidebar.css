@@ -1,0 +1,81 @@
+.sidebar {
+  width: 250px;
+  background-color: #921A40;
+  height: 100vh;
+  padding: 1rem;
+  transition: width 0.3s ease;
+  overflow: hidden;
+  position: fixed;
+  top: 60px;
+  left: 0;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+}
+
+.sidebar-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: inherit; /* Inherit color from sidebar */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-toggle:hover {
+  opacity: 0.8;
+}
+
+.sidebar.collapsed {
+  width: 70px;
+}
+
+.sidebar.collapsed .label {
+  display: none;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hamburger-button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  margin-top: 2rem;
+  gap: 1rem;
+}
+
+.sidebar-nav a {
+  color: white;
+  text-decoration: none;
+  background: none;
+  border: none;
+  font-weight: bold;
+  text-align: left;
+  padding: 0.5rem;
+  cursor: pointer;
+}
+
+.logout-button {
+  width: 100%;
+  padding: 10px;
+  background-color: #f4d9d0;
+  border: none;
+  margin-top: 1rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  background-color: #d9abab;
+}

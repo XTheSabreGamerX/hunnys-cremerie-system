@@ -14,3 +14,13 @@
 .dashboard-container p {
   font-size: 1.2rem;
 }
+
+.dashboard-main-content {
+  margin-top: 60px;
+  padding: 2rem;
+  margin-left: 250px;
+}
+
+.sidebar.collapsed + .dashboard-main-content {
+  margin-left: 70px;
+}

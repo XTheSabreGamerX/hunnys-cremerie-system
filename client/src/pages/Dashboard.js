@@ -1,12 +1,17 @@
 import React from 'react';
+import Sidebar from '../scripts/Sidebar';
 import '../styles/Dashboard.css';
 
 const Dashboard = () => {
   return (
-    <div className="dashboard-container">
-      <h1>Welcome to the Dashboard!</h1>
-      <p>This is the landing page after a successful login.</p>
-    </div>
+    <>
+      <Sidebar />
+      <div className="dashboard-main-content">
+        <h1>Dashboard</h1>
+        <p>Welcome back, admin!</p>
+        {/* More modules go here */}
+      </div>
+    </>
   );
 };
 

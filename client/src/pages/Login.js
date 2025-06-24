@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import '../styles/Login.css'
 import { useNavigate } from 'react-router-dom';
+import '../styles/Login.css';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -18,11 +18,10 @@ const Login = () => {
       });
 
       const data = await res.json();
-      
+
       if (res.ok) {
         localStorage.setItem('isLoggedIn', 'true');
         alert('Login successful!');
-        console.log(data);
         navigate('/dashboard');
       } else {
         alert(data.message || 'Login failed');
@@ -32,27 +31,27 @@ const Login = () => {
     }
   };
 
-  return (
-    <div className="main-content">
+   return (
+    <div className="login-main-content">
       <div className="login-container">
-      <h2>Login</h2>
-      <form onSubmit={handleLogin}>
-        <input
-          type="email"
-          value={email}
-          placeholder="Email"
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          value={password}
-          placeholder="Password"
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <button type="submit">Login</button>
-      </form>
+        <h2>Login</h2>
+        <form onSubmit={handleLogin}>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <button type="submit">Login</button>
+        </form>
       </div>
     </div>
   );
