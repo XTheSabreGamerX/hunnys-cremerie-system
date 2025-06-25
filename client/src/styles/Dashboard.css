@@ -19,6 +19,7 @@
   margin-top: 60px;
   padding: 2rem;
   margin-left: 250px;
+  overflow: hidden;
 }
 
 .sidebar.collapsed + .dashboard-main-content {
