@@ -1,25 +1,19 @@
-.dashboard-container {
-  padding: 2rem;
-  min-height: 100vh;
-  background-color: #f4f4f4;
-  color: #333;
-  text-align: center;
-}
-
-.dashboard-container h1 {
-  margin-bottom: 1rem;
-  font-size: 2rem;
-}
-
-.dashboard-container p {
-  font-size: 1.2rem;
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow-x: hidden;
 }
 
 .dashboard-main-content {
   margin-top: 60px;
-  padding: 2rem;
   margin-left: 250px;
-  overflow: hidden;
+  padding: 2rem;
+  background-color: #f4f4f4;
+  box-sizing: border-box;
+
+  height: calc(100vh - 60px);
+  overflow-y: auto; 
 }
 
 .sidebar.collapsed + .dashboard-main-content {

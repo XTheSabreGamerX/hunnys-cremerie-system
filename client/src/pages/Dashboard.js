@@ -6,11 +6,11 @@ const Dashboard = () => {
   return (
     <>
       <Sidebar />
-      <div className="dashboard-main-content">
+      <main className="dashboard-main-content">
         <h1>Dashboard</h1>
         <p>Welcome back, admin!</p>
-        {/* More modules go here */}
-      </div>
+        {/* Add dashboard modules or cards here */}
+      </main>
     </>
   );
 };
