@@ -29,7 +29,7 @@ const Sidebar = () => {
       <div className="sidebar-scroll">
         <nav className="sidebar-nav">
           <Link to="/dashboard"><span className="label">Dashboard</span></Link>
-          <Link to="/dashboard"><span className="label">User Management</span></Link>
+          <Link to="/user-management"><span className="label">User Management</span></Link>
           <Link to="/dashboard"><span className="label">Inventory</span></Link>
           <Link to="/dashboard"><span className="label">Sales Management</span></Link>
           <Link to="/dashboard"><span className="label">Sales Report</span></Link>

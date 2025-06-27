@@ -6,6 +6,7 @@ import Login from '../pages/Login';
 import Dashboard from '../pages/Dashboard';
 import DashboardHeader from './DashboardHeader';
 import ProtectedRoute from '../components/ProtectedRoute';
+import UserManagement from '../pages/UserManagement';
 
 function App() {
   return (
@@ -31,6 +32,18 @@ function App() {
               <ProtectedRoute>                
                 <DashboardHeader />
                 <Dashboard />
+              </ProtectedRoute>
+            </>
+          }
+        />
+
+        <Route //User Management route
+          path="/user-management"
+          element={
+            <>
+              <ProtectedRoute>                
+                <DashboardHeader />
+                <UserManagement />
               </ProtectedRoute>
             </>
           }

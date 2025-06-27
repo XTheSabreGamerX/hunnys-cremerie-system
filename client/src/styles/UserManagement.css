@@ -1,0 +1,28 @@
+.user-management-main-content {
+    margin-top: 60px;
+    margin-left: 250px;
+    padding: 2rem;
+    background-color: #f4f4f4;
+    min-height: calc(100vh - 60px);
+    color: #333;
+}
+
+.sidebar.collapsed + .user-management-main-content {
+    margin-left: 70px;
+}
+
+.user-management-main-content h1 {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.requests-container, .accounts-container {
+    background-color: rgba(128, 128, 128, 0.3); 
+    color: black;
+    margin-left: 30px;
+    padding: 1rem;
+}
+
+.accounts-container {
+    margin-top: 20px;
+}
