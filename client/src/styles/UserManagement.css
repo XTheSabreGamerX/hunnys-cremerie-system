@@ -19,10 +19,35 @@
 .requests-container, .accounts-container {
     background-color: rgba(128, 128, 128, 0.3); 
     color: black;
-    margin-left: 30px;
+    margin: 2rem auto;
+    max-width: 1000px;
     padding: 1rem;
 }
 
 .accounts-container {
-    margin-top: 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.accounts-container table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.accounts-container th,
+.accounts-container td {
+  border: 1px solid black;
+  padding: 8px;
+  text-align: left;
+}
+
+.accounts-container th {
+  background-color: #921A40;
+  color: white;
+}
+
+.accounts-container button {
+  margin-right: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
 }

@@ -1,21 +1,57 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import Sidebar from '../scripts/Sidebar';
 import '../styles/UserManagement.css';
 
 const UserManagement = () => {
-  return (
-    <>
-      <Sidebar />
-      <main className="user-management-main-content">
-        <div className="requests-container">
-            <h1>Requests here</h1>
-        </div>
+    const [users, setUsers] = useState([]);
+    
+    useEffect(() => {
+    axios.get('http://localhost:5000/api/user')
+      .then(res => {
+        setUsers(res.data);
+      })
+      .catch(err => {
+        console.error('Error fetching users:', err);
+      });
+  }, []);
 
-        <div className="accounts-container">
-            <h1>Accounts here</h1>
-        </div>
-      </main>
-    </>
+    return (
+        <>
+            <Sidebar />
+                <main className="user-management-main-content">
+                    <div className="requests-container">
+                        <h1>Requests here (WIP)</h1>
+                    </div>
+
+                    <div className="accounts-container">
+                        <h1>List of Available Accounts! (WIP, Buttons not working yet)</h1>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {users.map(user => (
+                                    <tr key={user._id}>
+                                        <td>{user.username}</td>
+                                        <td>{user.email}</td>
+                                        <td>{user.role || 'User'}</td>
+                                        <td>
+                                            <button>Deactivate</button>
+                                            <button>Edit</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </main>
+        </>
   );
 };
 
