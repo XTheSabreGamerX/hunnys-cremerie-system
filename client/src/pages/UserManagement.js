@@ -5,9 +5,10 @@ import '../styles/UserManagement.css';
 
 const UserManagement = () => {
     const [users, setUsers] = useState([]);
+    const API_BASE = process.env.REACT_APP_API_URI || 'http://localhost:5000';
     
     useEffect(() => {
-    axios.get('http://localhost:5000/api/user')
+    axios.get(`${API_BASE}/api/user`)
       .then(res => {
         setUsers(res.data);
       })
