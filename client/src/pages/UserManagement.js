@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import Sidebar from '../scripts/Sidebar';
 import '../styles/UserManagement.css';
@@ -8,22 +8,22 @@ const UserManagement = () => {
   const [requests, setRequests] = useState([]);
   const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
-  const fetchUsers = () => {
+  const fetchUsers =  useCallback(()=> {
     axios.get(`${API_BASE}/api/user`)
       .then(res => setUsers(res.data))
       .catch(err => console.error('Error fetching users:', err));
-  };
+  }, [API_BASE]);
 
-  const fetchRequests = () => {
+  const fetchRequests = useCallback(() => {
     axios.get(`${API_BASE}/api/request`)
       .then(res => setRequests(res.data))
       .catch(err => console.error('Error fetching requests:', err));
-  };
+  }, [API_BASE]);
 
   useEffect(() => {
     fetchUsers();
     fetchRequests();
-  }, [API_BASE]);
+  }, [fetchUsers, fetchRequests]);
 
   const handleApprove = async (id) => {
     try {
