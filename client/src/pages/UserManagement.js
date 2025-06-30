@@ -5,7 +5,7 @@ import '../styles/UserManagement.css';
 
 const UserManagement = () => {
     const [users, setUsers] = useState([]);
-    const API_BASE = process.env.REACT_APP_API_URI || 'http://localhost:5000';
+    const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
     
     useEffect(() => {
     axios.get(`${API_BASE}/api/user`)
@@ -15,7 +15,7 @@ const UserManagement = () => {
       .catch(err => {
         console.error('Error fetching users:', err);
       });
-  }, []);
+  }, [API_BASE]);
 
     return (
         <>
