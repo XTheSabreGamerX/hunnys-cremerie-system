@@ -63,9 +63,17 @@
   width: 15%;
 }
 
-.requests-container th:nth-child(4),
+.requests-container th:nth-child(4) {
+  width: 15%;
+}
+
 .accounts-container th:nth-child(4) {
+  width: 12%;
+}
+
+.accounts-container th:nth-child(5) {
   width: 20%;
+  white-space: nowrap;
 }
 
 .requests-container td,
@@ -74,6 +82,7 @@
   padding: 10px;
   vertical-align: middle;
   word-break: break-word;
+  text-align: center;
 }
 
 .requests-container button,

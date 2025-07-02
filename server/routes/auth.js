@@ -15,6 +15,10 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'User not found' });
     }
 
+    if (user.status === 'deactivated') {
+      return res.status(403).json({ message: 'Your account has been deactivated. If you think this is an error, please contact the admin.' });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);  //Checks for hashed passwords instead of plaintext ones.
 
     if (!isMatch) {

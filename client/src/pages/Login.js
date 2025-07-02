@@ -18,6 +18,9 @@ const Login = () => {
   const [registerError, setRegisterError] = useState('');
   const [registerSuccess, setRegisterSuccess] = useState('');
 
+  const [popupMessage, setPopupMessage] = useState('');
+  const [popupType, setPopupType] = useState('');
+
   const navigate = useNavigate();
   const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
@@ -54,11 +57,16 @@ const Login = () => {
       const data = await res.json();
 
       if (res.ok) {
+        localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('isLoggedIn', 'true');
-        alert('Login successful!');
-        navigate('/dashboard');
+        setPopupMessage('Login successful! Redirecting to dashboard...');
+        setPopupType('success');
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 2000);
       } else {
-        setErrorMessage(data.message || 'Login failed');
+        setPopupMessage('Invalid email or password');
+        setPopupType('error');
       }
     } catch (err) {
       console.error('Error logging in:', err);
@@ -91,7 +99,7 @@ const Login = () => {
       const data = await res.json();
 
       if (res.ok) {
-        setRegisterSuccess('Registration request submitted!');
+        setRegisterSuccess('Registration request submitted! Please wait for your approval from the admin!');
         setRegisterEmail('');
         setRegisterPassword('');
       } else {
@@ -102,10 +110,18 @@ const Login = () => {
       setRegisterError('Server error. Please try again later.');
     }
   };
-
+  
   return (
-    /*Whole Login component*/
-    <div className="login-main-content">
+   <div className="login-main-content">
+
+      {popupMessage && (
+        <div className={`popup-overlay ${popupType}`}>
+          <div className={`popup-box ${popupType}`}>
+            <p>{popupMessage}</p>
+          </div>
+        </div>
+      )}
+
       <div className="login-container">
         <h2>Login</h2>
 
@@ -150,7 +166,7 @@ const Login = () => {
             <h3>Request Registration</h3>
 
             {registerError && (
-              <div className="error-message">{registerError}</div>
+              <div className="registration-error-message">{registerError}</div>
             )}
             {registerSuccess && (
               <div className="success-message">{registerSuccess}</div>

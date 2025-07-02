@@ -7,6 +7,8 @@ import { useNavigate, Link } from 'react-router-dom';
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem("user"));
+  const role = user?.role ? user.role.toLowerCase() : null;
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -28,18 +30,46 @@ const Sidebar = () => {
 
       <div className="sidebar-scroll">
         <nav className="sidebar-nav">
-          <Link to="/dashboard"><span className="label">Dashboard</span></Link>
-          <Link to="/user-management"><span className="label">User Management</span></Link>
-          <Link to="/dashboard"><span className="label">Inventory</span></Link>
-          <Link to="/dashboard"><span className="label">Sales Management</span></Link>
-          <Link to="/dashboard"><span className="label">Sales Report</span></Link>
-          <Link to="/dashboard"><span className="label">Profitability Dashboard</span></Link>
-          <Link to="/dashboard"><span className="label">Supplier Management</span></Link>
-          <Link to="/dashboard"><span className="label">Customer Management</span></Link>
-          <Link to="/dashboard"><span className="label">Activity Log</span></Link>
-          <Link to="/dashboard"><span className="label">Pricing Management</span></Link>
-          <Link to="/dashboard"><span className="label">Backup and Restore</span></Link>
-          <Link to="/dashboard"><span className="label">Notifications</span></Link>
+            <Link to="/dashboard"><span className="label">Dashboard</span></Link>
+
+              {(role === 'admin' || role === 'manager') && (
+                <Link to="/user-management"><span className="label">User Management</span></Link>
+              )}
+
+              {(role === 'admin' || role === 'manager' || role === 'staff') && (
+                <>
+                  <Link to="/dashboard"><span className="label">Inventory</span></Link>
+                  <Link to="/dashboard"><span className="label">Sales Management</span></Link>
+                  <Link to="/dashboard"><span className="label">Sales Report</span></Link>
+                  <Link to="/dashboard"><span className="label">Profitability Dashboard</span></Link>
+                  <Link to="/dashboard"><span className="label">Supplier Management</span></Link>
+                  <Link to="/dashboard"><span className="label">Customer Management</span></Link>
+                </>
+              )}
+
+              {role === 'admin' && (
+                <>
+                  <Link to="/dashboard"><span className="label">Activity Log</span></Link>
+                  <Link to="/dashboard"><span className="label">Pricing Management</span></Link>
+                  <Link to="/dashboard"><span className="label">Backup and Restore</span></Link>
+                  <Link to="/dashboard"><span className="label">Notifications</span></Link>
+                </>
+              )}
+
+              {role === 'manager' && (
+                <>
+                  <Link to="/dashboard"><span className="label">Pricing Management</span></Link>
+                  <Link to="/dashboard"><span className="label">Backup and Restore</span></Link>
+                  <Link to="/dashboard"><span className="label">Notifications</span></Link>
+                </>
+              )}
+
+              {role === 'staff' && (
+                <>
+                  <Link to="/dashboard"><span className="label">Backup and Restore</span></Link>
+                  <Link to="/dashboard"><span className="label">Notifications</span></Link>
+                </>
+              )}
         </nav>
 
         {!isCollapsed && (
