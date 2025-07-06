@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PopupMessage from '../components/PopupMessage';
 import '../styles/Login.css';
 
 const Login = () => {
@@ -65,7 +66,8 @@ const Login = () => {
           navigate('/dashboard');
         }, 2000);
       } else {
-        setPopupMessage('Invalid email or password');
+        const message = data.message || 'Invalid email or password';
+        setPopupMessage(message);
         setPopupType('error');
       }
     } catch (err) {
@@ -115,11 +117,14 @@ const Login = () => {
    <div className="login-main-content">
 
       {popupMessage && (
-        <div className={`popup-overlay ${popupType}`}>
-          <div className={`popup-box ${popupType}`}>
-            <p>{popupMessage}</p>
-          </div>
-        </div>
+        <PopupMessage
+          message={popupMessage}
+          type={popupType}
+          onClose={() => {
+            setPopupMessage('');
+            setPopupType('');
+          }}
+        />
       )}
 
       <div className="login-container">

@@ -46,4 +46,26 @@ router.post('/reactivate/:id', async (req, res) => {
   }
 });
 
+//Edit account route
+router.put('/update/:id', async (req, res) => {
+  const { username, email, role } = req.body;
+
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      { username, email, role },
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ message: 'User updated successfully!', user: updatedUser });
+  } catch (err) {
+    console.error('Update user error:', err);
+    res.status(500).json({ message: 'Server error while updating user' });
+  }
+});
+
 module.exports = router;

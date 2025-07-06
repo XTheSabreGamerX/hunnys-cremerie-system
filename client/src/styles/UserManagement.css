@@ -1,13 +1,13 @@
 .user-management-main-content {
   margin-top: 60px;
   margin-left: 250px;
-  padding: 2rem;
-  background-color: #f4f4f4;
-  min-height: calc(100vh - 60px);
-  color: #333;
+  height: calc(100vh - 60px);
   display: flex;
   flex-direction: column;
   align-items: center;
+  overflow: hidden;
+  padding: 2rem;
+  background-color: #f4f4f4;
 }
 
 .sidebar.collapsed + .user-management-main-content {
@@ -22,7 +22,22 @@
   padding: 1.5rem;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  margin: 1.5rem 0;
+  margin: 1rem 0;
+  overflow: auto;
+  flex-shrink: 0;
+}
+
+.requests-container,
+.accounts-container {
+  flex: 1;
+}
+
+.requests-container {
+  max-height: 30vh;
+}
+
+.accounts-container {
+  max-height: 30vh;
 }
 
 .requests-container h1,

@@ -1,7 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import '../styles/PopupMessage.css';
 
-const PopupMessage = ({ message, type }) => {
+const PopupMessage = ({ message, type, onClose }) => {
+  useEffect(() => {
+    if (!message) return;
+
+    const timer = setTimeout(() => {
+      onClose();
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [message, onClose]);
+
   if (!message) return null;
 
   return (

@@ -3,7 +3,9 @@ import axios from 'axios';
 import Sidebar from '../scripts/Sidebar';
 import ConfirmationModal from '../components/ConfirmationModal';
 import PopupMessage from '../components/PopupMessage';
+import EditUserModal from '../components/EditUserModal';
 import '../styles/UserManagement.css';
+import '../styles/App.css'
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -11,6 +13,9 @@ const UserManagement = () => {
 
   const [popupMessage, setPopupMessage] = useState('');
   const [popupType, setPopupType] = useState('');
+
+  const [editingUser, setEditingUser] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const [showConfirm,setShowConfirm] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState('');
@@ -84,15 +89,38 @@ const UserManagement = () => {
   }
   };
 
-//Reactivating accounts
-const handleReactivate = async (id) => {
+  //Reactivating accounts
+  const handleReactivate = async (id) => {
+    try {
+      const res = await axios.post(`${API_BASE}/api/user/reactivate/${id}`);
+      showPopup(res.data.message);
+      fetchUsers();
+    } catch (err) {
+      console.error('Error reactivating user:', err);
+      showPopup('Failed to reactivate the user.', 'error');
+    }
+    };
+
+  //Editing account details
+  const handleEditClick = (user) => {
+    setEditingUser(user);
+    setShowEditModal(true);
+  }
+
+  const handleSaveEdit = async (updatedUser) => {
   try {
-    const res = await axios.post(`${API_BASE}/api/user/reactivate/${id}`);
-    showPopup(res.data.message);
+    const res = await axios.put(`${API_BASE}/api/user/update/${updatedUser._id}`, {
+      username: updatedUser.username,
+      email: updatedUser.email,
+      role: updatedUser.role
+    });
+    showPopup(res.data.message || 'Account details has been successfully edited!', 'success');
+    setShowEditModal(false);
+    setEditingUser(null);
     fetchUsers();
   } catch (err) {
-    console.error('Error reactivating user:', err);
-    showPopup('Failed to reactivate the user.', 'error');
+    console.error('Error updating user:', err);
+    showPopup('Failed to update user.', 'error');
   }
   };
 
@@ -106,6 +134,14 @@ const handleReactivate = async (id) => {
           setShowConfirm(false);
         }}
         onCancel={() => setShowConfirm(false)}
+      />
+      )}
+
+      {showEditModal && (
+      <EditUserModal
+        user={editingUser}
+        onClose={() => setShowEditModal(false)}
+        onSave={handleSaveEdit}
       />
       )}
 
@@ -195,7 +231,7 @@ const handleReactivate = async (id) => {
                         >
                           {user.status === 'deactivated' ? 'Reactivate' : 'Deactivate'}
                         </button>
-                        <button>Edit</button>
+                        <button onClick={() => handleEditClick(user)}>Edit</button>
                       </>
                     ) : (
                       <em>System Account</em>
