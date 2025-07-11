@@ -145,7 +145,14 @@ const UserManagement = () => {
       />
       )}
 
-      <PopupMessage message={popupMessage} type={popupType} />
+      <PopupMessage
+        message={popupMessage}
+        type={popupType}
+        onClose={() => {
+          setPopupMessage('');
+          setPopupType('');
+        }}
+      />
 
       <Sidebar />
       <main className="user-management-main-content">

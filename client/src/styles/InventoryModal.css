@@ -1,0 +1,132 @@
+.modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 1000;
+}
+
+.modal-content {
+	background-color: #fff;
+	border-radius: 12px;
+	padding: 24px 32px;
+	width: 90%;
+	max-width: 500px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+	animation: fadeIn 0.2s ease-in-out;
+	display: flex;
+	flex-direction: column;
+}
+
+.modal-content h2 {
+	margin-bottom: 16px;
+	font-size: 24px;
+	color: #333;
+	text-align: center;
+}
+
+.modal-field {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 1rem;
+	font-size: 16px;
+	color: #555;
+}
+
+.modal-field strong {
+	margin-bottom: 4px;
+	color: #111;
+}
+
+.modal-field input,
+.modal-field select {
+	padding: 8px 10px;
+	border: 1px solid #ccc;
+	border-radius: 6px;
+	font-size: 15px;
+}
+
+.modal-content ul {
+	list-style: none;
+	padding: 0;
+	margin: 1rem 0 0.5rem 0;
+}
+
+.modal-content li {
+	margin-bottom: 10px;
+	font-size: 16px;
+	color: #555;
+}
+
+.modal-content li strong {
+	color: #111;
+}
+
+.modal-actions {
+	display: flex;
+	justify-content: flex-end;
+	flex-wrap: wrap;
+	gap: 5px;
+	margin-top: 1rem;
+}
+
+.inventory-btn {
+	padding: 8px 16px;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: bold;
+	transition: background-color 0.2s ease;
+}
+
+.edit-btn {
+	background-color: #4caf50;
+	color: white;
+}
+
+.edit-btn:hover {
+	background-color: #43a047;
+}
+
+.delete-btn {
+	background-color: #f44336;
+	color: white;
+}
+
+.delete-btn:hover {
+	background-color: #e53935;
+}
+
+.close-btn {
+	background-color: #9e9e9e;
+	color: white;
+}
+
+.close-btn:hover {
+	background-color: #757575;
+}
+
+.add-btn {
+	background-color: #2E8B57;
+	color: white;
+}
+
+.add-btn:hover {
+	background-color: #246b44;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: scale(0.97);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}

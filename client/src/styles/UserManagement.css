@@ -116,3 +116,12 @@
 .accounts-container button:hover {
   background-color: #7a1534;
 }
+
+.requests-container table,
+.accounts-container table,
+.requests-container td,
+.accounts-container td,
+.requests-container tr,
+.accounts-container tr {
+  background-color: #fff;
+}
