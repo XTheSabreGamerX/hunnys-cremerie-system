@@ -11,6 +11,7 @@ router.get('/', async (req, res) => {
   }
 });
 
+//Add Item route
 router.post('/', async (req, res) => {
 	try {
 		const item = new InventoryItem(req.body);
@@ -22,6 +23,25 @@ router.post('/', async (req, res) => {
 	}
 });
 
+//Edit item route
+router.put('/:id', async (req, res) => {
+	try {
+		const updated = await InventoryItem.findByIdAndUpdate(
+			req.params.id,
+			req.body,
+			{ new: true, runValidators: true }
+		);
+		if (!updated) {
+			return res.status(404).json({ error: 'Item not found' });
+		}
+		res.json(updated);
+	} catch (err) {
+		console.error('Update error:', err);
+		res.status(500).json({ error: 'Failed to update item.' });
+	}
+});
+
+//Delete item route
 router.delete('/:id', async (req, res) => {
   try {
     const deletedItem = await InventoryItem.findByIdAndDelete(req.params.id);
