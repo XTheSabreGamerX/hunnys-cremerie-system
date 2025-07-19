@@ -8,6 +8,7 @@ import Inventory from '../pages/Inventory';
 import DashboardHeader from './DashboardHeader';
 import ProtectedRoute from '../components/ProtectedRoute';
 import UserManagement from '../pages/UserManagement';
+import CustomerManagement from '../pages/CustomerManagement';
 
 function App() {
   return (
@@ -61,9 +62,19 @@ function App() {
             </>
           }
           />
+
+        <Route //Customer Management route
+          path="/customer-management"
+          element={
+            <>
+              <ProtectedRoute>                
+                <DashboardHeader />
+                <CustomerManagement />
+              </ProtectedRoute>
+            </>
+          }
+        />
         </Routes>
-
-
     </Router>
   );
 }

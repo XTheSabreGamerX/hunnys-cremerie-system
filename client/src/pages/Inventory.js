@@ -1,23 +1,42 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Sidebar from '../scripts/Sidebar';
-import InventoryModal from '../components/InventoryModal';
+import EditModal from '../components/EditModal';
+import ViewModal from '../components/ViewModal';
 import PopupMessage from '../components/PopupMessage';
+import ConfirmationModal from '../components/ConfirmationModal';
 import '../styles/Inventory.css';
 
 const Inventory = () => {
 	const [items, setItems] = useState([]);
-	const [selectedItem, setSelectedItem] = useState(null);
-	const [popupMessage, setPopupMessage] = useState('');
+	const [filteredItems, setFilteredItems] = useState([]);
 	const [searchQuery, setSearchQuery] = useState('');
 	const [searchField, setSearchField] = useState('itemId');
+	const [selectedItem, setSelectedItem] = useState(null);
 	const [modalMode, setModalMode] = useState('view');
-	const [filteredItems, setFilteredItems] = useState([]);
+	const [pendingEditData, setPendingEditData] = useState(null);
+	const [showConfirmation, setShowConfirmation] = useState(false);
+	const [isViewOpen, setIsViewOpen] = useState(false);
+	const [viewedItem, setViewedItem] = useState(null);
+	const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+	const [itemToDelete, setItemToDelete] = useState(null);
+	const [popupMessage, setPopupMessage] = useState('');
+
 	const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+	const inventoryFields = [
+		{ label: 'Item ID', name: 'itemId' },
+		{ label: 'Item Name', name: 'name' },
+		{ label: 'Stock', name: 'stock', type: 'number' },
+		{ label: 'Category', name: 'category' },
+		{ label: 'Unit Price', name: 'unitPrice', type: 'number' },
+		{ label: 'Supplier', name: 'supplier' },
+		{ label: 'Expiration Date', name: 'expirationDate', type: 'date' },
+	];
 
 	const fetchItems = useCallback(async () => {
 		try {
-			const response = await fetch(`${API_BASE}/api/inventory`);
-			const data = await response.json();
+			const res = await fetch(`${API_BASE}/api/inventory`);
+			const data = await res.json();
 			setItems(data);
 		} catch (err) {
 			console.error('Error fetching inventory:', err);
@@ -28,78 +47,77 @@ const Inventory = () => {
 		fetchItems();
 	}, [fetchItems]);
 
-	const handleDelete = async (id) => {
-		try {
-			const res = await fetch(`${API_BASE}/api/inventory/${id}`, { method: 'DELETE' });
-			if (!res.ok) throw new Error('Failed');
-			setItems(prev => prev.filter(item => item._id !== id));
-			setPopupMessage('The item has been deleted!');
-			setSelectedItem(null);
-		} catch (err) {
-			console.error(err);
-			setPopupMessage('Could not delete item.');
+	useEffect(() => {
+		const query = searchQuery.toLowerCase().trim();
+
+		if (!query) {
+			setFilteredItems([]);
+			return;
 		}
+
+		const filtered = items.filter(item =>
+			(item[searchField] || '').toString().toLowerCase().includes(query)
+		);
+
+		setFilteredItems(filtered);
+
+		if (filtered.length === 0) {
+		}
+	}, [searchQuery, searchField, items]);
+
+	const validateFormData = (data) => {
+		const { itemId, name, stock, category, unitPrice, expirationDate } = data;
+
+		if (!itemId?.trim() || !name?.trim() || !category?.trim()) {
+			showPopup('Please fill in all required fields.');
+			return false;
+		}
+
+		if (isNaN(stock) || stock < 0) {
+			showPopup('Stock must be a non-negative number.');
+			return false;
+		}
+
+		if (isNaN(unitPrice) || unitPrice < 0) {
+			showPopup('Unit price must be a non-negative number.');
+			return false;
+		}
+
+		if (
+			modalMode === 'add' &&
+			items.some(i => i.itemId.toLowerCase() === itemId.trim().toLowerCase())
+		) {
+			showPopup('Item ID already exists. Please choose a unique ID.');
+			return false;
+		}
+
+		if (expirationDate) {
+			const today = new Date();
+			today.setHours(0, 0, 0, 0);
+			const expDate = new Date(expirationDate);
+			expDate.setHours(0, 0, 0, 0);
+			if (expDate < today) {
+				showPopup('Expiration date cannot be in the past.');
+				return false;
+			}
+		}
+
+		return true;
 	};
 
-	const handleEdit = (item) => {
-		setModalMode('edit');
-		setSelectedItem(item);
+	const showPopup = (message) => {
+		setPopupMessage(message);
+		setTimeout(() => setPopupMessage(''), 3000);
 	};
 
-	const handleAddOrEdit = async (data) => {
+	const saveItem = async (data) => {
+		const payload = {
+			...data,
+			stock: Number(data.stock),
+			unitPrice: Number(data.unitPrice),
+		};
+
 		try {
-			const { itemId, name, stock, category, unitPrice } = data;
-
-			if (!itemId?.trim() || !name?.trim() || !category?.trim()) {
-				setPopupMessage('Please fill in all required fields.');
-				setTimeout(() => setPopupMessage(''), 3000);
-				return;
-			}
-
-			const parsedStock = Number(stock);
-			const parsedPrice = Number(unitPrice);
-
-			if (isNaN(parsedStock) || parsedStock < 0) {
-				setPopupMessage('Stock must be a non-negative number.');
-				setTimeout(() => setPopupMessage(''), 3000);
-				return;
-			}
-
-			if (isNaN(parsedPrice) || parsedPrice < 0) {
-				setPopupMessage('Unit price must be a non-negative number.');
-				setTimeout(() => setPopupMessage(''), 3000);
-				return;
-			}
-
-			if (
-				modalMode === 'add' &&
-				items.some(i => i.itemId.toLowerCase() === itemId.trim().toLowerCase())
-			) {
-				setPopupMessage('Item ID already exists. Please choose a unique ID.');
-				setTimeout(() => setPopupMessage(''), 3000);
-				return;
-			}
-
-			const expiration = data.expirationDate;
-			if (expiration) {
-				const today = new Date();
-				today.setHours(0, 0, 0, 0);
-				const expDate = new Date(expiration);
-				expDate.setHours(0, 0, 0, 0);
-
-				if (expDate < today) {
-					setPopupMessage('Expiration date cannot be in the past.');
-					setTimeout(() => setPopupMessage(''), 3000);
-					return;
-				}
-			}
-
-			const payload = {
-				...data,
-				stock: parsedStock,
-				unitPrice: parsedPrice
-			};
-
 			if (modalMode === 'add') {
 				await fetch(`${API_BASE}/api/inventory`, {
 					method: 'POST',
@@ -115,58 +133,118 @@ const Inventory = () => {
 			}
 
 			await fetchItems();
-			setPopupMessage('Changes have been saved!');
+			showPopup('Changes have been saved!');
 			setSelectedItem(null);
 			setModalMode('view');
 		} catch (err) {
 			console.error(err);
-			setPopupMessage('Save failed.');
+			showPopup('Save failed.');
 		}
 	};
 
-	const handleSearch = () => {
-		const q = searchQuery.trim().toLowerCase();
+	const handleAddOrEdit = async (data) => {
+		if (!validateFormData(data)) return;
 
-		if (!q) {
-			setFilteredItems([]);
-			return;
-		}
-
-		const results = items.filter((item) => {
-			const value = (item[searchField] || '').toString().toLowerCase();
-			return value.includes(q);
-		});
-
-		setFilteredItems(results);
-
-		if (results.length === 0) {
-			setPopupMessage('Item was not found. Please check your search again!');
-			setTimeout(() => setPopupMessage(''), 3000);
+		if (modalMode === 'edit') {
+			setPendingEditData(data);
+			setShowConfirmation(true);
+		} else {
+			await saveItem(data);
 		}
 	};
+
+	const handleConfirmEdit = async () => {
+		if (pendingEditData) {
+			await saveItem(pendingEditData);
+		}
+		setPendingEditData(null);
+		setShowConfirmation(false);
+	};
+
+	const handleDelete = (itemId) => {
+		const item = items.find(i => i._id === itemId);
+		setItemToDelete(item);
+		setIsConfirmOpen(true);
+	};
+
+	const confirmDelete = async () => {
+		try {
+			const res = await fetch(`${API_BASE}/api/inventory/${itemToDelete._id}`, {
+				method: 'DELETE',
+			});
+			if (!res.ok) throw new Error('Delete failed');
+
+			setItems(prev => prev.filter(item => item._id !== itemToDelete._id));
+			showPopup('Item deleted successfully!');
+		} catch (error) {
+			console.error('Failed to delete item:', error);
+			showPopup('Failed to delete item.');
+		} finally {
+			setIsConfirmOpen(false);
+			setIsViewOpen(false);
+			setItemToDelete(null);
+		}
+	};
+
+	const isFiltering = searchQuery.trim() !== '';
 
 	return (
 		<>
-			{popupMessage && (
-				<PopupMessage
-					message={popupMessage}
-					type="success"
-					onClose={() => setPopupMessage('')}
+			{popupMessage && <PopupMessage message={popupMessage} type="success" onClose={() => setPopupMessage('')} />}
+
+			{isViewOpen && viewedItem && (
+				<ViewModal
+					item={viewedItem}
+					fields={[
+						{ name: 'name', label: 'Item Name' },
+						{ name: 'category', label: 'Category' },
+						{ name: 'stock', label: 'Stock' },
+						{ name: 'unitPrice', label: 'Price' },
+						{ name: 'supplier', label: 'Supplier' },
+						{
+							name: 'expirationDate',
+							label: 'Expiration Date',
+							formatter: (val) => new Date(val).toLocaleDateString(),
+						},
+					]}
+					onClose={() => {
+						setIsViewOpen(false);
+						setViewedItem(null);
+					}}
+					onDelete={() => handleDelete(viewedItem._id)}
 				/>
 			)}
 
-			{(modalMode === 'add' || selectedItem) && (
-				<InventoryModal
-					mode={modalMode}
-					item={selectedItem}
-					items={items}
+			{isConfirmOpen && (
+				<ConfirmationModal
+					message={`Are you sure you want to delete "${itemToDelete?.name || 'this item'}"?`}
+					onConfirm={confirmDelete}
+					onCancel={() => {
+						setIsConfirmOpen(false);
+						setItemToDelete(null);
+					}}
+				/>
+			)}
+			{(modalMode === 'edit' || modalMode === 'add') && (
+				<EditModal
+					item={modalMode === 'edit' ? selectedItem : {}}
+					fields={inventoryFields}
 					onSave={handleAddOrEdit}
-					onDelete={handleDelete}
 					onClose={() => {
 						setSelectedItem(null);
 						setModalMode('view');
 					}}
-					setPopupMessage={setPopupMessage}
+					mode={modalMode}
+				/>
+			)}
+			{showConfirmation && (
+				<ConfirmationModal
+					message="Are you sure you want to save these changes?"
+					onConfirm={handleConfirmEdit}
+					onCancel={() => {
+						setPendingEditData(null);
+						setShowConfirmation(false);
+					}}
 				/>
 			)}
 
@@ -204,25 +282,6 @@ const Inventory = () => {
 					>
 						Add Item
 					</button>
-
-					<button
-						className="inventory-btn search-btn"
-						onClick={handleSearch}
-					>
-						Search
-					</button>
-
-					{filteredItems.length > 0 && (
-						<button
-							className="inventory-btn close-btn"
-							onClick={() => {
-								setFilteredItems([]);
-								setSearchQuery('');
-							}}
-						>
-							Reset Search
-						</button>
-					)}
 				</div>
 
 				<div className="inventory-table-container">
@@ -239,14 +298,11 @@ const Inventory = () => {
 								<th>Actions</th>
 							</tr>
 						</thead>
-
 						<tbody>
-							{(filteredItems.length > 0 ? filteredItems : items).length === 0 ? (
-								<tr>
-									<td colSpan="8">No items found.</td>
-								</tr>
+							{(isFiltering ? filteredItems : items).length === 0 ? (
+								<tr><td colSpan="8">No items found.</td></tr>
 							) : (
-								(filteredItems.length > 0 ? filteredItems : items).map((item) => (
+								(isFiltering ? filteredItems : items).map(item => (
 									<tr key={item._id}>
 										<td>{item.itemId}</td>
 										<td>{item.name}</td>
@@ -254,27 +310,16 @@ const Inventory = () => {
 										<td>{item.category}</td>
 										<td>₱{item.unitPrice}</td>
 										<td>{item.supplier || '—'}</td>
+										<td>{item.expirationDate ? new Date(item.expirationDate).toLocaleDateString() : 'N/A'}</td>
 										<td>
-											{item.expirationDate
-												? new Date(item.expirationDate).toLocaleDateString()
-												: 'N/A'}
-										</td>
-										<td>
-											<button
-												className="inventory-btn edit-btn"
-												onClick={() => handleEdit(item)}
-											>
-												Edit
-											</button>
-											<button
-												className="inventory-btn view-btn"
-												onClick={() => {
-													setModalMode('view');
-													setSelectedItem(item);
-												}}
-											>
-												View
-											</button>
+											<button className="inventory-btn edit-btn" onClick={() => {
+												setSelectedItem(item);
+												setModalMode('edit');
+											}}>Edit</button>
+											<button className="inventory-btn view-btn" onClick={() => {
+												setViewedItem(item);
+												setIsViewOpen(true);
+											}}>View</button>
 										</td>
 									</tr>
 								))

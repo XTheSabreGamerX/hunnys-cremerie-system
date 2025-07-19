@@ -4,6 +4,7 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const requestRoutes = require('./routes/request');
 const inventoryRoutes = require('./routes/inventory');
+const customerRoutes = require('./routes/customer')
 const cors = require('cors');
 require('dotenv').config();
 
@@ -17,6 +18,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/request', requestRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/customers', customerRoutes);
 
 if (!MONGO_URI) {
   console.error('MONGO_URI is not defined. Please check your .env file.');
