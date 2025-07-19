@@ -20,18 +20,28 @@ const Inventory = () => {
 	const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 	const [itemToDelete, setItemToDelete] = useState(null);
 	const [popupMessage, setPopupMessage] = useState('');
+	const [popupType, setPopupType] = useState('success');
 
 	const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 	const inventoryFields = [
-		{ label: 'Item ID', name: 'itemId' },
-		{ label: 'Item Name', name: 'name' },
+		{ label: 'Item ID', name: 'itemId', required: 'true' },
+		{ label: 'Item Name', name: 'name', required: 'true' },
 		{ label: 'Stock', name: 'stock', type: 'number' },
 		{ label: 'Category', name: 'category' },
 		{ label: 'Unit Price', name: 'unitPrice', type: 'number' },
 		{ label: 'Supplier', name: 'supplier' },
 		{ label: 'Expiration Date', name: 'expirationDate', type: 'date' },
 	];
+
+	const showPopup = (message, type = 'success') => {
+		setPopupMessage(message);
+		setPopupType(type);
+		setTimeout(() => {
+			setPopupMessage('');
+			setPopupType('success');
+		}, 3000);
+	};
 
 	const fetchItems = useCallback(async () => {
 		try {
@@ -60,34 +70,26 @@ const Inventory = () => {
 		);
 
 		setFilteredItems(filtered);
-
-		if (filtered.length === 0) {
-		}
 	}, [searchQuery, searchField, items]);
 
 	const validateFormData = (data) => {
-		const { itemId, name, stock, category, unitPrice, expirationDate } = data;
+		const { itemId, name, stock, unitPrice, expirationDate } = data;
 
-		if (!itemId?.trim() || !name?.trim() || !category?.trim()) {
-			showPopup('Please fill in all required fields.');
+		if (!itemId?.trim() || !name?.trim()) {
+			showPopup('Please fill up the required fields!', 'error');
 			return false;
 		}
 
-		if (isNaN(stock) || stock < 0) {
-			showPopup('Stock must be a non-negative number.');
+		data.stock = stock === '' || stock === undefined ? 0 : Number(stock);
+		data.unitPrice = unitPrice === '' || unitPrice === undefined ? 0 : Number(unitPrice);
+
+		if (isNaN(data.stock) || data.stock < 0) {
+			showPopup('Stock must be a non-negative number.', 'error');
 			return false;
 		}
 
-		if (isNaN(unitPrice) || unitPrice < 0) {
-			showPopup('Unit price must be a non-negative number.');
-			return false;
-		}
-
-		if (
-			modalMode === 'add' &&
-			items.some(i => i.itemId.toLowerCase() === itemId.trim().toLowerCase())
-		) {
-			showPopup('Item ID already exists. Please choose a unique ID.');
+		if (isNaN(data.unitPrice) || data.unitPrice < 0) {
+			showPopup('Unit price must be a non-negative number.', 'error');
 			return false;
 		}
 
@@ -97,48 +99,48 @@ const Inventory = () => {
 			const expDate = new Date(expirationDate);
 			expDate.setHours(0, 0, 0, 0);
 			if (expDate < today) {
-				showPopup('Expiration date cannot be in the past.');
+				showPopup('Expiration date cannot be in the past.', 'error');
 				return false;
 			}
+		}
+
+		if (
+			modalMode === 'add' &&
+			items.some(i => i.itemId.toLowerCase() === itemId.trim().toLowerCase())
+		) {
+			showPopup('Item ID already exists. Please choose a unique ID.', 'error');
+			return false;
 		}
 
 		return true;
 	};
 
-	const showPopup = (message) => {
-		setPopupMessage(message);
-		setTimeout(() => setPopupMessage(''), 3000);
-	};
-
 	const saveItem = async (data) => {
 		const payload = {
 			...data,
-			stock: Number(data.stock),
-			unitPrice: Number(data.unitPrice),
+			stock: isNaN(Number(data.stock)) ? 0 : Number(data.stock),
+			unitPrice: isNaN(Number(data.unitPrice)) ? 0 : Number(data.unitPrice),
 		};
 
 		try {
-			if (modalMode === 'add') {
-				await fetch(`${API_BASE}/api/inventory`, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(payload),
-				});
-			} else if (modalMode === 'edit') {
-				await fetch(`${API_BASE}/api/inventory/${payload._id}`, {
-					method: 'PUT',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(payload),
-				});
-			}
+			const method = modalMode === 'add' ? 'POST' : 'PUT';
+			const url = modalMode === 'add'
+				? `${API_BASE}/api/inventory`
+				: `${API_BASE}/api/inventory/${payload._id}`;
+
+			await fetch(url, {
+				method,
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload),
+			});
 
 			await fetchItems();
-			showPopup('Changes have been saved!');
 			setSelectedItem(null);
 			setModalMode('view');
+			showPopup(`Item ${modalMode === 'add' ? 'added' : 'updated'} successfully!`, 'success');
 		} catch (err) {
 			console.error(err);
-			showPopup('Save failed.');
+			showPopup('Save failed.', 'error');
 		}
 	};
 
@@ -175,10 +177,10 @@ const Inventory = () => {
 			if (!res.ok) throw new Error('Delete failed');
 
 			setItems(prev => prev.filter(item => item._id !== itemToDelete._id));
-			showPopup('Item deleted successfully!');
+			showPopup('Item deleted successfully!', 'success');
 		} catch (error) {
 			console.error('Failed to delete item:', error);
-			showPopup('Failed to delete item.');
+			showPopup('Failed to delete item.', 'error');
 		} finally {
 			setIsConfirmOpen(false);
 			setIsViewOpen(false);
@@ -190,7 +192,13 @@ const Inventory = () => {
 
 	return (
 		<>
-			{popupMessage && <PopupMessage message={popupMessage} type="success" onClose={() => setPopupMessage('')} />}
+			{popupMessage && (
+				<PopupMessage
+					message={popupMessage}
+					type={popupType}
+					onClose={() => setPopupMessage('')}
+				/>
+			)}
 
 			{isViewOpen && viewedItem && (
 				<ViewModal
@@ -225,6 +233,7 @@ const Inventory = () => {
 					}}
 				/>
 			)}
+
 			{(modalMode === 'edit' || modalMode === 'add') && (
 				<EditModal
 					item={modalMode === 'edit' ? selectedItem : {}}
@@ -237,6 +246,7 @@ const Inventory = () => {
 					mode={modalMode}
 				/>
 			)}
+
 			{showConfirmation && (
 				<ConfirmationModal
 					message="Are you sure you want to save these changes?"
@@ -307,7 +317,7 @@ const Inventory = () => {
 										<td>{item.itemId}</td>
 										<td>{item.name}</td>
 										<td>{item.stock}</td>
-										<td>{item.category}</td>
+										<td>{item.category || '—'}</td>
 										<td>₱{item.unitPrice}</td>
 										<td>{item.supplier || '—'}</td>
 										<td>{item.expirationDate ? new Date(item.expirationDate).toLocaleDateString() : 'N/A'}</td>

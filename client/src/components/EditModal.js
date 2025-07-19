@@ -29,7 +29,10 @@ const EditModal = ({ item, fields, onSave, onClose, mode = 'edit' }) => {
         <form onSubmit={handleSubmit}>
         {fields.map((field) => (
           <div key={field.name} className="form-group">
-            <label>{field.label}</label>
+            <label>
+              {field.label}{' '}
+              {field.required && <span style={{ color: 'red' }}>*</span>}
+            </label>
             <input
               type={field.type || 'text'}
               value={editedItem[field.name] || ''}

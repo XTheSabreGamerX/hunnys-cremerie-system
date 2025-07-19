@@ -6,13 +6,15 @@ import PopupMessage from '../components/PopupMessage';
 import ConfirmationModal from '../components/ConfirmationModal';
 import '../styles/CustomerManagement.css';
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 const CustomerManagement = () => {
 	const [customers, setCustomers] = useState([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchField, setSearchField] = useState('customerId');
+	const [searchQuery, setSearchQuery] = useState('');
+	const [searchField, setSearchField] = useState('customerId');
 	const [selectedItem, setSelectedItem] = useState(null);
 	const [isEditOpen, setIsEditOpen] = useState(false);
-	const [isViewOpen, setIsViewOpen] = useState(false); 
+	const [isViewOpen, setIsViewOpen] = useState(false);
 	const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 	const [itemToDelete, setItemToDelete] = useState(null);
 	const [viewedItem, setViewedItem] = useState(null);
@@ -26,12 +28,22 @@ const CustomerManagement = () => {
 
 	const fetchCustomers = async () => {
 		try {
-			const response = await fetch('http://localhost:5000/api/customers');
+			const response = await fetch(`${API_BASE}/api/customers`);
 			const data = await response.json();
 			setCustomers(data);
 		} catch (error) {
 			console.error('Error fetching customers:', error);
 		}
+	};
+
+	const validateCustomerData = (data) => {
+		const { customerId, name } = data;
+		if (!customerId?.trim() || !name?.trim()) {
+			setPopupMessage('Please fill in all required fields.');
+			setPopupType('error');
+			return false;
+		}
+		return true;
 	};
 
 	const handleEditClick = (customer) => {
@@ -41,20 +53,18 @@ const CustomerManagement = () => {
 	};
 
 	const handleAddCustomer = async (newCustomer) => {
+		if (!validateCustomerData(newCustomer)) return;
+
 		try {
-			const response = await fetch('http://localhost:5000/api/customers', {
+			const response = await fetch(`${API_BASE}/api/customers`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(newCustomer),
 			});
-
-			if (!response.ok) {
-				throw new Error('Add failed');
-			}
+			if (!response.ok) throw new Error('Add failed');
 
 			const added = await response.json();
 			setCustomers(prev => [...prev, added]);
-
 			setPopupMessage('Customer added successfully!');
 			setPopupType('success');
 			setModalMode('view');
@@ -66,21 +76,21 @@ const CustomerManagement = () => {
 	};
 
 	const handleSaveChanges = async (updatedCustomer) => {
+		if (!validateCustomerData(updatedCustomer)) return;
+
 		try {
-			const response = await fetch(`http://localhost:5000/api/customers/${updatedCustomer._id}`, {
+			const response = await fetch(`${API_BASE}/api/customers/${updatedCustomer._id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(updatedCustomer),
 			});
-
-			if (!response.ok) {
-				throw new Error('Update failed');
-			}
+			if (!response.ok) throw new Error('Update failed');
 
 			const updatedData = await response.json();
-
 			setCustomers(prev =>
-				prev.map((customer) => (customer._id === updatedData._id ? updatedData : customer))
+				prev.map((customer) =>
+					customer._id === updatedData._id ? updatedData : customer
+				)
 			);
 
 			setIsEditOpen(false);
@@ -97,13 +107,10 @@ const CustomerManagement = () => {
 
 	const confirmDelete = async () => {
 		try {
-			const response = await fetch(`http://localhost:5000/api/customers/${itemToDelete._id}`, {
+			const response = await fetch(`${API_BASE}/api/customers/${itemToDelete._id}`, {
 				method: 'DELETE',
 			});
-
-			if (!response.ok) {
-				throw new Error('Delete failed');
-			}
+			if (!response.ok) throw new Error('Delete failed');
 
 			setCustomers(prev => prev.filter(c => c._id !== itemToDelete._id));
 			setPopupMessage('Item deleted successfully!');
@@ -141,8 +148,8 @@ const CustomerManagement = () => {
 				<EditModal
 					item={modalMode === 'edit' ? selectedItem : {}}
 					fields={[
-						{ name: 'customerId', label: 'Customer ID' },
-						{ name: 'name', label: 'Name' },
+						{ name: 'customerId', label: 'Customer ID', required: 'true' },
+						{ name: 'name', label: 'Name', required: 'true' },
 						{ name: 'email', label: 'Email' },
 						{ name: 'phoneNumber', label: 'Phone Number' },
 						{ name: 'address', label: 'Address' },
@@ -205,34 +212,35 @@ const CustomerManagement = () => {
 			<main className="customer-main-content">
 				<h1>Customer Management</h1>
 				<div className="customer-actions">
-                    <select
-                        className="customer-filter"
-                        value={searchField}
-                        onChange={(e) => setSearchField(e.target.value)}
-                    >
-                        <option value="customerId">Customer ID</option>
-                        <option value="name">Name</option>
-                        <option value="email">Email</option>
-                        <option value="phoneNumber">Phone</option>
-                        <option value="address">Address</option>
-                    </select>
-                    <input
-                        type="text"
-                        className="customer-search"
-                        placeholder="Search"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <button
-                        className="inventory-btn add-btn"
-                        onClick={() => {
-                            setModalMode('add');
-                            setSelectedItem(null);
-                        }}
-                    >
-                        Add Item
-                    </button>
-                </div>
+					<select
+						className="customer-filter"
+						value={searchField}
+						onChange={(e) => setSearchField(e.target.value)}
+					>
+						<option value="customerId">Customer ID</option>
+						<option value="name">Name</option>
+						<option value="email">Email</option>
+						<option value="phoneNumber">Phone</option>
+						<option value="address">Address</option>
+					</select>
+					<input
+						type="text"
+						className="customer-search"
+						placeholder="Search"
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+					/>
+					<button
+						className="inventory-btn add-btn"
+						onClick={() => {
+							setModalMode('add');
+							setSelectedItem(null);
+							setIsEditOpen(true);
+						}}
+					>
+						Add Item
+					</button>
+				</div>
 				<div className="customer-table-container">
 					<table>
 						<thead>
