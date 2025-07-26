@@ -42,7 +42,7 @@ const Sidebar = () => {
                   <Link to="/dashboard"><span className="label">Sales Management</span></Link>
                   <Link to="/dashboard"><span className="label">Sales Report</span></Link>
                   <Link to="/dashboard"><span className="label">Profitability Dashboard</span></Link>
-                  <Link to="/dashboard"><span className="label">Supplier Management</span></Link>
+                  <Link to="/supplier-management"><span className="label">Supplier Management</span></Link>
                   <Link to="/customer-management"><span className="label">Customer Management</span></Link>
                 </>
               )}

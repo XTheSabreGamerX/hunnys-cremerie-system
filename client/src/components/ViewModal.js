@@ -7,7 +7,7 @@ const ViewModal = ({ item, fields, onClose, onDelete }) => {
   return (
     <div className="modal-overlay">
       <div className="modal-content view-modal">
-        <h2>View Customer Details</h2>
+        <h2>Details</h2>
         <div className="modal-details">
           {fields.map((field) => (
             <div key={field.name} className="modal-field">

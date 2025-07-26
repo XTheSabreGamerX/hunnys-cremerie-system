@@ -4,6 +4,7 @@ import EditModal from '../components/EditModal';
 import ViewModal from '../components/ViewModal';
 import PopupMessage from '../components/PopupMessage';
 import ConfirmationModal from '../components/ConfirmationModal';
+import '../styles/App.css';
 import '../styles/Inventory.css';
 
 const Inventory = () => {
@@ -40,7 +41,7 @@ const Inventory = () => {
 		setTimeout(() => {
 			setPopupMessage('');
 			setPopupType('success');
-		}, 3000);
+		}, 2000);
 	};
 
 	const fetchItems = useCallback(async () => {
@@ -191,83 +192,83 @@ const Inventory = () => {
 	const isFiltering = searchQuery.trim() !== '';
 
 	return (
-		<>
-			{popupMessage && (
-				<PopupMessage
-					message={popupMessage}
-					type={popupType}
-					onClose={() => setPopupMessage('')}
-				/>
-			)}
+	<>
+		{popupMessage && (
+			<PopupMessage
+				message={popupMessage}
+				type={popupType}
+				onClose={() => setPopupMessage('')}
+			/>
+		)}
 
-			{isViewOpen && viewedItem && (
-				<ViewModal
-					item={viewedItem}
-					fields={[
-						{ name: 'name', label: 'Item Name' },
-						{ name: 'category', label: 'Category' },
-						{ name: 'stock', label: 'Stock' },
-						{ name: 'unitPrice', label: 'Price' },
-						{ name: 'supplier', label: 'Supplier' },
-						{
-							name: 'expirationDate',
-							label: 'Expiration Date',
-							formatter: (val) => new Date(val).toLocaleDateString(),
-						},
-					]}
-					onClose={() => {
-						setIsViewOpen(false);
-						setViewedItem(null);
-					}}
-					onDelete={() => handleDelete(viewedItem._id)}
-				/>
-			)}
+		{isViewOpen && viewedItem && (
+			<ViewModal
+				item={viewedItem}
+				fields={[
+					{ name: 'name', label: 'Item Name' },
+					{ name: 'category', label: 'Category' },
+					{ name: 'stock', label: 'Stock' },
+					{ name: 'unitPrice', label: 'Price' },
+					{ name: 'supplier', label: 'Supplier' },
+					{
+						name: 'expirationDate',
+						label: 'Expiration Date',
+						formatter: (val) => new Date(val).toLocaleDateString(),
+					},
+				]}
+				onClose={() => {
+					setIsViewOpen(false);
+					setViewedItem(null);
+				}}
+				onDelete={() => handleDelete(viewedItem._id)}
+			/>
+		)}
 
-			{isConfirmOpen && (
-				<ConfirmationModal
-					message={`Are you sure you want to delete "${itemToDelete?.name || 'this item'}"?`}
-					onConfirm={confirmDelete}
-					onCancel={() => {
-						setIsConfirmOpen(false);
-						setItemToDelete(null);
-					}}
-				/>
-			)}
+		{isConfirmOpen && (
+			<ConfirmationModal
+				message={`Are you sure you want to delete "${itemToDelete?.name || 'this item'}"?`}
+				onConfirm={confirmDelete}
+				onCancel={() => {
+					setIsConfirmOpen(false);
+					setItemToDelete(null);
+				}}
+			/>
+		)}
 
-			{(modalMode === 'edit' || modalMode === 'add') && (
-				<EditModal
-					item={modalMode === 'edit' ? selectedItem : {}}
-					fields={inventoryFields}
-					onSave={handleAddOrEdit}
-					onClose={() => {
-						setSelectedItem(null);
-						setModalMode('view');
-					}}
-					mode={modalMode}
-				/>
-			)}
+		{(modalMode === 'edit' || modalMode === 'add') && (
+			<EditModal
+				item={modalMode === 'edit' ? selectedItem : {}}
+				fields={inventoryFields}
+				onSave={handleAddOrEdit}
+				onClose={() => {
+					setSelectedItem(null);
+					setModalMode('view');
+				}}
+				mode={modalMode}
+			/>
+		)}
 
-			{showConfirmation && (
-				<ConfirmationModal
-					message="Are you sure you want to save these changes?"
-					onConfirm={handleConfirmEdit}
-					onCancel={() => {
-						setPendingEditData(null);
-						setShowConfirmation(false);
-					}}
-				/>
-			)}
+		{showConfirmation && (
+			<ConfirmationModal
+				message="Are you sure you want to save these changes?"
+				onConfirm={handleConfirmEdit}
+				onCancel={() => {
+					setPendingEditData(null);
+					setShowConfirmation(false);
+				}}
+			/>
+		)}
 
-			<Sidebar />
+		<Sidebar />
 
-			<main className="inventory-main-content">
-				<h1>Inventory</h1>
+		<main className="module-main-content inventory-main">
+			<h1>Inventory</h1>
 
-				<div className="inventory-actions">
+			<div className="module-actions-container">
 					<select
-						className="inventory-filter"
-						value={searchField}
-						onChange={(e) => setSearchField(e.target.value)}
+					className="module-filter-dropdown"
+					value={searchField}
+					onChange={(e) => setSearchField(e.target.value)}
 					>
 						<option value="itemId">Item ID</option>
 						<option value="name">Name</option>
@@ -277,69 +278,81 @@ const Inventory = () => {
 
 					<input
 						type="text"
-						className="inventory-search"
+						className="module-search-input"
 						placeholder="Search"
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
 					/>
 
-					<button
-						className="inventory-btn add-btn"
-						onClick={() => {
-							setModalMode('add');
-							setSelectedItem(null);
-						}}
-					>
-						Add Item
-					</button>
-				</div>
+				<button
+					className="module-action-btn module-add-btn"
+					onClick={() => {
+					setModalMode('add');
+					setSelectedItem(null);
+					}}
+				>
+					Add Item
+				</button>
+			</div>
 
-				<div className="inventory-table-container">
-					<table>
-						<thead>
-							<tr>
-								<th>ID</th>
-								<th>Item Name</th>
-								<th>Stock</th>
-								<th>Category</th>
-								<th>Unit Price</th>
-								<th>Supplier</th>
-								<th>Expiration Date</th>
-								<th>Actions</th>
-							</tr>
-						</thead>
-						<tbody>
-							{(isFiltering ? filteredItems : items).length === 0 ? (
-								<tr><td colSpan="8">No items found.</td></tr>
-							) : (
-								(isFiltering ? filteredItems : items).map(item => (
-									<tr key={item._id}>
-										<td>{item.itemId}</td>
-										<td>{item.name}</td>
-										<td>{item.stock}</td>
-										<td>{item.category || '—'}</td>
-										<td>₱{item.unitPrice}</td>
-										<td>{item.supplier || '—'}</td>
-										<td>{item.expirationDate ? new Date(item.expirationDate).toLocaleDateString() : 'N/A'}</td>
-										<td>
-											<button className="inventory-btn edit-btn" onClick={() => {
+			<div className="module-table-container">
+				<table>
+					<thead>
+						<tr>
+							<th>ID</th>
+							<th>Item Name</th>
+							<th>Stock</th>
+							<th>Category</th>
+							<th>Unit Price</th>
+							<th>Supplier</th>
+							<th>Expiration Date</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{(isFiltering ? filteredItems : items).length === 0 ? (
+							<tr><td colSpan="8">No items found.</td></tr>
+						) : (
+							(isFiltering ? filteredItems : items).map(item => (
+								<tr key={item._id}>
+									<td>{item.itemId}</td>
+									<td>{item.name}</td>
+									<td>{item.stock}</td>
+									<td>{item.category || '—'}</td>
+									<td>₱{item.unitPrice}</td>
+									<td>{item.supplier || '—'}</td>
+									<td>{item.expirationDate ? new Date(item.expirationDate).toLocaleDateString() : 'N/A'}</td>
+									<td>
+										<button
+											className="module-action-btn module-edit-btn"
+											onClick={() => {
 												setSelectedItem(item);
 												setModalMode('edit');
-											}}>Edit</button>
-											<button className="inventory-btn view-btn" onClick={() => {
+											}}
+										>
+											Edit
+										</button>
+
+										<button
+											className="module-action-btn module-view-btn"
+											onClick={() => {
 												setViewedItem(item);
 												setIsViewOpen(true);
-											}}>View</button>
-										</td>
-									</tr>
-								))
-							)}
-						</tbody>
-					</table>
-				</div>
-			</main>
-		</>
-	);
+											}}
+										>
+											View
+										</button>
+									</td>
+								</tr>
+							))
+						)}
+					</tbody>
+				</table>
+			</div>
+		</main>
+	</>
+);
 };
+
 
 export default Inventory;

@@ -23,11 +23,7 @@ const customerSchema = new mongoose.Schema({
   address: {
     type: String,
     trim: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
   }
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model('Customer', customerSchema);

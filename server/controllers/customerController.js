@@ -24,7 +24,11 @@ const createCustomer = async (req, res) => {
 // Update Customer
 const updateCustomer = async (req, res) => {
   try {
-    const updated = await Customer.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updated = await Customer.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, timestamps: true }
+    );
     res.json(updated);
   } catch (err) {
     res.status(400).json({ message: 'Update failed' });

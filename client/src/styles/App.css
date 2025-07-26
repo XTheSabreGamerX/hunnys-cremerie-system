@@ -43,3 +43,129 @@ html, body {
     transform: rotate(360deg);
   }
 }
+
+/* Shared Main Content Container */
+.module-main-content {
+  margin-top: 60px;
+  margin-left: 250px;
+  padding: 2rem;
+  background-color: #fdfdfd;
+  min-height: calc(100vh - 60px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sidebar.collapsed + .module-main-content {
+  margin-left: 70px;
+}
+
+.module-main-content h1 {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.module-actions-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  margin: 0 auto 1.5rem auto;
+  width: 100%;
+  max-width: 1000px;
+  box-sizing: border-box;
+  border-radius: 5px;
+}
+
+.module-search-input,
+.module-filter-dropdown {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box;
+}
+
+
+/* === Shared Table Container === */
+.module-table-container {
+  width: 100%;
+  max-width: 1000px;
+  max-height: 600px;
+  background-color: rgba(128, 128, 128, 0.3);
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  margin-top: 5px;
+}
+
+.module-table-container table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  border: 1px solid black;
+}
+
+.module-table-container th,
+.module-table-container td {
+  border: 1px solid #ccc;
+  padding: 12px;
+  text-align: center;
+  vertical-align: middle;
+  word-break: break-word;
+  border: 1px solid black;
+}
+
+.module-table-container th {
+  background-color: #921A40;
+  color: white;
+}
+
+.module-table-container td {
+  background-color: #fff;
+}
+
+
+/* === Shared Buttons === */
+.module-action-btn {
+  padding: 8px 14px;
+  margin: 0 4px;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+}
+
+.module-edit-btn {
+  background-color: #f39c12;
+  color: white;
+}
+
+.module-edit-btn:hover {
+  background-color: #d68910;
+}
+
+.module-view-btn {
+  background-color: #3498db;
+  color: white;
+}
+.module-view-btn:hover {
+  background-color: #2e86c1;
+}
+
+.module-add-btn {
+  background-color: #2E8B57;
+  color: white;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.module-add-btn:hover {
+  background-color: #246b44;
+}

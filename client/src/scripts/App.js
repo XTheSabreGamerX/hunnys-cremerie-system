@@ -8,6 +8,7 @@ import Inventory from '../pages/Inventory';
 import DashboardHeader from './DashboardHeader';
 import ProtectedRoute from '../components/ProtectedRoute';
 import UserManagement from '../pages/UserManagement';
+import SupplierManagement from '../pages/SupplierManagement';
 import CustomerManagement from '../pages/CustomerManagement';
 
 function App() {
@@ -62,6 +63,18 @@ function App() {
             </>
           }
           />
+
+        <Route //Supplier Management route
+          path="/supplier-management"
+          element={
+            <>
+              <ProtectedRoute>                
+                <DashboardHeader />
+                <SupplierManagement />
+              </ProtectedRoute>
+            </>
+          }
+        /> 
 
         <Route //Customer Management route
           path="/customer-management"

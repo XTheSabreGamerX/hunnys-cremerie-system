@@ -38,11 +38,22 @@ const CustomerManagement = () => {
 
 	const validateCustomerData = (data) => {
 		const { customerId, name } = data;
+
 		if (!customerId?.trim() || !name?.trim()) {
 			setPopupMessage('Please fill in all required fields.');
 			setPopupType('error');
 			return false;
 		}
+
+		if (
+			modalMode === 'add' &&
+			customers.some(c => c.customerId.toLowerCase() === customerId.trim().toLowerCase())
+		) {
+			setPopupMessage('Customer ID already exists. Please choose a unique ID.');
+			setPopupType('error');
+			return false;
+		}
+
 		return true;
 	};
 
@@ -66,7 +77,8 @@ const CustomerManagement = () => {
 			const added = await response.json();
 			setCustomers(prev => [...prev, added]);
 			setPopupMessage('Customer added successfully!');
-			setPopupType('success');
+			setPopupType('success');		
+			setIsEditOpen(false);
 			setModalMode('view');
 		} catch (error) {
 			console.error('Failed to add customer:', error);
@@ -141,160 +153,174 @@ const CustomerManagement = () => {
 	});
 
 	return (
-		<>
-			<Sidebar />
+	<>
+		<Sidebar />
 
-			{(isEditOpen || modalMode === 'add') && (
-				<EditModal
-					item={modalMode === 'edit' ? selectedItem : {}}
-					fields={[
-						{ name: 'customerId', label: 'Customer ID', required: 'true' },
-						{ name: 'name', label: 'Name', required: 'true' },
-						{ name: 'email', label: 'Email' },
-						{ name: 'phoneNumber', label: 'Phone Number' },
-						{ name: 'address', label: 'Address' },
-					]}
-					onSave={modalMode === 'add' ? handleAddCustomer : handleSaveChanges}
-					onClose={() => {
-						setIsEditOpen(false);
-						setModalMode('view');
+		{(isEditOpen || modalMode === 'add') && (
+			<EditModal
+				item={modalMode === 'edit' ? selectedItem : {}}
+				fields={[
+					{ name: 'customerId', label: 'Customer ID', required: 'true' },
+					{ name: 'name', label: 'Name', required: 'true' },
+					{ name: 'email', label: 'Email' },
+					{ name: 'phoneNumber', label: 'Phone Number' },
+					{ name: 'address', label: 'Address' },
+				]}
+				onSave={modalMode === 'add' ? handleAddCustomer : handleSaveChanges}
+				onClose={() => {
+					setIsEditOpen(false);
+					setModalMode('view');
+					setSelectedItem(null);
+				}}
+				mode={modalMode}
+			/>
+		)}
+
+		{isViewOpen && (
+			<ViewModal
+				item={viewedItem}
+				fields={[
+					{ name: 'customerId', label: 'Customer ID' },
+					{ name: 'name', label: 'Name' },
+					{ name: 'email', label: 'Email' },
+					{ name: 'phoneNumber', label: 'Phone Number' },
+					{ name: 'address', label: 'Address' },
+					{
+						name: 'createdAt',
+						label: 'Created At',
+						formatter: (value) => new Date(value).toLocaleDateString(),
+					},
+				]}
+				onClose={() => {
+					setIsViewOpen(false);
+					setViewedItem(null);
+				}}
+				onDelete={() => handleDelete(viewedItem)}
+			/>
+		)}
+
+		{isConfirmOpen && (
+			<ConfirmationModal
+				message={`Are you sure you want to delete "${itemToDelete?.name || 'this item'}"?`}
+				onConfirm={confirmDelete}
+				onCancel={() => {
+					setIsConfirmOpen(false);
+					setItemToDelete(null);
+				}}
+			/>
+		)}
+
+		{popupMessage && (
+			<PopupMessage
+				message={popupMessage}
+				type={popupType}
+				onClose={() => {
+					setPopupMessage('');
+					setPopupType('');
+				}}
+			/>
+		)}
+
+		<main className="module-main-content customer-main">
+			<h1>Customer Management</h1>
+
+			<div className="module-actions-container">
+				<select
+					className="module-filter-dropdown"
+					value={searchField}
+					onChange={(e) => setSearchField(e.target.value)}
+				>
+					<option value="customerId">Customer ID</option>
+					<option value="name">Name</option>
+					<option value="email">Email</option>
+					<option value="phoneNumber">Phone</option>
+					<option value="address">Address</option>
+				</select>
+
+				<input
+					type="text"
+					className="module-search-input"
+					placeholder="Search"
+					value={searchQuery}
+					onChange={(e) => setSearchQuery(e.target.value)}
+				/>
+
+				<button
+					className="module-action-btn module-add-btn"
+					onClick={() => {
+						setModalMode('add');
 						setSelectedItem(null);
+						setIsEditOpen(true);
 					}}
-					mode={modalMode}
-				/>
-			)}
+				>
+					Add Item
+				</button>
+			</div>
 
-			{isViewOpen && (
-				<ViewModal
-					item={viewedItem}
-					fields={[
-						{ name: 'customerId', label: 'Customer ID' },
-						{ name: 'name', label: 'Name' },
-						{ name: 'email', label: 'Email' },
-						{ name: 'phoneNumber', label: 'Phone Number' },
-						{ name: 'address', label: 'Address' },
-						{
-							name: 'createdAt',
-							label: 'Created At',
-							formatter: (value) => new Date(value).toLocaleDateString(),
-						},
-					]}
-					onClose={() => {
-						setIsViewOpen(false);
-						setViewedItem(null);
-					}}
-					onDelete={() => handleDelete(viewedItem)}
-				/>
-			)}
-
-			{isConfirmOpen && (
-				<ConfirmationModal
-					message={`Are you sure you want to delete "${itemToDelete?.name || 'this item'}"?`}
-					onConfirm={confirmDelete}
-					onCancel={() => {
-						setIsConfirmOpen(false);
-						setItemToDelete(null);
-					}}
-				/>
-			)}
-
-			{popupMessage && (
-				<PopupMessage
-					message={popupMessage}
-					type={popupType}
-					onClose={() => {
-						setPopupMessage('');
-						setPopupType('');
-					}}
-				/>
-			)}
-
-			<main className="customer-main-content">
-				<h1>Customer Management</h1>
-				<div className="customer-actions">
-					<select
-						className="customer-filter"
-						value={searchField}
-						onChange={(e) => setSearchField(e.target.value)}
-					>
-						<option value="customerId">Customer ID</option>
-						<option value="name">Name</option>
-						<option value="email">Email</option>
-						<option value="phoneNumber">Phone</option>
-						<option value="address">Address</option>
-					</select>
-					<input
-						type="text"
-						className="customer-search"
-						placeholder="Search"
-						value={searchQuery}
-						onChange={(e) => setSearchQuery(e.target.value)}
-					/>
-					<button
-						className="inventory-btn add-btn"
-						onClick={() => {
-							setModalMode('add');
-							setSelectedItem(null);
-							setIsEditOpen(true);
-						}}
-					>
-						Add Item
-					</button>
-				</div>
-				<div className="customer-table-container">
-					<table>
-						<thead>
+			<div className="module-table-container">
+				<table>
+					<thead>
+						<tr>
+							<th>ID</th>
+							<th>Name</th>
+							<th>Email</th>
+							<th>Number</th>
+							<th>Address</th>
+							<th>Created</th>
+							<th>Updated</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{displayedCustomers.length === 0 ? (
 							<tr>
-								<th>ID</th>
-								<th>Name</th>
-								<th>Email</th>
-								<th>Phone</th>
-								<th>Address</th>
-								<th>Created At</th>
-								<th>Actions</th>
+							<td colSpan="8">No customers found.</td>
 							</tr>
-						</thead>
-						<tbody>
-							{displayedCustomers.length === 0 ? (
-								<tr>
-									<td colSpan="7">No customers found.</td>
-								</tr>
-							) : (
-								displayedCustomers.map((customer) => (
-									<tr key={customer._id}>
-										<td>{customer.customerId}</td>
-										<td>{customer.name}</td>
-										<td>{customer.email || '—'}</td>
-										<td>{customer.phoneNumber || '—'}</td>
-										<td>{customer.address || '—'}</td>
-										<td>
-											{customer.createdAt
-												? new Date(customer.createdAt).toLocaleDateString()
-												: '—'}
-										</td>
-										<td>
-											<button
-												onClick={() => handleEditClick(customer)}
-												className="customer-btn edit-btn"
-											>
-												Edit
-											</button>
-											<button
-												onClick={() => handleViewClick(customer)}
-												className="customer-btn view-btn"
-											>
-												View
-											</button>
-										</td>
-									</tr>
-								))
-							)}
-						</tbody>
-					</table>
-				</div>
-			</main>
-		</>
-	);
+						) : (
+							displayedCustomers.map((customer) => (
+							<tr key={customer._id}>
+								<td>{customer.customerId}</td>
+								<td>{customer.name}</td>
+								<td>{customer.email || '—'}</td>
+								<td>{customer.phoneNumber || '—'}</td>
+								<td>{customer.address || '—'}</td>
+								<td>
+								{customer.createdAt
+									? new Date(customer.createdAt).toLocaleString('en-PH', {
+										timeZone: 'Asia/Manila',
+									})
+									: '—'}
+								</td>
+								<td>
+								{customer.updatedAt
+									? new Date(customer.updatedAt).toLocaleString('en-PH', {
+										timeZone: 'Asia/Manila',
+									})
+									: '—'}
+								</td>
+								<td>
+								<button
+									onClick={() => handleEditClick(customer)}
+									className="module-action-btn module-edit-btn"
+								>
+									Edit
+								</button>
+								<button
+									onClick={() => handleViewClick(customer)}
+									className="module-action-btn module-view-btn"
+								>
+									View
+								</button>
+								</td>
+							</tr>
+							))
+						)}
+					</tbody>
+				</table>
+			</div>
+		</main>
+	</>
+);
 };
 
 export default CustomerManagement;
