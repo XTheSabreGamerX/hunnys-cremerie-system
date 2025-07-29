@@ -13,7 +13,7 @@ const SupplierManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchField, setSearchField] = useState("supplierId");
   const [selectedSupplier, setSelectedSupplier] = useState(null);
-  const [modalMode, setModalMode] = useState("view");
+  const [modalMode, setModalMode] = useState(null);
   const [pendingEditData, setPendingEditData] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -186,8 +186,8 @@ const SupplierManagement = () => {
             },
           ]}
           onClose={() => {
-            setIsViewOpen(false);
             setViewedSupplier(null);
+            setIsViewOpen(false);
           }}
           onDelete={() => handleDelete(viewedSupplier._id)}
         />
@@ -221,10 +221,11 @@ const SupplierManagement = () => {
         <EditModal
           item={modalMode === "edit" ? selectedSupplier : {}}
           fields={supplierFields}
-          onSave={handleAddOrEdit}
-          onClose={() => {
+          onSave={handleAddOrEdit}   
+          modalType="supplier"
+          onClose={() => {         
+            setModalMode(null);
             setSelectedSupplier(null);
-            setModalMode("view");
           }}
           mode={modalMode}
         />
@@ -233,9 +234,9 @@ const SupplierManagement = () => {
       <Sidebar />
 
       <main className="module-main-content supplier-main">
-		<div className="module-header">
-			<h1 className="module-title">Supplier Management</h1>
-		</div>
+        <div className="module-header">
+          <h1 className="module-title">Supplier Management</h1>
+        </div>
 
         <div className="module-actions-container">
           <select
@@ -300,8 +301,8 @@ const SupplierManagement = () => {
                         <button
                           className="module-action-btn module-edit-btn"
                           onClick={() => {
-                            setSelectedSupplier(supplier);
                             setModalMode("edit");
+                            setSelectedSupplier(supplier);
                           }}
                         >
                           Edit

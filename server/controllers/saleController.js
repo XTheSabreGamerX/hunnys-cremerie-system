@@ -1,4 +1,5 @@
 const Sale = require("../models/Sale");
+const Inventory = require("../models/InventoryItem");
 
 // GET function to get all sales
 const getAllSales = async (req, res) => {
@@ -26,11 +27,31 @@ const createSale = async (req, res) => {
   try {
     const newSale = new Sale(req.body);
     await newSale.save();
-    res
-      .status(201)
-      .json({ message: "Sale recorded successfully", sale: newSale });
+
+    // Deducts inventory item when making a sale
+    for (const soldItem of newSale.items) {
+      const inventoryItem = await Inventory.findOne({
+        itemId: soldItem.itemId,
+      });
+
+      if (!inventoryItem) continue;
+
+      inventoryItem.stock -= soldItem.quantity;
+      if (inventoryItem.stock < 0) inventoryItem.stock = 0;
+
+      await inventoryItem.save();
+    }
+
+    res.status(201).json({
+      message: "Sale recorded and inventory updated successfully",
+      sale: newSale,
+    });
   } catch (err) {
-    res.status(400).json({ message: "Failed to create sale", error: err });
+    console.error("Sale creation error:", err);
+    res.status(400).json({
+      message: "Failed to create sale",
+      error: err,
+    });
   }
 };
 
@@ -51,12 +72,16 @@ const updateSale = async (req, res) => {
 // DELETE function to delete a sale
 const deleteSale = async (req, res) => {
   try {
+
     const deletedSale = await Sale.findByIdAndDelete(req.params.id);
-    if (!deletedSale)
-      return res.status(404).json({ message: "Sale not found" });
-    res.status(200).json({ message: "Sale deleted" });
+
+    if (!deletedSale) {
+      return res.status(404).json({ message: 'Sale not found' });
+    }
+
+    res.status(200).json({ message: 'Sale deleted successfully' });
   } catch (err) {
-    res.status(500).json({ message: "Failed to delete sale", error: err });
+    res.status(500).json({ message: 'Error deleting sale', error: err });
   }
 };
 

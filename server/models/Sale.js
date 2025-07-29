@@ -4,6 +4,12 @@ const saleSchema = new mongoose.Schema(
   {
     saleId: { type: String, required: true, unique: true },
     customerName: { type: String, required: true },
+    orderType: { 
+      type: String, 
+      enum: ["Walk-in", "Online"], 
+      default: "Online",
+      required: true
+    },
     items: [
       {
         itemId: String,

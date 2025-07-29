@@ -14,6 +14,7 @@ const Inventory = () => {
   const [searchField, setSearchField] = useState("itemId");
   const [selectedItem, setSelectedItem] = useState(null);
   const [modalMode, setModalMode] = useState("view");
+  const [formData, setFormData] = useState({});
   const [pendingEditData, setPendingEditData] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -244,14 +245,17 @@ const Inventory = () => {
 
       {(modalMode === "edit" || modalMode === "add") && (
         <EditModal
-          item={modalMode === "edit" ? selectedItem : {}}
+          item={modalMode === "edit" ? selectedItem : null}
           fields={inventoryFields}
-          onSave={handleAddOrEdit}
+          onSave={handleAddOrEdit}      
+          modalType="inventory"
           onClose={() => {
             setSelectedItem(null);
             setModalMode("view");
           }}
           mode={modalMode}
+          formData={formData}
+          setFormData={setFormData}
         />
       )}
 
@@ -298,6 +302,7 @@ const Inventory = () => {
             onClick={() => {
               setModalMode("add");
               setSelectedItem(null);
+              setFormData({});
             }}
           >
             Add Item
