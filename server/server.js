@@ -4,6 +4,7 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const requestRoutes = require('./routes/request');
 const inventoryRoutes = require('./routes/inventory');
+const saleRoutes = require('./routes/sale');
 const supplierRoutes = require('./routes/supplier');
 const customerRoutes = require('./routes/customer');
 const cors = require('cors');
@@ -19,6 +20,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/request', requestRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/sales', saleRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/customers', customerRoutes);
 

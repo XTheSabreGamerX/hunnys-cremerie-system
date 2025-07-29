@@ -39,7 +39,7 @@ const Sidebar = () => {
               {(role === 'admin' || role === 'manager' || role === 'staff') && (
                 <>
                   <Link to="/inventory"><span className="label">Inventory</span></Link>
-                  <Link to="/dashboard"><span className="label">Sales Management</span></Link>
+                  <Link to="/sales-management"><span className="label">Sales Management</span></Link>
                   <Link to="/dashboard"><span className="label">Sales Report</span></Link>
                   <Link to="/dashboard"><span className="label">Profitability Dashboard</span></Link>
                   <Link to="/supplier-management"><span className="label">Supplier Management</span></Link>

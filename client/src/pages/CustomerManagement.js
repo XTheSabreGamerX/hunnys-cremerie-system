@@ -222,7 +222,9 @@ const CustomerManagement = () => {
 		)}
 
 		<main className="module-main-content customer-main">
-			<h1>Customer Management</h1>
+			<div className="module-header">
+				<h1 className="module-title">Customer Management</h1>
+			</div>
 
 			<div className="module-actions-container">
 				<select

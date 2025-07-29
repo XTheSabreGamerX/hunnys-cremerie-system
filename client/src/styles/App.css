@@ -66,6 +66,24 @@ html, body {
   color: #333;
 }
 
+.module-header {
+  width: 100%;
+  padding: 20px 30px;
+  padding-left: 60px;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #727272;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fff;
+}
+
+.module-title {
+  font-size: 30px;
+  font-weight: 600;
+  color: #000000;
+}
+
 .module-actions-container {
   display: flex;
   justify-content: center;
