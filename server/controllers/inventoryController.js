@@ -1,12 +1,30 @@
-const InventoryItem = require('../models/InventoryItem');
+const InventoryItem = require("../models/InventoryItem");
 
 // GET all inventory items
 const getAllInventoryItems = async (req, res) => {
+
   try {
-    const items = await InventoryItem.find();
-    res.json(items);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const totalItems = await InventoryItem.countDocuments();
+    const totalPages = Math.ceil(totalItems / limit);
+
+    const items = await InventoryItem.find()
+      .skip(skip)
+      .limit(limit)
+      .sort({ itemId: 1 });
+
+    res.json({
+      items,
+      currentPage: page,
+      totalPages,
+      totalItems,
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Server error while fetching inventory' });
+    console.error("Server error while fetching inventory:", err);
+    res.status(500).json({ message: "Server error while fetching inventory" });
   }
 };
 
@@ -18,7 +36,7 @@ const addInventoryItem = async (req, res) => {
     res.status(201).json(item);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to add item.' });
+    res.status(500).json({ error: "Failed to add item." });
   }
 };
 
@@ -31,12 +49,12 @@ const updateInventoryItem = async (req, res) => {
       { new: true, runValidators: true }
     );
     if (!updated) {
-      return res.status(404).json({ error: 'Item not found' });
+      return res.status(404).json({ error: "Item not found" });
     }
     res.json(updated);
   } catch (err) {
-    console.error('Update error:', err);
-    res.status(500).json({ error: 'Failed to update item.' });
+    console.error("Update error:", err);
+    res.status(500).json({ error: "Failed to update item." });
   }
 };
 
@@ -45,11 +63,11 @@ const deleteInventoryItem = async (req, res) => {
   try {
     const deletedItem = await InventoryItem.findByIdAndDelete(req.params.id);
     if (!deletedItem) {
-      return res.status(404).json({ message: 'Item not found' });
+      return res.status(404).json({ message: "Item not found" });
     }
-    res.status(200).json({ message: 'Item has deleted successfully' });
+    res.status(200).json({ message: "Item has deleted successfully" });
   } catch (err) {
-    res.status(500).json({ message: 'Server error during deletion' });
+    res.status(500).json({ message: "Server error during deletion" });
   }
 };
 
@@ -57,5 +75,5 @@ module.exports = {
   getAllInventoryItems,
   addInventoryItem,
   updateInventoryItem,
-  deleteInventoryItem
+  deleteInventoryItem,
 };

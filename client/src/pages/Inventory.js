@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import Sidebar from "../scripts/Sidebar";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
@@ -23,6 +23,9 @@ const Inventory = () => {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("success");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const containerRef = useRef(null);
 
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
@@ -45,19 +48,64 @@ const Inventory = () => {
     }, 2000);
   };
 
+  // Fetches all inventory items
   const fetchItems = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/inventory`);
+      const res = await fetch(
+        `${API_BASE}/api/inventory?page=${page}&limit=10`
+      );
       const data = await res.json();
-      setItems(data);
+
+      console.log("Fetched data:", data);
+
+      const wrappedData = Array.isArray(data)
+        ? {
+            items: data,
+            currentPage: 1,
+            totalPages: 1,
+            totalItems: data.length,
+          }
+        : data;
+
+      if (page === 1) {
+        setItems(wrappedData.items);
+      } else {
+        setItems((prev) => [...prev, ...wrappedData.items]);
+      }
+
+      setHasMore(page < wrappedData.totalPages);
     } catch (err) {
       console.error("Error fetching inventory:", err);
     }
-  }, [API_BASE]);
+  }, [API_BASE, page]);
 
   useEffect(() => {
     fetchItems();
-  }, [fetchItems]);
+  }, [page, fetchItems]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+
+    const handleScroll = () => {
+      if (
+        container.scrollTop + container.clientHeight >=
+          container.scrollHeight - 50 &&
+        hasMore
+      ) {
+        setPage((prev) => prev + 1);
+      }
+    };
+
+    if (container) {
+      container.addEventListener("scroll", handleScroll);
+    }
+
+    return () => {
+      if (container) {
+        container.removeEventListener("scroll", handleScroll);
+      }
+    };
+  }, [hasMore]);
 
   useEffect(() => {
     const query = searchQuery.toLowerCase().trim();
@@ -138,7 +186,9 @@ const Inventory = () => {
         body: JSON.stringify(payload),
       });
 
-      await fetchItems();
+      setItems([]);
+      setPage(1);
+
       setSelectedItem(null);
       setModalMode("view");
       showPopup(
@@ -183,7 +233,17 @@ const Inventory = () => {
       });
       if (!res.ok) throw new Error("Delete failed");
 
-      setItems((prev) => prev.filter((item) => item._id !== itemToDelete._id));
+      const updatedItems = items.filter(
+        (item) => item._id !== itemToDelete._id
+      );
+      setItems(updatedItems);
+
+      if (updatedItems.length === 0 && page > 1) {
+        setPage((prev) => prev - 1);
+      } else {
+        await fetchItems(true);
+      }
+
       showPopup("Item deleted successfully!", "success");
     } catch (error) {
       console.error("Failed to delete item:", error);
@@ -247,7 +307,7 @@ const Inventory = () => {
         <EditModal
           item={modalMode === "edit" ? selectedItem : null}
           fields={inventoryFields}
-          onSave={handleAddOrEdit}      
+          onSave={handleAddOrEdit}
           modalType="inventory"
           onClose={() => {
             setSelectedItem(null);
@@ -309,7 +369,7 @@ const Inventory = () => {
           </button>
         </div>
 
-        <div className="module-table-container">
+        <div className="module-table-container" ref={containerRef}>
           <table>
             <thead>
               <tr>

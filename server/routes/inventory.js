@@ -9,8 +9,11 @@ const {
 
 // Routes
 router.get('/', getAllInventoryItems);
+
 router.post('/', addInventoryItem);
+
 router.put('/:id', updateInventoryItem);
+
 router.delete('/:id', deleteInventoryItem);
 
 module.exports = router;
