@@ -186,9 +186,9 @@ const Inventory = () => {
         body: JSON.stringify(payload),
       });
 
-      setItems([]);
       setPage(1);
-
+      setHasMore(true);
+      await fetchItems();
       setSelectedItem(null);
       setModalMode("view");
       showPopup(
@@ -233,17 +233,9 @@ const Inventory = () => {
       });
       if (!res.ok) throw new Error("Delete failed");
 
-      const updatedItems = items.filter(
-        (item) => item._id !== itemToDelete._id
-      );
-      setItems(updatedItems);
-
-      if (updatedItems.length === 0 && page > 1) {
-        setPage((prev) => prev - 1);
-      } else {
-        await fetchItems(true);
-      }
-
+      setPage(1);
+      setHasMore(true);
+      await fetchItems();
       showPopup("Item deleted successfully!", "success");
     } catch (error) {
       console.error("Failed to delete item:", error);
