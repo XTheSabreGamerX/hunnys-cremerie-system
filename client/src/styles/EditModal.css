@@ -96,3 +96,23 @@
 .close-btn:hover {
   background-color: #d32f2f;
 }
+
+.module-input,
+.module-dropdown {
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100%;
+  background-color: #fff;
+  box-sizing: border-box;
+  margin-top: 4px;
+  margin-bottom: 12px;
+}
+
+.module-input:focus,
+.module-dropdown:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 3px rgba(76, 175, 80, 0.4);
+}
