@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import Sidebar from "../scripts/Sidebar";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
@@ -20,21 +20,41 @@ const CustomerManagement = () => {
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("");
   const [modalMode, setModalMode] = useState("view");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const containerRef = useRef(null);
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/customers`);
-      const data = await response.json();
-      setCustomers(data);
-    } catch (error) {
-      console.error("Error fetching customers:", error);
-    }
-  };
+      const res = await fetch(
+        `${API_BASE}/api/customers?page=${page}&limit=10`
+      );
+      const data = await res.json();
 
+      // Adjust to match backend's response structure
+      const wrappedData = Array.isArray(data)
+        ? {
+            customers: data,
+            currentPage: 1,
+            totalPages: 1,
+          }
+        : data;
+
+      const newItems = Array.isArray(wrappedData.customers)
+        ? wrappedData.customers
+        : [];
+
+      setCustomers((prev) =>
+        page === 1 ? newItems : [...(prev || []), ...newItems]
+      );
+      setHasMore(page < wrappedData.totalPages);
+    } catch (err) {
+      console.error("Error fetching customers:", err);
+      setHasMore(false);
+    }
+  }, [page]);
+
+  // Validation function for checking empty fields and duplicate IDs
   const validateCustomerData = (data) => {
     const { customerId, name } = data;
 
@@ -44,9 +64,15 @@ const CustomerManagement = () => {
       return false;
     }
 
+    console.log(
+      "Checking ID:",
+      customerId,
+      "Against:",
+      customers.map((c) => c.customerId)
+    );
     if (
       modalMode === "add" &&
-      customers.some(
+      (customers || []).some(
         (c) => c.customerId.toLowerCase() === customerId.trim().toLowerCase()
       )
     ) {
@@ -57,6 +83,35 @@ const CustomerManagement = () => {
 
     return true;
   };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [page, fetchCustomers]);
+
+  // Infinite Scroll for pagination
+  useEffect(() => {
+    const container = containerRef.current;
+
+    const handleScroll = () => {
+      if (
+        container.scrollTop + container.clientHeight >=
+          container.scrollHeight - 50 &&
+        hasMore
+      ) {
+        setPage((prev) => prev + 1);
+      }
+    };
+
+    if (container) {
+      container.addEventListener("scroll", handleScroll);
+    }
+
+    return () => {
+      if (container) {
+        container.removeEventListener("scroll", handleScroll);
+      }
+    };
+  }, [hasMore]);
 
   const handleEditClick = (customer) => {
     setSelectedItem(customer);
@@ -75,7 +130,8 @@ const CustomerManagement = () => {
       if (!response.ok) throw new Error("Add failed");
 
       const added = await response.json();
-      setCustomers((prev) => [...prev, added]);
+
+      setCustomers((prev) => [...(prev || []), added]);
       setPopupMessage("Customer added successfully!");
       setPopupType("success");
       setModalMode("view");
@@ -107,6 +163,10 @@ const CustomerManagement = () => {
         )
       );
 
+      setPage(1);
+      setHasMore(true);
+      await fetchCustomers();
+
       setPopupMessage("Customer updated successfully!");
       setPopupType("success");
       setSelectedItem(null);
@@ -128,7 +188,13 @@ const CustomerManagement = () => {
       );
       if (!response.ok) throw new Error("Delete failed");
 
-      setCustomers((prev) => prev.filter((c) => c._id !== itemToDelete._id));
+      setPage(1);
+      setHasMore(true);
+      await fetchCustomers();
+
+      setCustomers((prev) =>
+        (prev || []).filter((c) => c._id !== itemToDelete._id)
+      );
       setPopupMessage("Item deleted successfully!");
       setPopupType("success");
     } catch (error) {
@@ -151,10 +217,12 @@ const CustomerManagement = () => {
     setIsConfirmOpen(true);
   };
 
-  const displayedCustomers = customers.filter((customer) => {
-    const value = customer[searchField];
-    return value?.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const displayedCustomers = Array.isArray(customers)
+    ? customers.filter((customer) => {
+        const value = customer[searchField];
+        return value?.toLowerCase().includes(searchQuery.toLowerCase());
+      })
+    : [];
 
   return (
     <>

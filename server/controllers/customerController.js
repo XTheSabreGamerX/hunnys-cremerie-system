@@ -2,11 +2,24 @@ const Customer = require('../models/Customer');
 
 // Get all Customers
 const getAllCustomers = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
   try {
-    const customers = await Customer.find();
-    res.json(customers);
+    const total = await Customer.countDocuments();
+    const customers = await Customer.find()
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .sort({ customerId: 1 });
+
+    res.json({
+      customers,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Failed to get customers:', err);
+    res.status(500).json({ message: 'Server Error' });
   }
 };
 

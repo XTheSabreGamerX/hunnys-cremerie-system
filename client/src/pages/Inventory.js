@@ -83,6 +83,7 @@ const Inventory = () => {
     fetchItems();
   }, [page, fetchItems]);
 
+  // Infinite Scroll for pagination
   useEffect(() => {
     const container = containerRef.current;
 
