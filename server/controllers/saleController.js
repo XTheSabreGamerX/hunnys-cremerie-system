@@ -3,11 +3,24 @@ const Inventory = require("../models/InventoryItem");
 
 // GET function to get all sales
 const getAllSales = async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
   try {
-    const sales = await Sale.find().sort({ createdAt: -1 });
-    res.status(200).json(sales);
+    const total = await Sale.countDocuments();
+    const sales = await Sale.find()
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    res.json({
+      sales,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+    });
   } catch (err) {
-    res.status(500).json({ message: "Failed to fetch sales", error: err });
+    console.error('Failed to get sales:', err);
+    res.status(500).json({ message: 'Server Error' });
   }
 };
 

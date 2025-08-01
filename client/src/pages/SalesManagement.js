@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import Sidebar from "../scripts/Sidebar";
 import EditModal from "../components/EditModal";
@@ -23,6 +23,9 @@ const SalesManagement = () => {
   const [saleToDelete, setSaleToDelete] = useState(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewedSale, setViewedSale] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const containerRef = useRef(null);
 
   // Fields for creating a sale
   const saleFields = [
@@ -89,28 +92,74 @@ const SalesManagement = () => {
 
   // Fetch inventory items
   useEffect(() => {
-    fetch(`${API_BASE}/api/inventory`)
+    fetch(`${API_BASE}/api/inventory?page=1&limit=1000`)
       .then((res) => res.json())
-      .then((data) => setInventoryItems(data))
+      .then((data) => {
+        const items = Array.isArray(data) ? data : data.items;
+        setInventoryItems(items || []);
+      })
       .catch((err) => console.error("Failed to fetch inventory items", err));
   }, []);
 
-  // Fetch sales
-  const fetchSales = async () => {
+  // Fetch sales with pagination
+  const fetchSales = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/sales`);
-      if (!response.ok) throw new Error("Failed to fetch sales.");
+      const response = await fetch(
+        `${API_BASE}/api/sales?page=${page}&limit=10`
+      );
       const data = await response.json();
-      setSales(data);
-    } catch (err) {
-      setPopupMessage(err.message || "Something went wrong.");
-      setPopupType("error");
+
+      const wrappedData = Array.isArray(data)
+        ? {
+            sales: data,
+            currentPage: 1,
+            totalPages: 1,
+          }
+        : data;
+
+      const newSales = Array.isArray(wrappedData.sales)
+        ? wrappedData.sales
+        : [];
+
+      setSales((prev) =>
+        page === 1 ? newSales : [...(prev || []), ...newSales]
+      );
+      setHasMore(page < wrappedData.totalPages);
+    } catch (error) {
+      console.error("Error fetching sales:", error);
+      setHasMore(false);
     }
-  };
+  }, [page]);
 
   useEffect(() => {
     fetchSales();
-  }, []);
+  }, [fetchSales]);
+
+  // Infinite scrolling for pagination
+  useEffect(() => {
+    const container = containerRef.current;
+
+    const handleScroll = () => {
+      if (
+        container &&
+        container.scrollTop + container.clientHeight >=
+          container.scrollHeight - 100 &&
+        hasMore
+      ) {
+        setPage((prevPage) => prevPage + 1);
+      }
+    };
+
+    if (container) {
+      container.addEventListener("scroll", handleScroll);
+    }
+
+    return () => {
+      if (container) {
+        container.removeEventListener("scroll", handleScroll);
+      }
+    };
+  }, [hasMore]);
 
   // Filter sales
   useEffect(() => {
@@ -279,7 +328,7 @@ const SalesManagement = () => {
           onClose={handleCloseModal}
           mode="add"
           modalType="sale"
-          allItems={inventoryItems}
+          allItems={Array.isArray(inventoryItems) ? inventoryItems : []}
           itemForm={itemForm}
           setItemForm={setItemForm}
         />
