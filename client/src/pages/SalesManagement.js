@@ -1,6 +1,12 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import { useNavigate } from "react-router-dom";
-import { v4 as uuidv4 } from "uuid";
+import { nanoid } from "nanoid";
 import Sidebar from "../scripts/Sidebar";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
@@ -31,18 +37,23 @@ const SalesManagement = () => {
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
-  const authHeader = {
-    headers: {
-      Authorization: `Bearer ${token}`,
+  const authHeader = useMemo(
+    () => ({
       "Content-Type": "application/json",
-    },
-  };
+      Authorization: `Bearer ${token}`,
+    }),
+    [token]
+  );
 
   useEffect(() => {
     if (!token) {
       navigate("/login");
     }
   }, [token, navigate]);
+
+  const generateSaleID = () => {
+    return `SALE-${nanoid(8).toUpperCase()}`;
+  };
 
   // Fields for creating a sale
   const saleFields = [
@@ -110,7 +121,7 @@ const SalesManagement = () => {
   // Fetch inventory items
   useEffect(() => {
     fetch(`${API_BASE}/api/inventory?page=1&limit=1000`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: authHeader,
     })
       .then((res) => res.json())
       .then((data) => {
@@ -118,7 +129,7 @@ const SalesManagement = () => {
         setInventoryItems(items || []);
       })
       .catch((err) => console.error("Failed to fetch inventory items", err));
-  }, [token]);
+  }, [token, authHeader]);
 
   // Fetch sales with pagination
   const fetchSales = useCallback(async () => {
@@ -126,7 +137,7 @@ const SalesManagement = () => {
       const response = await fetch(
         `${API_BASE}/api/sales?page=${page}&limit=10`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: authHeader,
         }
       );
       const data = await response.json();
@@ -151,7 +162,7 @@ const SalesManagement = () => {
       console.error("Error fetching sales:", error);
       setHasMore(false);
     }
-  }, [page, token]);
+  }, [page, authHeader]);
 
   useEffect(() => {
     fetchSales();
@@ -236,7 +247,7 @@ const SalesManagement = () => {
     const totalAmount = subtotal + taxAmount;
 
     const saleToSend = {
-      saleId: uuidv4(),
+      saleId: generateSaleID(),
       customerName: saleData.customerName,
       orderType: saleData.orderType,
       items: saleData.items,

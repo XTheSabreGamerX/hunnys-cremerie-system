@@ -38,16 +38,21 @@ const getSaleById = async (req, res) => {
 // POST function to create a new sale
 const createSale = async (req, res) => {
   try {
+    console.log('📥 Incoming sale:', req.body); // <-- Log full incoming sale
+
     const newSale = new Sale(req.body);
     await newSale.save();
 
-    // Deducts inventory item when making a sale
-    for (const soldItem of newSale.items) {
-      const inventoryItem = await Inventory.findOne({
-        itemId: soldItem.itemId,
-      });
+    console.log('✅ Sale saved. Deducting inventory...');
 
-      if (!inventoryItem) continue;
+    for (const soldItem of newSale.items) {
+      console.log('🔍 Processing item:', soldItem);
+
+      const inventoryItem = await Inventory.findOne({ itemId: soldItem.itemId });
+      if (!inventoryItem) {
+        console.warn('⚠️ Item not found in inventory:', soldItem.itemId);
+        continue;
+      }
 
       inventoryItem.stock -= soldItem.quantity;
       if (inventoryItem.stock < 0) inventoryItem.stock = 0;
@@ -56,13 +61,13 @@ const createSale = async (req, res) => {
     }
 
     res.status(201).json({
-      message: "Sale recorded and inventory updated successfully",
+      message: 'Sale recorded and inventory updated successfully',
       sale: newSale,
     });
   } catch (err) {
-    console.error("Sale creation error:", err);
+    console.error('❌ Sale creation error:', err);
     res.status(400).json({
-      message: "Failed to create sale",
+      message: 'Failed to create sale',
       error: err,
     });
   }
