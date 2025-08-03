@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const authenticateToken = require('../middleware/auth');
 const {
     getAllSuppliers,
     createSupplier,
@@ -7,12 +8,12 @@ const {
     deleteSupplier
 } = require ('../controllers/supplierController');
 
-router.get('/', getAllSuppliers);
+router.get('/', authenticateToken, getAllSuppliers);
 
-router.post('/', createSupplier);
+router.post('/', authenticateToken, createSupplier);
 
-router.put('/:id', updateSupplier);
+router.put('/:id', authenticateToken, updateSupplier);
 
-router.delete('/:id', deleteSupplier);
+router.delete('/:id', authenticateToken, deleteSupplier);
 
 module.exports = router;

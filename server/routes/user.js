@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const authenticateToken = require('../middleware/auth');
 const {
   getAllUsers,
   deactivateUser,
@@ -8,15 +9,15 @@ const {
 } = require('../controllers/userController');
 
 // Gets all user details
-router.get('/', getAllUsers);
+router.get('/', authenticateToken, getAllUsers);
 
 // Deactivate user account
-router.put('/deactivate/:id', deactivateUser);
+router.put('/deactivate/:id', authenticateToken, deactivateUser);
 
 // Reactivate user account
-router.post('/reactivate/:id', reactivateUser);
+router.post('/reactivate/:id', authenticateToken, reactivateUser);
 
 // Update user account
-router.put('/update/:id', updateUser);
+router.put('/update/:id', authenticateToken, updateUser);
 
 module.exports = router;

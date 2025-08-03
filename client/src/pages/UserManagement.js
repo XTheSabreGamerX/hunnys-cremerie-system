@@ -1,11 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
 import Sidebar from '../scripts/Sidebar';
 import ConfirmationModal from '../components/ConfirmationModal';
 import PopupMessage from '../components/PopupMessage';
 import EditUserModal from '../components/EditUserModal';
 import '../styles/UserManagement.css';
-import '../styles/App.css'
+import '../styles/App.css';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -17,44 +16,53 @@ const UserManagement = () => {
   const [editingUser, setEditingUser] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  const [showConfirm,setShowConfirm] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [confirmMessage, setConfirmMessage] = useState('');
   const [onConfirmAction, setOnConfirmAction] = useState(() => () => {});
 
   const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  const token = localStorage.getItem('token');
 
   const showPopup = (message, type = 'success') => {
-  setPopupMessage(message);
-  setPopupType(type);
-
-  setTimeout(() => {
-    setPopupMessage('');
-    setPopupType('');
-  }, 2000);
+    setPopupMessage(message);
+    setPopupType(type);
+    setTimeout(() => {
+      setPopupMessage('');
+      setPopupType('');
+    }, 2000);
   };
 
-  const fetchUsers =  useCallback(()=> {
-    axios.get(`${API_BASE}/api/user`)
-      .then(res => setUsers(res.data))
+  const fetchUsers = useCallback(() => {
+    fetch(`${API_BASE}/api/user`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => setUsers(data))
       .catch(err => console.error('Error fetching users:', err));
-  }, [API_BASE]);
+  }, [API_BASE, token]);
 
   const fetchRequests = useCallback(() => {
-    axios.get(`${API_BASE}/api/request`)
-      .then(res => setRequests(res.data))
+    fetch(`${API_BASE}/api/request`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.json())
+      .then(data => setRequests(data))
       .catch(err => console.error('Error fetching requests:', err));
-  }, [API_BASE]);
+  }, [API_BASE, token]);
 
   useEffect(() => {
     fetchUsers();
     fetchRequests();
   }, [fetchUsers, fetchRequests]);
 
-  //Accepting registration requests
   const handleApprove = async (id) => {
     try {
-      const res = await axios.post(`${API_BASE}/api/request/approve/${id}`);
-      showPopup(res.data.message);
+      const res = await fetch(`${API_BASE}/api/request/approve/${id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      showPopup(data.message);
       fetchRequests();
       fetchUsers();
     } catch (err) {
@@ -63,86 +71,100 @@ const UserManagement = () => {
     }
   };
 
-  //Rejecting registration requests
   const handleReject = (id) => {
-  axios
-    .delete(`${API_BASE}/api/request/reject/${id}`)
-    .then(() => {
-      showPopup('Request rejected successfully!');
-      setRequests(requests.filter((req) => req._id !== id));
+    fetch(`${API_BASE}/api/request/reject/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
     })
-    .catch((err) => {
-      console.error('Error rejecting request:', err);
-      showPopup('Failed to reject the request.', 'error');
-    });
+      .then(() => {
+        showPopup('Request rejected successfully!');
+        setRequests(requests.filter((req) => req._id !== id));
+      })
+      .catch((err) => {
+        console.error('Error rejecting request:', err);
+        showPopup('Failed to reject the request.', 'error');
+      });
   };
 
-  //Deactivating accounts
   const handleDeactivate = async (id) => {
-  try {
-    const res = await axios.put(`${API_BASE}/api/user/deactivate/${id}`);
-    showPopup(res.data.message);
-    fetchUsers();
-  } catch (err) {
-    console.error('Error deactivating user:', err);
-    showPopup('Failed to deactivate user.', 'error');
-  }
+    try {
+      const res = await fetch(`${API_BASE}/api/user/deactivate/${id}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      showPopup(data.message);
+      fetchUsers();
+    } catch (err) {
+      console.error('Error deactivating user:', err);
+      showPopup('Failed to deactivate user.', 'error');
+    }
   };
 
-  //Reactivating accounts
   const handleReactivate = async (id) => {
     try {
-      const res = await axios.post(`${API_BASE}/api/user/reactivate/${id}`);
-      showPopup(res.data.message);
+      const res = await fetch(`${API_BASE}/api/user/reactivate/${id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      showPopup(data.message);
       fetchUsers();
     } catch (err) {
       console.error('Error reactivating user:', err);
       showPopup('Failed to reactivate the user.', 'error');
     }
-    };
+  };
 
-  //Editing account details
   const handleEditClick = (user) => {
     setEditingUser(user);
     setShowEditModal(true);
-  }
+  };
 
   const handleSaveEdit = async (updatedUser) => {
-  try {
-    const res = await axios.put(`${API_BASE}/api/user/update/${updatedUser._id}`, {
-      username: updatedUser.username,
-      email: updatedUser.email,
-      role: updatedUser.role
-    });
-    showPopup(res.data.message || 'Account details has been successfully edited!', 'success');
-    setShowEditModal(false);
-    setEditingUser(null);
-    fetchUsers();
-  } catch (err) {
-    console.error('Error updating user:', err);
-    showPopup('Failed to update user.', 'error');
-  }
+    try {
+      const res = await fetch(`${API_BASE}/api/user/update/${updatedUser._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          username: updatedUser.username,
+          email: updatedUser.email,
+          role: updatedUser.role,
+        }),
+      });
+      const data = await res.json();
+      showPopup(data.message || 'Account details has been successfully edited!', 'success');
+      setShowEditModal(false);
+      setEditingUser(null);
+      fetchUsers();
+    } catch (err) {
+      console.error('Error updating user:', err);
+      showPopup('Failed to update user.', 'error');
+    }
   };
 
   return (
-    <>     
+    <>
       {showConfirm && (
-      <ConfirmationModal
-        message={confirmMessage}
-        onConfirm={async () => {
-          await onConfirmAction();
-          setShowConfirm(false);
-        }}
-        onCancel={() => setShowConfirm(false)}
-      />
+        <ConfirmationModal
+          message={confirmMessage}
+          onConfirm={async () => {
+            await onConfirmAction();
+            setShowConfirm(false);
+          }}
+          onCancel={() => setShowConfirm(false)}
+        />
       )}
 
       {showEditModal && (
-      <EditUserModal
-        user={editingUser}
-        onClose={() => setShowEditModal(false)}
-        onSave={handleSaveEdit}
-      />
+        <EditUserModal
+          user={editingUser}
+          onClose={() => setShowEditModal(false)}
+          onSave={handleSaveEdit}
+        />
       )}
 
       <PopupMessage
@@ -156,7 +178,6 @@ const UserManagement = () => {
 
       <Sidebar />
       <main className="user-management-main-content">
-
         <div className="requests-container">
           <h1>Registration Requests</h1>
           <table>
@@ -207,7 +228,7 @@ const UserManagement = () => {
               <tr>
                 <th>Username</th>
                 <th>Email</th>
-                <th>Role</th>          
+                <th>Role</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -220,7 +241,7 @@ const UserManagement = () => {
                   <td>{user.role || 'User'}</td>
                   <td>{user.status}</td>
                   <td>
-                    {user.email !== 'admin@hunnys.com' ? ( //Avoids the admin account from being deactivated. Will be changed later to owner's email.
+                    {user.email !== 'admin@hunnys.com' ? (
                       <>
                         <button
                           onClick={() => {
@@ -249,7 +270,6 @@ const UserManagement = () => {
             </tbody>
           </table>
         </div>
-
       </main>
     </>
   );

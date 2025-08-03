@@ -1,4 +1,11 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../scripts/Sidebar";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
@@ -24,14 +31,33 @@ const CustomerManagement = () => {
   const [hasMore, setHasMore] = useState(true);
   const containerRef = useRef(null);
 
+  const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/login");
+    }
+  }, [token, navigate]);
+
+  const authHeader = useMemo(
+    () => ({     
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    }),
+    [token]
+  );
+
   const fetchCustomers = useCallback(async () => {
     try {
       const res = await fetch(
-        `${API_BASE}/api/customers?page=${page}&limit=10`
+        `${API_BASE}/api/customers?page=${page}&limit=10`,
+        {
+          headers: authHeader,
+        }
       );
       const data = await res.json();
 
-      // Adjust to match backend's response structure
       const wrappedData = Array.isArray(data)
         ? {
             customers: data,
@@ -52,43 +78,12 @@ const CustomerManagement = () => {
       console.error("Error fetching customers:", err);
       setHasMore(false);
     }
-  }, [page]);
-
-  // Validation function for checking empty fields and duplicate IDs
-  const validateCustomerData = (data) => {
-    const { customerId, name } = data;
-
-    if (!customerId?.trim() || !name?.trim()) {
-      setPopupMessage("Please fill in all required fields.");
-      setPopupType("error");
-      return false;
-    }
-
-    console.log(
-      "Checking ID:",
-      customerId,
-      "Against:",
-      customers.map((c) => c.customerId)
-    );
-    if (
-      modalMode === "add" &&
-      (customers || []).some(
-        (c) => c.customerId.toLowerCase() === customerId.trim().toLowerCase()
-      )
-    ) {
-      setPopupMessage("Customer ID already exists. Please choose a unique ID.");
-      setPopupType("error");
-      return false;
-    }
-
-    return true;
-  };
+  }, [page, authHeader]);
 
   useEffect(() => {
     fetchCustomers();
   }, [page, fetchCustomers]);
 
-  // Infinite Scroll for pagination
   useEffect(() => {
     const container = containerRef.current;
 
@@ -113,9 +108,27 @@ const CustomerManagement = () => {
     };
   }, [hasMore]);
 
-  const handleEditClick = (customer) => {
-    setSelectedItem(customer);
-    setModalMode("edit");
+  const validateCustomerData = (data) => {
+    const { customerId, name } = data;
+
+    if (!customerId?.trim() || !name?.trim()) {
+      setPopupMessage("Please fill in all required fields.");
+      setPopupType("error");
+      return false;
+    }
+
+    if (
+      modalMode === "add" &&
+      (customers || []).some(
+        (c) => c.customerId.toLowerCase() === customerId.trim().toLowerCase()
+      )
+    ) {
+      setPopupMessage("Customer ID already exists. Please choose a unique ID.");
+      setPopupType("error");
+      return false;
+    }
+
+    return true;
   };
 
   const handleAddCustomer = async (newCustomer) => {
@@ -124,13 +137,13 @@ const CustomerManagement = () => {
     try {
       const response = await fetch(`${API_BASE}/api/customers`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeader,
         body: JSON.stringify(newCustomer),
       });
+
       if (!response.ok) throw new Error("Add failed");
 
       const added = await response.json();
-
       setCustomers((prev) => [...(prev || []), added]);
       setPopupMessage("Customer added successfully!");
       setPopupType("success");
@@ -150,10 +163,11 @@ const CustomerManagement = () => {
         `${API_BASE}/api/customers/${updatedCustomer._id}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeader,
           body: JSON.stringify(updatedCustomer),
         }
       );
+
       if (!response.ok) throw new Error("Update failed");
 
       const updatedData = await response.json();
@@ -184,8 +198,10 @@ const CustomerManagement = () => {
         `${API_BASE}/api/customers/${itemToDelete._id}`,
         {
           method: "DELETE",
+          headers: authHeader,
         }
       );
+
       if (!response.ok) throw new Error("Delete failed");
 
       setPage(1);
@@ -205,6 +221,11 @@ const CustomerManagement = () => {
       setIsViewOpen(false);
       setItemToDelete(null);
     }
+  };
+
+  const handleEditClick = (customer) => {
+    setSelectedItem(customer);
+    setModalMode("edit");
   };
 
   const handleViewClick = (customer) => {
@@ -332,7 +353,7 @@ const CustomerManagement = () => {
           </button>
         </div>
 
-        <div className="module-table-container">
+        <div className="module-table-container" ref={containerRef}>
           <table>
             <thead>
               <tr>

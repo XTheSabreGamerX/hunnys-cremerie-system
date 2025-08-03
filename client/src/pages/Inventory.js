@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../scripts/Sidebar";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
@@ -27,6 +28,16 @@ const Inventory = () => {
   const [hasMore, setHasMore] = useState(true);
   const containerRef = useRef(null);
 
+  const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+
+  // Return to login page if token is nowhere to be found
+  useEffect(() => {
+    if (!token) {
+      navigate("/login");
+    }
+  }, [token, navigate]);
+
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
   const inventoryFields = [
@@ -52,8 +63,14 @@ const Inventory = () => {
   const fetchItems = useCallback(async () => {
     try {
       const res = await fetch(
-        `${API_BASE}/api/inventory?page=${page}&limit=10`
+        `${API_BASE}/api/inventory?page=${page}&limit=10`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
+
       const data = await res.json();
 
       console.log("Fetched data:", data);
@@ -77,7 +94,7 @@ const Inventory = () => {
     } catch (err) {
       console.error("Error fetching inventory:", err);
     }
-  }, [API_BASE, page]);
+  }, [API_BASE, page, token]);
 
   useEffect(() => {
     fetchItems();
@@ -167,6 +184,7 @@ const Inventory = () => {
     return true;
   };
 
+  // Saves item changes
   const saveItem = async (data) => {
     const payload = {
       ...data,
@@ -183,7 +201,10 @@ const Inventory = () => {
 
       await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -231,7 +252,11 @@ const Inventory = () => {
     try {
       const res = await fetch(`${API_BASE}/api/inventory/${itemToDelete._id}`, {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
+
       if (!res.ok) throw new Error("Delete failed");
 
       setPage(1);

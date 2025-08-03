@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../scripts/Sidebar";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
@@ -23,6 +24,15 @@ const SupplierManagement = () => {
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("success");
 
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login");
+    }
+  }, [navigate]);
+
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
   const supplierFields = [
@@ -42,12 +52,33 @@ const SupplierManagement = () => {
   };
 
   const fetchSuppliers = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No token found.");
+      return;
+    }
+
     try {
-      const res = await fetch(`${API_BASE}/api/suppliers`);
+      const res = await fetch(`${API_BASE}/api/suppliers`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to fetch suppliers");
+      }
+
       const data = await res.json();
+      if (!Array.isArray(data)) {
+        console.error("Expected an array, got:", data);
+        return;
+      }
+
       setSuppliers(data);
     } catch (err) {
-      console.error("Error fetching suppliers:", err);
+      console.error("Error fetching suppliers:", err.message);
     }
   }, [API_BASE]);
 
@@ -85,6 +116,12 @@ const SupplierManagement = () => {
   };
 
   const saveSupplier = async (data) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      showPopup("Authentication required.", "error");
+      return;
+    }
+
     try {
       const method = modalMode === "add" ? "POST" : "PUT";
       const url =
@@ -94,7 +131,10 @@ const SupplierManagement = () => {
 
       await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(data),
       });
 
@@ -136,10 +176,28 @@ const SupplierManagement = () => {
   };
 
   const confirmDelete = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      showPopup("Authentication required.", "error");
+      return;
+    }
+
     try {
-      await fetch(`${API_BASE}/api/suppliers/${supplierToDelete._id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `${API_BASE}/api/suppliers/${supplierToDelete._id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Delete failed.");
+      }
+
       setSuppliers((prev) =>
         prev.filter((s) => s._id !== supplierToDelete._id)
       );
@@ -221,9 +279,9 @@ const SupplierManagement = () => {
         <EditModal
           item={modalMode === "edit" ? selectedSupplier : {}}
           fields={supplierFields}
-          onSave={handleAddOrEdit}   
+          onSave={handleAddOrEdit}
           modalType="supplier"
-          onClose={() => {         
+          onClose={() => {
             setModalMode(null);
             setSelectedSupplier(null);
           }}

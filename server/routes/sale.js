@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const authenticateToken = require('../middleware/auth');
 const {
   getAllSales,
   getSaleById,
@@ -8,14 +9,14 @@ const {
   deleteSale,
 } = require("../controllers/saleController");
 
-router.get("/", getAllSales);
+router.get("/", authenticateToken, getAllSales);
 
-router.get("/:id", getSaleById);
+router.get("/:id", authenticateToken, getSaleById);
 
-router.post("/", createSale);
+router.post("/", authenticateToken, createSale);
 
-router.put("/:id", updateSale);
+router.put("/:id", authenticateToken, updateSale);
 
-router.delete("/:id", deleteSale);
+router.delete("/:id", authenticateToken, deleteSale);
 
 module.exports = router;

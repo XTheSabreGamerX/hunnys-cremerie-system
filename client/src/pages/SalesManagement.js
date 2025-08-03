@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import Sidebar from "../scripts/Sidebar";
 import EditModal from "../components/EditModal";
@@ -26,6 +27,22 @@ const SalesManagement = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const containerRef = useRef(null);
+
+  const token = localStorage.getItem("token");
+  const navigate = useNavigate();
+
+  const authHeader = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  };
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/login");
+    }
+  }, [token, navigate]);
 
   // Fields for creating a sale
   const saleFields = [
@@ -92,20 +109,25 @@ const SalesManagement = () => {
 
   // Fetch inventory items
   useEffect(() => {
-    fetch(`${API_BASE}/api/inventory?page=1&limit=1000`)
+    fetch(`${API_BASE}/api/inventory?page=1&limit=1000`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then((res) => res.json())
       .then((data) => {
         const items = Array.isArray(data) ? data : data.items;
         setInventoryItems(items || []);
       })
       .catch((err) => console.error("Failed to fetch inventory items", err));
-  }, []);
+  }, [token]);
 
   // Fetch sales with pagination
   const fetchSales = useCallback(async () => {
     try {
       const response = await fetch(
-        `${API_BASE}/api/sales?page=${page}&limit=10`
+        `${API_BASE}/api/sales?page=${page}&limit=10`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
       const data = await response.json();
 
@@ -129,11 +151,11 @@ const SalesManagement = () => {
       console.error("Error fetching sales:", error);
       setHasMore(false);
     }
-  }, [page]);
+  }, [page, token]);
 
   useEffect(() => {
     fetchSales();
-  }, [fetchSales]);
+  }, [fetchSales, token]);
 
   // Infinite scrolling for pagination
   useEffect(() => {
@@ -231,7 +253,7 @@ const SalesManagement = () => {
     try {
       const res = await fetch(`${API_BASE}/api/sales`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeader,
         body: JSON.stringify(saleToSend),
       });
 
@@ -255,6 +277,7 @@ const SalesManagement = () => {
         `${API_BASE}/api/sales/${saleToDelete._id}`,
         {
           method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 

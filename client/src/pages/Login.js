@@ -1,34 +1,34 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import PopupMessage from '../components/PopupMessage';
-import '../styles/Login.css';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import PopupMessage from "../components/PopupMessage";
+import "../styles/Login.css";
 
 const Login = () => {
   //Login States
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState("");
 
   //Register States
   const [showRegister, setShowRegister] = useState(false);
-  const [registerEmail, setRegisterEmail] = useState('');
-  const [registerPassword, setRegisterPassword] = useState('');
-  const [registerError, setRegisterError] = useState('');
-  const [registerSuccess, setRegisterSuccess] = useState('');
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
+  const [registerError, setRegisterError] = useState("");
+  const [registerSuccess, setRegisterSuccess] = useState("");
 
-  const [popupMessage, setPopupMessage] = useState('');
-  const [popupType, setPopupType] = useState('');
+  const [popupMessage, setPopupMessage] = useState("");
+  const [popupType, setPopupType] = useState("");
 
   const navigate = useNavigate();
-  const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
   //Handles Login
   const handleLogin = async (e) => {
     e.preventDefault();
-    setErrorMessage('');
+    setErrorMessage("");
     setEmailError(false);
     setPasswordError(false);
 
@@ -50,29 +50,32 @@ const Login = () => {
 
     try {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json'},
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-        localStorage.setItem('isLoggedIn', 'true');
-        setPopupMessage('Login successful! Redirecting to dashboard...');
-        setPopupType('success');
+        localStorage.setItem("token", data.token);
+
+        localStorage.setItem("user", JSON.stringify(data.user));
+        localStorage.setItem("isLoggedIn", "true");
+
+        setPopupMessage("Login successful! Redirecting to dashboard...");
+        setPopupType("success");
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate("/dashboard");
         }, 2000);
       } else {
-        const message = data.message || 'Invalid email or password';
+        const message = data.message || "Invalid email or password";
         setPopupMessage(message);
-        setPopupType('error');
+        setPopupType("error");
       }
     } catch (err) {
-      console.error('Error logging in:', err);
-      setErrorMessage('There was a problem connecting to the server.');
+      console.error("Error logging in:", err);
+      setErrorMessage("There was a problem connecting to the server.");
     } finally {
       setLoading(false);
     }
@@ -80,18 +83,18 @@ const Login = () => {
 
   //Handles Registration
   const handleRegister = async () => {
-    setRegisterError('');
-    setRegisterSuccess('');
+    setRegisterError("");
+    setRegisterSuccess("");
 
     if (!registerEmail.trim() || !registerPassword.trim()) {
-      setRegisterError('Please fill in both email and password.');
+      setRegisterError("Please fill in both email and password.");
       return;
     }
 
     try {
       const res = await fetch(`${API_BASE}/api/request/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: registerEmail,
           password: registerPassword,
@@ -101,28 +104,29 @@ const Login = () => {
       const data = await res.json();
 
       if (res.ok) {
-        setRegisterSuccess('Registration request submitted! Please wait for your approval from the admin!');
-        setRegisterEmail('');
-        setRegisterPassword('');
+        setRegisterSuccess(
+          "Registration request submitted! Please wait for your approval from the admin!"
+        );
+        setRegisterEmail("");
+        setRegisterPassword("");
       } else {
-        setRegisterError(data.message || 'Registration failed.');
+        setRegisterError(data.message || "Registration failed.");
       }
     } catch (err) {
-      console.error('Registration error:', err);
-      setRegisterError('Server error. Please try again later.');
+      console.error("Registration error:", err);
+      setRegisterError("Server error. Please try again later.");
     }
   };
-  
-  return (
-   <div className="login-main-content">
 
+  return (
+    <div className="login-main-content">
       {popupMessage && (
         <PopupMessage
           message={popupMessage}
           type={popupType}
           onClose={() => {
-            setPopupMessage('');
-            setPopupType('');
+            setPopupMessage("");
+            setPopupType("");
           }}
         />
       )}
@@ -145,14 +149,14 @@ const Login = () => {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={emailError ? 'input-error' : ''}
+            className={emailError ? "input-error" : ""}
           />
           <input
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={passwordError ? 'input-error' : ''}
+            className={passwordError ? "input-error" : ""}
           />
           <button type="submit">Login</button>
         </form>
