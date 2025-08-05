@@ -31,7 +31,6 @@ const Inventory = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
-  // Return to login page if token is nowhere to be found
   useEffect(() => {
     if (!token) {
       navigate("/login");
@@ -72,8 +71,6 @@ const Inventory = () => {
       );
 
       const data = await res.json();
-
-      console.log("Fetched data:", data);
 
       const wrappedData = Array.isArray(data)
         ? {

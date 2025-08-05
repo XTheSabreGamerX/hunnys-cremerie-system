@@ -1,8 +1,8 @@
 const InventoryItem = require("../models/InventoryItem");
+const { createLog } = require("../controllers/activityLogController");
 
 // GET all inventory items
 const getAllInventoryItems = async (req, res) => {
-
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -33,6 +33,18 @@ const addInventoryItem = async (req, res) => {
   try {
     const item = new InventoryItem(req.body);
     await item.save();
+
+    try {
+      await createLog({
+        action: 'Added Item',
+        module: 'Inventory',
+        description: `User ${req.user.username} added an item: ${item.name}`,
+        userId: req.user.id,
+      });
+    } catch (logErr) {
+      console.error('[Activity Log] Failed to log addition:', logErr.message);
+    }
+
     res.status(201).json(item);
   } catch (err) {
     console.error(err);
@@ -51,6 +63,18 @@ const updateInventoryItem = async (req, res) => {
     if (!updated) {
       return res.status(404).json({ error: "Item not found" });
     }
+
+    try {
+      await createLog({
+        action: 'Updated Item',
+        module: 'Inventory',
+        description: `User ${req.user.username} updated an item: ${updated.name}`,
+        userId: req.user.id,
+      });
+    } catch (logErr) {
+      console.error('[Activity Log] Failed to log update:', logErr.message);
+    }
+
     res.json(updated);
   } catch (err) {
     console.error("Update error:", err);
@@ -63,11 +87,24 @@ const deleteInventoryItem = async (req, res) => {
   try {
     const deletedItem = await InventoryItem.findByIdAndDelete(req.params.id);
     if (!deletedItem) {
-      return res.status(404).json({ message: "Item not found" });
+      return res.status(404).json({ message: 'Item not found' });
     }
-    res.status(200).json({ message: "Item has deleted successfully" });
+
+    try {
+      await createLog({
+        action: 'Deleted Item',
+        module: 'Inventory',
+        description: `User ${req.user.username} deleted an item: ${deletedItem.name}`,
+        userId: req.user.id,
+      });
+    } catch (logErr) {
+      console.error('[Activity Log] Failed to log deletion:', logErr.message);
+    }
+
+    res.status(200).json({ message: 'Item has been deleted successfully' });
   } catch (err) {
-    res.status(500).json({ message: "Server error during deletion" });
+    console.error('[DELETE] Server error:', err.message);
+    res.status(500).json({ message: 'Server error during deletion' });
   }
 };
 

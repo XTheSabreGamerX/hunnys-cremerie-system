@@ -37,9 +37,14 @@ const Sidebar = () => {
           </Link>
 
           {(role === "admin" || role === "manager") && (
-            <Link to="/user-management">
-              <span className="label">User Management</span>
-            </Link>
+            <>
+              <Link to="/user-management">
+                <span className="label">User Management</span>
+              </Link>
+              <Link to="/activity-log">
+                <span className="label">Activity Log</span>
+              </Link>
+            </>
           )}
 
           {(role === "admin" || role === "manager" || role === "staff") && (
@@ -67,9 +72,6 @@ const Sidebar = () => {
 
           {role === "admin" && (
             <>
-              <Link to="/dashboard">
-                <span className="label">Activity Log</span>
-              </Link>
               <Link to="/dashboard">
                 <span className="label">Pricing Management</span>
               </Link>

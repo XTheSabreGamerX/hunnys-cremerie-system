@@ -9,10 +9,11 @@ import Header from "./Header";
 import Footer from "./Footer";
 import Login from "../pages/Login";
 import Dashboard from "../pages/Dashboard";
+import UserManagement from "../pages/UserManagement";
+import ActivityLog from "../pages/ActivityLog";
 import Inventory from "../pages/Inventory";
 import DashboardHeader from "./DashboardHeader";
 import ProtectedRoute from "../components/ProtectedRoute";
-import UserManagement from "../pages/UserManagement";
 import SupplierManagement from "../pages/SupplierManagement";
 import CustomerManagement from "../pages/CustomerManagement";
 import SalesManagement from "../pages/SalesManagement";
@@ -53,6 +54,18 @@ function App() {
               <ProtectedRoute>
                 <DashboardHeader />
                 <UserManagement />
+              </ProtectedRoute>
+            </>
+          }
+        />
+
+        <Route //User Management route
+          path="/activity-log"
+          element={
+            <>
+              <ProtectedRoute>
+                <DashboardHeader />
+                <ActivityLog />
               </ProtectedRoute>
             </>
           }
