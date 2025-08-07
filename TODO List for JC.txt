@@ -1,7 +1,6 @@
-- Sales module still making sale when inventory item is empty
 - Search with filter for Activity Log
 - Inventory, Sales, Customer, and Supplier need to connect with one another (dropdowns for customers in sale creation, etc...)
-- Register requires confirm password
+- Register routing needs to be fixed for other devices
 - Login and Register show password
-- Modals looks stretched than before
 - Adjust Activity Log styling
+- Replace Confirmation Message popups with toast

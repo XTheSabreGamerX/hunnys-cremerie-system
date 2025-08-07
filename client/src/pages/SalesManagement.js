@@ -6,7 +6,7 @@ import React, {
   useMemo,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import { nanoid } from "nanoid";
+import { nanoid } from "nanoid/non-secure";
 import Sidebar from "../scripts/Sidebar";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
@@ -23,6 +23,7 @@ const SalesManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchField, setSearchField] = useState("saleId");
   const [inventoryItems, setInventoryItems] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [filteredSales, setFilteredSales] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -56,43 +57,58 @@ const SalesManagement = () => {
   };
 
   // Fields for creating a sale
-  const saleFields = [
-    {
-      name: "customerName",
-      label: "Customer Name",
-      type: "text",
-      required: true,
-    },
-    {
-      name: "orderType",
-      label: "Order Type",
-      type: "select",
-      required: true,
-      options: [
-        { value: "Walk-in", label: "Walk-in" },
-        { value: "Online", label: "Online" },
-      ],
-    },
-    {
-      name: "taxRate",
-      label: "Tax Rate (%)",
-      type: "number",
-      required: false,
-    },
-    {
-      name: "paymentMethod",
-      label: "Payment Method",
-      type: "select",
-      required: true,
-      options: [
-        { value: "Cash", label: "Cash" },
-        { value: "Credit Card", label: "Credit Card" },
-        { value: "GCash", label: "GCash" },
-        { value: "PayMaya", label: "PayMaya" },
-        { value: "Others", label: "Others" },
-      ],
-    },
-  ];
+  const saleFields = useMemo(
+    () => [
+      {
+        name: "customerName",
+        label: "Customer Name",
+        type: "select",
+        placeholder:
+          "Choose from registered customers, otherwise, leave this empty if needed",
+        options: [
+          {
+            value: "Unregistered",
+            label: "Unregistered",
+          },
+          ...customers.map((cust) => ({
+            value: cust.name,
+            label: `${cust.name} (${cust.customerId})`,
+          })),
+        ],
+      },
+      {
+        name: "orderType",
+        label: "Order Type",
+        type: "select",
+        required: true,
+        options: [
+          { value: "Walk-in", label: "Walk-in" },
+          { value: "Online", label: "Online" },
+        ],
+      },
+      {
+        name: "taxRate",
+        label: "Tax Rate (%)",
+        type: "number",
+        placeholder: "Leave empty if no tax applies",
+        required: false,
+      },
+      {
+        name: "paymentMethod",
+        label: "Payment Method",
+        type: "select",
+        required: true,
+        options: [
+          { value: "Cash", label: "Cash" },
+          { value: "Credit Card", label: "Credit Card" },
+          { value: "GCash", label: "GCash" },
+          { value: "PayMaya", label: "PayMaya" },
+          { value: "Others", label: "Others" },
+        ],
+      },
+    ],
+    [customers]
+  );
 
   // Fields for viewing a sale's details
   const displaySale = [
@@ -129,6 +145,27 @@ const SalesManagement = () => {
         setInventoryItems(items || []);
       })
       .catch((err) => console.error("Failed to fetch inventory items", err));
+  }, [token, authHeader]);
+
+  // Fetch Customers
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/customers?page=1&limit=1000`, {
+          headers: authHeader,
+        });
+
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const customers = Array.isArray(data.customers) ? data.customers : [];
+        setCustomers(customers);
+      } catch (err) {
+        console.error("Failed to fetch customers");
+      }
+    };
+
+    fetchCustomers();
   }, [token, authHeader]);
 
   // Fetch sales with pagination
@@ -365,6 +402,8 @@ const SalesManagement = () => {
           allItems={Array.isArray(inventoryItems) ? inventoryItems : []}
           itemForm={itemForm}
           setItemForm={setItemForm}
+          setPopupMessage={setPopupMessage}
+          setPopupType={setPopupType}
         />
       )}
 

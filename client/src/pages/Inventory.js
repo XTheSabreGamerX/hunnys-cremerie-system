@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { customAlphabet } from "nanoid/non-secure";
 import Sidebar from "../scripts/Sidebar";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
@@ -26,6 +27,8 @@ const Inventory = () => {
   const [popupType, setPopupType] = useState("success");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+
+  const nanoid = customAlphabet('0123456789', 6);
   const containerRef = useRef(null);
 
   const navigate = useNavigate();
@@ -40,7 +43,11 @@ const Inventory = () => {
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
   const inventoryFields = [
-    { label: "Item ID", name: "itemId", required: "true" },
+    {
+      label: "Item ID",
+      name: "itemId",
+      placeholder: "e.g. BOX-001, CAKE-025, etc... Leave empty for default ID",
+    },
     { label: "Item Name", name: "name", required: "true" },
     { label: "Stock", name: "stock", type: "number" },
     { label: "Category", name: "category" },
@@ -140,7 +147,7 @@ const Inventory = () => {
   const validateFormData = (data) => {
     const { itemId, name, stock, unitPrice, expirationDate } = data;
 
-    if (!itemId?.trim() || !name?.trim()) {
+    if (!name?.trim()) {
       showPopup("Please fill up the required fields!", "error");
       return false;
     }
@@ -172,6 +179,7 @@ const Inventory = () => {
 
     if (
       modalMode === "add" &&
+      itemId?.trim() &&
       items.some((i) => i.itemId.toLowerCase() === itemId.trim().toLowerCase())
     ) {
       showPopup("Item ID already exists. Please choose a unique ID.", "error");
@@ -183,20 +191,27 @@ const Inventory = () => {
 
   // Saves item changes
   const saveItem = async (data) => {
-    const payload = {
-      ...data,
-      stock: isNaN(Number(data.stock)) ? 0 : Number(data.stock),
-      unitPrice: isNaN(Number(data.unitPrice)) ? 0 : Number(data.unitPrice),
-    };
-
     try {
+      let itemId = data.itemId?.trim();
+
+      if (modalMode === "add" && !itemId) {
+        itemId = `INV-${nanoid(6)}`;
+      }
+
+      const payload = {
+        ...data,
+        itemId,
+        stock: isNaN(Number(data.stock)) ? 0 : Number(data.stock),
+        unitPrice: isNaN(Number(data.unitPrice)) ? 0 : Number(data.unitPrice),
+      };
+
       const method = modalMode === "add" ? "POST" : "PUT";
       const url =
         modalMode === "add"
           ? `${API_BASE}/api/inventory`
-          : `${API_BASE}/api/inventory/${payload._id}`;
+          : `${API_BASE}/api/inventory/${data._id}`;
 
-      await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -205,18 +220,28 @@ const Inventory = () => {
         body: JSON.stringify(payload),
       });
 
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Backend Error:", errorText);
+        throw new Error(
+          `Request failed: ${res.status} ${res.statusText} - ${errorText}`
+        );
+      }
+
       setPage(1);
       setHasMore(true);
       await fetchItems();
       setSelectedItem(null);
       setModalMode("view");
+
       showPopup(
         `Item ${modalMode === "add" ? "added" : "updated"} successfully!`,
         "success"
       );
     } catch (err) {
-      console.error(err);
-      showPopup("Save failed.", "error");
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      console.error("Save failed:", errorMessage);
+      showPopup(`Save failed: ${errorMessage}`, "error");
     }
   };
 

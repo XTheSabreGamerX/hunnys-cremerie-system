@@ -38,7 +38,7 @@ const addInventoryItem = async (req, res) => {
       await createLog({
         action: 'Added Item',
         module: 'Inventory',
-        description: `User ${req.user.username} added an item: ${item.name}`,
+        description: `An inventory item was added: ${item.name}`,
         userId: req.user.id,
       });
     } catch (logErr) {
@@ -47,8 +47,8 @@ const addInventoryItem = async (req, res) => {
 
     res.status(201).json(item);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to add item." });
+    console.error('Add item failed:', err);
+    res.status(500).json({ error: 'Failed to add item.' });
   }
 };
 

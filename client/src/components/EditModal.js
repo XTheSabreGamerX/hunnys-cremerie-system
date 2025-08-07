@@ -1,19 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import '../styles/EditModal.css';
+import React, { useState, useEffect } from "react";
+import "../styles/EditModal.css";
 
 const EditModal = ({
   item,
   fields,
   onSave,
   onClose,
-  mode = 'edit',
-  modalType = 'default',
+  mode = "edit",
+  modalType = "default",
   allItems = [],
   itemForm,
   setItemForm,
+  setPopupMessage,
+  setPopupType,
 }) => {
   const [formData, setFormData] = useState(() => {
-    if (mode === 'edit' && item) {
+    if (mode === "edit" && item) {
       return {
         ...item,
         items: item.items || [],
@@ -21,17 +23,17 @@ const EditModal = ({
     }
 
     return {
-      customerName: '',
+      customerName: "",
       taxRate: 0,
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toISOString().split("T")[0],
       items: [],
     };
   });
 
   useEffect(() => {
-    if (item && modalType !== 'sale') {
+    if (item && modalType !== "sale") {
       setFormData(item);
-    } else if (!item && modalType !== 'sale') {
+    } else if (!item && modalType !== "sale") {
       setFormData({});
     }
   }, [item, modalType]);
@@ -50,7 +52,28 @@ const EditModal = ({
 
   const handleAddItem = () => {
     const selected = allItems.find((i) => i.itemId === itemForm.itemId);
-    if (!selected) return;
+
+    if (!selected) {
+      setPopupMessage("Invalid item selected.");
+      setPopupType("error");
+      return;
+    }
+
+    const stock = selected.stock ?? 0;
+
+    if (stock === 0) {
+      setPopupMessage(`"${selected.name}" is out of stock.`);
+      setPopupType("error");
+      return;
+    }
+
+    if (itemForm.quantity > stock) {
+      setPopupMessage(
+        `Cannot add ${itemForm.quantity} units. Only ${stock} in stock for "${selected.name}".`
+      );
+      setPopupType("error");
+      return;
+    }
 
     const newItem = {
       itemId: selected.itemId,
@@ -64,31 +87,33 @@ const EditModal = ({
       items: [...prev.items, newItem],
     }));
 
-    setItemForm({ itemId: '', quantity: 1 });
+    setItemForm({ itemId: "", quantity: 1 });
   };
 
   return (
     <div className="modal-overlay">
       <div className="modal-content">
         <h2>
-          {mode === 'add'
-            ? `Add New ${modalType.charAt(0).toUpperCase() + modalType.slice(1)}`
+          {mode === "add"
+            ? `Add New ${
+                modalType.charAt(0).toUpperCase() + modalType.slice(1)
+              }`
             : `Edit ${modalType.charAt(0).toUpperCase() + modalType.slice(1)}`}
         </h2>
 
         <form onSubmit={handleSubmit}>
-          {modalType === 'sale' ? (
+          {modalType === "sale" ? (
             <>
               {fields.map((field) => (
                 <div key={field.name} className="form-group">
                   <label>
-                    {field.label}{' '}
-                    {field.required && <span style={{ color: 'red' }}>*</span>}
+                    {field.label}{" "}
+                    {field.required && <span style={{ color: "red" }}>*</span>}
                   </label>
-                  {field.type === 'select' ? (
+                  {field.type === "select" ? (
                     <select
                       className="module-dropdown"
-                      value={formData[field.name] || ''}
+                      value={formData[field.name] || ""}
                       onChange={(e) => handleChange(field.name, e.target.value)}
                     >
                       <option value="">Select an option</option>
@@ -100,11 +125,12 @@ const EditModal = ({
                     </select>
                   ) : (
                     <input
-                      type={field.type || 'text'}
-                      value={formData[field.name] || ''}
+                      type={field.type || "text"}
+                      value={formData[field.name] || ""}
                       onChange={(e) => handleChange(field.name, e.target.value)}
-                      min={field.type === 'number' ? 0 : undefined}
-                      step={field.type === 'number' ? 'any' : undefined}
+                      min={field.type === "number" ? 0 : undefined}
+                      step={field.type === "number" ? "any" : undefined}
+                      placeholder={field.placeholder}
                     />
                   )}
                 </div>
@@ -143,7 +169,7 @@ const EditModal = ({
                 />
               </div>
 
-              <div className="form-group" style={{ marginTop: '10px' }}>
+              <div className="form-group" style={{ marginTop: "10px" }}>
                 <button
                   type="button"
                   className="module-action-btn module-add-btn add-item-btn"
@@ -167,13 +193,13 @@ const EditModal = ({
             fields.map((field) => (
               <div key={field.name} className="form-group">
                 <label>
-                  {field.label}{' '}
-                  {field.required && <span style={{ color: 'red' }}>*</span>}
+                  {field.label}{" "}
+                  {field.required && <span style={{ color: "red" }}>*</span>}
                 </label>
-                {field.type === 'select' ? (
+                {field.type === "select" ? (
                   <select
                     className="module-dropdown"
-                    value={formData[field.name] || ''}
+                    value={formData[field.name] || ""}
                     onChange={(e) => handleChange(field.name, e.target.value)}
                   >
                     <option value="">Select an option</option>
@@ -185,11 +211,12 @@ const EditModal = ({
                   </select>
                 ) : (
                   <input
-                    type={field.type || 'text'}
-                    value={formData[field.name] || ''}
+                    type={field.type || "text"}
+                    value={formData[field.name] || ""}
                     onChange={(e) => handleChange(field.name, e.target.value)}
-                    min={field.type === 'number' ? 0 : undefined}
-                    step={field.type === 'number' ? 'any' : undefined}
+                    min={field.type === "number" ? 0 : undefined}
+                    step={field.type === "number" ? "any" : undefined}
+                    placeholder={field.placeholder}
                   />
                 )}
               </div>

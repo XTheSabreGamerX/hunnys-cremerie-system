@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const saleSchema = new mongoose.Schema(
   {
     saleId: { type: String, required: true, unique: true },
-    customerName: { type: String, required: true },
+    customerName: { type: String},
     orderType: { 
       type: String, 
       enum: ["Walk-in", "Online"], 

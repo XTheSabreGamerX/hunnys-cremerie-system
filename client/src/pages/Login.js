@@ -16,6 +16,8 @@ const Login = () => {
   const [showRegister, setShowRegister] = useState(false);
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [registerError, setRegisterError] = useState("");
   const [registerSuccess, setRegisterSuccess] = useState("");
 
@@ -85,16 +87,22 @@ const Login = () => {
   const handleRegister = async () => {
     setRegisterError("");
     setRegisterSuccess("");
+    setConfirmPasswordError("");
 
     if (!registerEmail.trim() || !registerPassword.trim()) {
       setRegisterError("Please fill in both email and password.");
       return;
     }
 
+    if (registerPassword !== confirmPassword) {
+      setConfirmPasswordError("Passwords do not match.");
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/api/request/register`, {
         method: "POST",
-        credentials: 'include',
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: registerEmail,
@@ -178,8 +186,15 @@ const Login = () => {
             {registerError && (
               <div className="registration-error-message">{registerError}</div>
             )}
+
             {registerSuccess && (
               <div className="success-message">{registerSuccess}</div>
+            )}
+
+            {confirmPasswordError && (
+              <p className="registration-error-message">
+                {confirmPasswordError}
+              </p>
             )}
 
             <input
@@ -195,11 +210,27 @@ const Login = () => {
               onChange={(e) => setRegisterPassword(e.target.value)}
             />
 
+            <input
+              type="password"
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className={confirmPasswordError ? "input-error" : ""}
+            />
+
             <div className="register-modal-buttons">
               <button onClick={handleRegister}>Submit</button>
               <button
                 className="cancel-btn"
-                onClick={() => setShowRegister(false)}
+                onClick={() => {
+                  setShowRegister(false);
+                  setRegisterEmail("");
+                  setRegisterPassword("");
+                  setConfirmPassword("");
+                  setRegisterError("");
+                  setRegisterSuccess("");
+                  setConfirmPasswordError("");
+                }}
               >
                 Cancel
               </button>
