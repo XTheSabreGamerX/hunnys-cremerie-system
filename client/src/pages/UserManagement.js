@@ -180,7 +180,7 @@ const UserManagement = () => {
       <main className="user-management-main-content">
         <div className="requests-container">
           <h1>Registration Requests</h1>
-          <table>
+          <table className="table--cards">
             <thead>
               <tr>
                 <th>Email</th>
@@ -192,10 +192,10 @@ const UserManagement = () => {
             <tbody>
               {requests.map(request => (
                 <tr key={request._id}>
-                  <td>{request.email}</td>
-                  <td>{new Date(request.dateRequested).toLocaleString()}</td>
-                  <td>{request.status}</td>
-                  <td>
+                  <td data-label="Email">{request.email}</td>
+                  <td data-label="Date Requested">{new Date(request.dateRequested).toLocaleString()}</td>
+                  <td data-label="Status">{request.status}</td>
+                  <td data-label="Action" className="table-actions">
                     <button
                       onClick={() => {
                         setConfirmMessage('Are you sure you want to accept this registration?');
@@ -223,7 +223,7 @@ const UserManagement = () => {
 
         <div className="accounts-container">
           <h1>List of Available Accounts!</h1>
-          <table>
+          <table className="table--cards">
             <thead>
               <tr>
                 <th>Username</th>
@@ -236,11 +236,11 @@ const UserManagement = () => {
             <tbody>
               {users.map(user => (
                 <tr key={user._id}>
-                  <td>{user.username}</td>
-                  <td>{user.email}</td>
-                  <td>{user.role || 'User'}</td>
-                  <td>{user.status}</td>
-                  <td>
+                  <td data-label="Username">{user.username}</td>
+                  <td data-label="Email">{user.email}</td>
+                  <td data-label="Role">{user.role || 'User'}</td>
+                  <td data-label="Status">{user.status}</td>
+                  <td data-label="Actions" className="table-actions">
                     {user.email !== 'admin@hunnys.com' ? (
                       <>
                         <button

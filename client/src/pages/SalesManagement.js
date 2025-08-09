@@ -442,49 +442,36 @@ const SalesManagement = () => {
         </div>
 
         <section className="module-table-container">
-          <table className="module-table">
-            <thead>
-              <tr>
-                <th>Sale ID</th>
-                <th>Customer Name</th>
-                <th>Order Type</th>
-                <th>Total</th>
-                <th>Payment Method</th>
-                <th>Date Created</th>
-                <th className="action-column">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSales.length > 0 ? (
-                filteredSales.map((sale) => (
-                  <tr key={sale._id}>
-                    <td>{sale.saleId}</td>
-                    <td>{sale.customerName}</td>
-                    <td>{sale.orderType}</td>
-                    <td>₱{sale.totalAmount?.toFixed(2)}</td>
-                    <td>{sale.paymentMethod}</td>
-                    <td>{new Date(sale.date).toLocaleDateString()}</td>
-                    <td>
-                      <button
-                        className="module-action-btn module-view-btn"
-                        onClick={() => {
-                          setViewedSale(sale);
-                          setIsViewOpen(true);
-                        }}
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="7">No sales found.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </section>
+  <table className="module-table table--cards">
+    <thead>
+      <tr>
+        <th>Sale ID</th><th>Customer Name</th><th>Order Type</th>
+        <th>Total</th><th>Payment Method</th><th>Date Created</th>
+        <th className="action-column">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {filteredSales.length > 0 ? (
+        filteredSales.map((sale) => (
+          <tr key={sale._id}>
+            <td data-label="Sale ID">{sale.saleId}</td>
+            <td data-label="Customer Name">{sale.customerName}</td>
+            <td data-label="Order Type">{sale.orderType}</td>
+            <td data-label="Total">₱{sale.totalAmount?.toFixed(2)}</td>
+            <td data-label="Payment Method">{sale.paymentMethod}</td>
+            <td data-label="Date Created">{new Date(sale.date).toLocaleDateString()}</td>
+            <td data-label="Actions" className="table-actions">
+              <button className="module-action-btn module-view-btn" onClick={() => { setViewedSale(sale); setIsViewOpen(true); }}>View</button>
+            </td>
+          </tr>
+        ))
+      ) : (
+        <tr><td colSpan="7">No sales found.</td></tr>
+      )}
+    </tbody>
+  </table>
+</section>
+
       </main>
     </>
   );

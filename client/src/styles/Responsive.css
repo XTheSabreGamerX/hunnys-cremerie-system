@@ -1,0 +1,369 @@
+/* Responsive.css — mobile-first adjustments */
+
+/* Global tweaks */
+html, body {
+  -webkit-text-size-adjust: 100%;
+}
+:root {
+  --hc-brand: #921A40;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+}
+
+/* Header/Navbar */
+.navbar,
+.dashboard-header {
+  height: 60px;
+}
+.navbar-title {
+  font-size: clamp(18px, 4vw, 26px);
+}
+
+/* Sidebar */
+.sidebar {
+  transition: transform 0.25s ease, width 0.25s ease;
+}
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 220px;
+  }
+}
+@media (max-width: 768px) {
+  .sidebar {
+    width: 220px;
+    transform: translateX(-100%) !important;
+    position: fixed;
+    top: 60px;
+    bottom: 0;
+    z-index: 1100;
+    background-color: #921A40;
+  }
+  .sidebar.open {
+    transform: translateX(0) !important;
+  }
+  .sidebar.collapsed {
+    width: 220px;
+  }
+  .sidebar.collapsed .label {
+    display: inline;
+  }
+  .sidebar.collapsed .sidebar-nav,
+  .sidebar.collapsed .logout-button {
+    pointer-events: auto;
+    opacity: 1;
+  }
+}
+
+/* Main content */
+.module-main-content,
+.dashboard-main-content,
+.activity-log-main-content,
+.user-management-main-content {
+  padding: 1rem;
+}
+@media (max-width: 1024px) {
+  .module-main-content,
+  .dashboard-main-content,
+  .activity-log-main-content,
+  .user-management-main-content {
+    margin-left: 90px;
+  }
+}
+@media (max-width: 768px) {
+  .module-main-content,
+  .dashboard-main-content,
+  .activity-log-main-content,
+  .user-management-main-content {
+    margin-left: 0 !important;
+    margin-top: 60px;
+    min-height: calc(100vh - 60px);
+  }
+}
+
+/* Module header/actions */
+.module-header {
+  padding: 12px 16px;
+  gap: 8px;
+}
+@media (max-width: 768px) {
+  .module-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .module-title {
+    font-size: clamp(20px, 5vw, 26px);
+  }
+  .module-actions-container {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0;
+    gap: 8px;
+  }
+  .module-search-input,
+  .module-filter-dropdown,
+  .module-add-btn {
+    width: 100%;
+  }
+}
+
+/* Tables */
+.module-table-container {
+  overflow-x: auto;
+}
+@media (max-width: 1024px) {
+  .module-table-container table {
+    table-layout: auto;
+  }
+}
+@media (max-width: 768px) {
+  .customer-main .module-table-container table th,
+  .customer-main .module-table-container table td,
+  .inventory-main .module-table-container table th,
+  .inventory-main .module-table-container table td,
+  .supplier-main .module-table-container table th,
+  .supplier-main .module-table-container table td {
+    width: auto !important;
+    white-space: nowrap;
+  }
+  .module-table-container th,
+  .module-table-container td {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Table action buttons */
+.module-action-btn {
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+@media (max-width: 768px) {
+  .module-action-btn {
+    display: inline-flex;
+    margin: 4px 2px;
+  }
+}
+
+/* Modals */
+.modal-content,
+.register-modal-content {
+  max-width: min(500px, 90vw);
+}
+@media (max-width: 768px) {
+  .modal-content,
+  .register-modal-content {
+    width: 92vw !important;
+    padding: 18px !important;
+  }
+  .modal-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .modal-buttons {
+    flex-wrap: wrap;
+  }
+}
+
+/* Login */
+@media (max-width: 1024px) {
+  .login-main-content {
+    justify-content: center;
+    padding: 1.25rem;
+    background-position: center;
+  }
+  .login-container {
+    width: min(420px, 90vw);
+  }
+}
+
+/* Footer */
+.footer {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+}
+@media (max-width: 768px) {
+  .module-main-content,
+  .dashboard-main-content,
+  .activity-log-main-content,
+  .user-management-main-content {
+    padding-bottom: 80px;
+  }
+}
+
+/* User management containers */
+@media (max-width: 768px) {
+  .requests-container,
+  .accounts-container {
+    max-height: 40vh;
+  }
+}
+
+/* Popup messages */
+@media (max-width: 768px) {
+  .popup-box {
+    width: 90vw;
+    padding: 1rem 1.25rem;
+    font-size: 1rem;
+  }
+}
+
+/* Typography adjustments */
+@media (max-width: 768px) {
+  .module-main-content h1,
+  .requests-container h1,
+  .accounts-container h1,
+  .activity-log-title {
+    font-size: clamp(18px, 5vw, 22px);
+  }
+}
+
+/* === Portrait fixes for tables === */
+@media (max-width: 768px) {
+  .module-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .module-table-container table {
+    table-layout: auto;
+    min-width: 640px;
+  }
+  .module-table-container th,
+  .module-table-container td {
+    min-width: 120px;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: anywhere;
+    padding: 8px 10px;
+    font-size: 0.95rem;
+    line-height: 1.25;
+  }
+  .customer-main .module-table-container th,
+  .customer-main .module-table-container td,
+  .inventory-main .module-table-container th,
+  .inventory-main .module-table-container td,
+  .supplier-main .module-table-container th,
+  .supplier-main .module-table-container td {
+    width: auto !important;
+  }
+  .module-title {
+    font-size: clamp(18px, 5vw, 22px);
+    max-width: 100%;
+  }
+  .table-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+  .module-action-btn {
+    padding: 6px 10px;
+    font-size: 0.9rem;
+  }
+}
+
+/* === Portrait: spacing from sidebar === */
+@media (max-width: 768px) {
+  .module-main-content,
+  .dashboard-main-content,
+  .activity-log-main-content,
+  .user-management-main-content {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* === Portrait: force remove sidebar gutter === */
+@media (max-width: 768px) {
+  body .sidebar + .module-main-content,
+  body .sidebar.collapsed + .module-main-content,
+  body .sidebar + .dashboard-main-content,
+  body .sidebar.collapsed + .dashboard-main-content,
+  body .sidebar + .activity-log-main-content,
+  body .sidebar.collapsed + .activity-log-main-content,
+  body .sidebar + .user-management-main-content,
+  body .sidebar.collapsed + .user-management-main-content,
+  body .module-main-content,
+  body .dashboard-main-content,
+  body .activity-log-main-content,
+  body .user-management-main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
+  }
+}
+/* === Portrait: enforce gap between sidebar and modules === */
+@media (max-width: 768px) {
+  body .module-main-content,
+  body .dashboard-main-content,
+  body .activity-log-main-content,
+  body .user-management-main-content {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    box-sizing: border-box;
+  }
+}
+/* === Mobile: table rows become cards === */
+@media (max-width: 768px) {
+  /* opt-in: only tables with .table--cards will transform */
+  .table--cards {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .table--cards thead {
+    display: none; /* hide header on phones */
+  }
+  .table--cards tbody,
+  .table--cards tr,
+  .table--cards td,
+  .table--cards th {
+    display: block;
+    width: 100%;
+  }
+
+  .table--cards tr {
+    background: #fff;
+    margin-bottom: 12px;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    overflow: hidden;
+    border: 1px solid #e5e5e5;
+  }
+
+  .table--cards td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #eee;
+    display: grid;
+    grid-template-columns: 1fr 2fr; /* label | value */
+    gap: 8px;
+    align-items: start;
+  }
+  .table--cards td:last-child {
+    border-bottom: 0;
+  }
+
+  /* show the column name before each value */
+  .table--cards td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #444;
+    min-width: 0;
+  }
+
+  /* buttons inside card rows */
+  .table--cards .table-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-start;
+  }
+
+  /* utility: hide certain cells/headers on phones if needed */
+  .sm-hide { display: none !important; }
+}

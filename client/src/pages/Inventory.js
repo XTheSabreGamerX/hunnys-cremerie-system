@@ -410,65 +410,39 @@ const Inventory = () => {
         </div>
 
         <div className="module-table-container" ref={containerRef}>
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Item Name</th>
-                <th>Stock</th>
-                <th>Category</th>
-                <th>Unit Price</th>
-                <th>Supplier</th>
-                <th>Expiration Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(isFiltering ? filteredItems : items).length === 0 ? (
-                <tr>
-                  <td colSpan="8">No items found.</td>
-                </tr>
-              ) : (
-                (isFiltering ? filteredItems : items).map((item) => (
-                  <tr key={item._id}>
-                    <td>{item.itemId}</td>
-                    <td>{item.name}</td>
-                    <td>{item.stock}</td>
-                    <td>{item.category || "—"}</td>
-                    <td>₱{item.unitPrice}</td>
-                    <td>{item.supplier || "—"}</td>
-                    <td>
-                      {item.expirationDate
-                        ? new Date(item.expirationDate).toLocaleDateString()
-                        : "N/A"}
-                    </td>
-                    <td>
-                      <button
-                        className="module-action-btn module-edit-btn"
-                        onClick={() => {
-                          setSelectedItem(item);
-                          setModalMode("edit");
-                        }}
-                      >
-                        Edit
-                      </button>
+  <table className="table--cards">
+    <thead>
+      <tr>
+        <th>ID</th><th>Item Name</th><th>Stock</th><th>Category</th>
+        <th>Unit Price</th><th>Supplier</th><th>Expiration Date</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {(isFiltering ? filteredItems : items).length === 0 ? (
+        <tr><td colSpan="8">No items found.</td></tr>
+      ) : (
+        (isFiltering ? filteredItems : items).map((item) => (
+          <tr key={item._id}>
+            <td data-label="ID">{item.itemId}</td>
+            <td data-label="Item Name">{item.name}</td>
+            <td data-label="Stock">{item.stock}</td>
+            <td data-label="Category">{item.category || "—"}</td>
+            <td data-label="Unit Price">₱{item.unitPrice}</td>
+            <td data-label="Supplier">{item.supplier || "—"}</td>
+            <td data-label="Expiration Date">
+              {item.expirationDate ? new Date(item.expirationDate).toLocaleDateString() : "N/A"}
+            </td>
+            <td data-label="Actions" className="table-actions">
+              <button className="module-action-btn module-edit-btn" onClick={() => { setSelectedItem(item); setModalMode("edit"); }}>Edit</button>
+              <button className="module-action-btn module-view-btn" onClick={() => { setViewedItem(item); setIsViewOpen(true); }}>View</button>
+            </td>
+          </tr>
+        ))
+      )}
+    </tbody>
+  </table>
+</div>
 
-                      <button
-                        className="module-action-btn module-view-btn"
-                        onClick={() => {
-                          setViewedItem(item);
-                          setIsViewOpen(true);
-                        }}
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
       </main>
     </>
   );

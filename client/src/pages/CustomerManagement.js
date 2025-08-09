@@ -354,66 +354,44 @@ const CustomerManagement = () => {
         </div>
 
         <div className="module-table-container" ref={containerRef}>
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Number</th>
-                <th>Address</th>
-                <th>Created</th>
-                <th>Updated</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayedCustomers.length === 0 ? (
-                <tr>
-                  <td colSpan="8">No customers found.</td>
-                </tr>
-              ) : (
-                displayedCustomers.map((customer) => (
-                  <tr key={customer._id}>
-                    <td>{customer.customerId}</td>
-                    <td>{customer.name}</td>
-                    <td>{customer.email || "—"}</td>
-                    <td>{customer.phoneNumber || "—"}</td>
-                    <td>{customer.address || "—"}</td>
-                    <td>
-                      {customer.createdAt
-                        ? new Date(customer.createdAt).toLocaleString("en-PH", {
-                            timeZone: "Asia/Manila",
-                          })
-                        : "—"}
-                    </td>
-                    <td>
-                      {customer.updatedAt
-                        ? new Date(customer.updatedAt).toLocaleString("en-PH", {
-                            timeZone: "Asia/Manila",
-                          })
-                        : "—"}
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => handleEditClick(customer)}
-                        className="module-action-btn module-edit-btn"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleViewClick(customer)}
-                        className="module-action-btn module-view-btn"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+  <table className="table--cards">
+    <thead>
+      <tr>
+        <th>ID</th><th>Name</th><th>Email</th><th>Number</th>
+        <th>Address</th><th>Created</th><th>Updated</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {displayedCustomers.length === 0 ? (
+        <tr><td colSpan="8">No customers found.</td></tr>
+      ) : (
+        displayedCustomers.map((customer) => (
+          <tr key={customer._id}>
+            <td data-label="ID">{customer.customerId}</td>
+            <td data-label="Name">{customer.name}</td>
+            <td data-label="Email">{customer.email || "—"}</td>
+            <td data-label="Number">{customer.phoneNumber || "—"}</td>
+            <td data-label="Address">{customer.address || "—"}</td>
+            <td data-label="Created">
+              {customer.createdAt
+                ? new Date(customer.createdAt).toLocaleString("en-PH",{ timeZone: "Asia/Manila" })
+                : "—"}
+            </td>
+            <td data-label="Updated">
+              {customer.updatedAt
+                ? new Date(customer.updatedAt).toLocaleString("en-PH",{ timeZone: "Asia/Manila" })
+                : "—"}
+            </td>
+            <td data-label="Actions" className="table-actions">
+              <button onClick={() => handleEditClick(customer)} className="module-action-btn module-edit-btn">Edit</button>
+              <button onClick={() => handleViewClick(customer)} className="module-action-btn module-view-btn">View</button>
+            </td>
+          </tr>
+        ))
+      )}
+    </tbody>
+  </table>
+</div>
       </main>
     </>
   );

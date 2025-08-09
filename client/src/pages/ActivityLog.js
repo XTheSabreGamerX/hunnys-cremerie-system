@@ -52,36 +52,39 @@ const ActivityLog = () => {
           {/* Search/filter inputs here later */}
         </div>
 
-        <div className="activity-log-table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Timestamp</th>
-                <th>User</th>
-                <th>Action</th>
-                <th>Module</th>
-                <th>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.length === 0 ? (
-                <tr>
-                  <td colSpan="5">No activity logs found.</td>
-                </tr>
-              ) : (
-                logs.map((log) => (
-                  <tr key={log._id}>
-                    <td>{new Date(log.createdAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}</td>
-                    <td>{log.userId?.username || "Unknown"}</td>
-                    <td>{log.action}</td>
-                    <td>{log.module}</td>
-                    <td>{log.description}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+<div className="activity-log-table-container">
+  <table className="table--cards">
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>User</th>
+        <th>Action</th>
+        <th>Module</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {logs.length === 0 ? (
+        <tr>
+          <td colSpan="5">No activity logs found.</td>
+        </tr>
+      ) : (
+        logs.map((log) => (
+          <tr key={log._id}>
+            <td data-label="Timestamp">
+              {new Date(log.createdAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}
+            </td>
+            <td data-label="User">{log.userId?.username || "Unknown"}</td>
+            <td data-label="Action">{log.action}</td>
+            <td data-label="Module">{log.module}</td>
+            <td data-label="Description">{log.description}</td>
+          </tr>
+        ))
+      )}
+    </tbody>
+  </table>
+</div>
+
       </main>
     </>
   );

@@ -328,61 +328,36 @@ const SupplierManagement = () => {
         </div>
 
         <div className="module-table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Contact</th>
-                <th>Company</th>
-                <th>Created At</th>
-                <th>Updated At</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(isFiltering ? filteredSuppliers : suppliers).length === 0 ? (
-                <tr>
-                  <td colSpan="7">No suppliers found.</td>
-                </tr>
-              ) : (
-                (isFiltering ? filteredSuppliers : suppliers).map(
-                  (supplier) => (
-                    <tr key={supplier._id}>
-                      <td>{supplier.supplierId}</td>
-                      <td>{supplier.name}</td>
-                      <td>{supplier.contact}</td>
-                      <td>{supplier.company}</td>
-                      <td>{new Date(supplier.createdAt).toLocaleString()}</td>
-                      <td>{new Date(supplier.updatedAt).toLocaleString()}</td>
-                      <td>
-                        <button
-                          className="module-action-btn module-edit-btn"
-                          onClick={() => {
-                            setModalMode("edit");
-                            setSelectedSupplier(supplier);
-                          }}
-                        >
-                          Edit
-                        </button>
+  <table className="table--cards">
+    <thead>
+      <tr>
+        <th>ID</th><th>Name</th><th>Contact</th><th>Company</th>
+        <th>Created At</th><th>Updated At</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {(isFiltering ? filteredSuppliers : suppliers).length === 0 ? (
+        <tr><td colSpan="7">No suppliers found.</td></tr>
+      ) : (
+        (isFiltering ? filteredSuppliers : suppliers).map((supplier) => (
+          <tr key={supplier._id}>
+            <td data-label="ID">{supplier.supplierId}</td>
+            <td data-label="Name">{supplier.name}</td>
+            <td data-label="Contact">{supplier.contact}</td>
+            <td data-label="Company">{supplier.company}</td>
+            <td data-label="Created At">{new Date(supplier.createdAt).toLocaleString()}</td>
+            <td data-label="Updated At">{new Date(supplier.updatedAt).toLocaleString()}</td>
+            <td data-label="Actions" className="table-actions">
+              <button className="module-action-btn module-edit-btn" onClick={() => { setModalMode("edit"); setSelectedSupplier(supplier); }}>Edit</button>
+              <button className="module-action-btn module-view-btn" onClick={() => { setViewedSupplier(supplier); setIsViewOpen(true); }}>View</button>
+            </td>
+          </tr>
+        ))
+      )}
+    </tbody>
+  </table>
+</div>
 
-                        <button
-                          className="module-action-btn module-view-btn"
-                          onClick={() => {
-                            setViewedSupplier(supplier);
-                            setIsViewOpen(true);
-                          }}
-                        >
-                          View
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                )
-              )}
-            </tbody>
-          </table>
-        </div>
       </main>
     </>
   );
