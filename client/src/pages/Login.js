@@ -7,6 +7,7 @@ const Login = () => {
   //Login States
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
@@ -161,12 +162,23 @@ const Login = () => {
             className={emailError ? "input-error" : ""}
           />
           <input
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className={passwordError ? "input-error" : ""}
           />
+          <div className="show-password-container">
+            <input
+              id="show-password"
+              type="checkbox"
+              checked={showPassword}
+              onChange={(e) => setShowPassword(e.target.checked)}
+            />
+            <label htmlFor="show-password" className="show-password-label">
+              Show Password
+            </label>
+          </div>
           <button type="submit">Login</button>
         </form>
 

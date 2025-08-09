@@ -201,3 +201,36 @@ html, body {
   word-break: break-word;
   white-space: normal;
 }
+
+.show-password-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 20px;
+  white-space: nowrap;
+}
+
+.show-password-container input[type="checkbox"] {
+  margin: 0;
+  padding: 0;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  cursor: pointer;
+  align-self: center;
+}
+
+.show-password-label {
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-weight: 400;
+  font-size: 0.95rem;
+  line-height: 1;
+  color: #333;
+  cursor: pointer;
+  user-select: none;
+}
