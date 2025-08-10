@@ -202,6 +202,19 @@ html, body {
   white-space: normal;
 }
 
+.success-message,
+.registration-error-message {
+  min-height: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.success-message:empty,
+.registration-error-message:empty {
+  min-height: 2rem;
+}
+
 .show-password-container {
   display: inline-flex;
   align-items: center;
@@ -233,4 +246,92 @@ html, body {
   color: #333;
   cursor: pointer;
   user-select: none;
+}
+
+.reset-password-link {
+  cursor: pointer;
+  font-size: 15px;
+  color: blue;
+  text-decoration: underline;
+  padding: 0;
+  margin: 0;
+}
+
+.reset-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.reset-modal-content {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.reset-modal-content input {
+  padding: 10px 15px;
+  font-size: 1rem;
+  width: 100%; 
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.reset-modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.reset-modal-buttons button {
+  background-color: #921A40;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.reset-modal-buttons button:hover {
+  background-color: #7a1635;
+}
+
+.reset-modal-buttons .cancel-btn {
+  background-color: #ccc;
+  color: black;
+}
+
+.reset-modal-buttons .cancel-btn:hover {
+  background-color: #aaa;
+}
+
+.reset-modal .error-message {
+  color: red;
+  font-size: 1rem;
+  text-align: center;
+  font-weight: bold;
+}
+
+.reset-modal .success-message {
+  color: green;
+  font-size: 1rem;
+  text-align: center;
+  font-weight: bold;
 }

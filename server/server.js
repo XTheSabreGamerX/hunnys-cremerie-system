@@ -1,9 +1,10 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/user');
-const activityRoutes = require('./routes/activityLog');
 const requestRoutes = require('./routes/request');
+const userRoutes = require('./routes/user');
+const resetRequestRoutes = require('./routes/resetRequest');
+const activityRoutes = require('./routes/activityLog');
 const inventoryRoutes = require('./routes/inventory');
 const saleRoutes = require('./routes/sale');
 const supplierRoutes = require('./routes/supplier');
@@ -37,6 +38,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/request', requestRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/resetRequest', resetRequestRoutes);
 app.use('/api/activitylog', activityRoutes)
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/sales', saleRoutes);

@@ -22,6 +22,12 @@ const Login = () => {
   const [registerError, setRegisterError] = useState("");
   const [registerSuccess, setRegisterSuccess] = useState("");
 
+  //Reset Password States
+  const [resetEmail, setResetEmail] = useState("");
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [resetSuccess, setResetSuccess] = useState("");
+
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("");
 
@@ -90,6 +96,25 @@ const Login = () => {
     setRegisterSuccess("");
     setConfirmPasswordError("");
 
+    function isValidEmail(email) {
+      // Email regex pattern: text@text.text
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+      if (!emailPattern.test(email)) return false;
+
+      if (email.includes("..")) return false;
+
+      return true;
+    }
+
+    // Checks for valid email format
+    if (!isValidEmail(registerEmail)) {
+      setRegisterError(
+        "Please enter a valid email address without consecutive dots."
+      );
+      return;
+    }
+
     if (!registerEmail.trim() || !registerPassword.trim()) {
       setRegisterError("Please fill in both email and password.");
       return;
@@ -119,6 +144,7 @@ const Login = () => {
         );
         setRegisterEmail("");
         setRegisterPassword("");
+        setConfirmPassword("");
       } else {
         setRegisterError(data.message || "Registration failed.");
       }
@@ -126,6 +152,38 @@ const Login = () => {
       console.error("Registration error:", err);
       setRegisterError("Server error. Please try again later.");
     }
+  };
+
+  // Handles Password reset requests
+  const handleResetRequest = () => {
+    if (!resetEmail) {
+      setResetError("Please enter your email.");
+      setResetSuccess("");
+      return;
+    }
+
+    fetch(`${API_BASE}/api/resetRequest`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email: resetEmail }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to send reset request");
+        return res.json();
+      })
+      .then((data) => {
+        setResetError("");
+        setResetSuccess(
+          "Password reset request sent. Please wait for admin approval."
+        );
+        setResetEmail("");
+      })
+      .catch((error) => {
+        setResetError(error.message);
+        setResetSuccess("");
+      });
   };
 
   return (
@@ -182,6 +240,14 @@ const Login = () => {
           <button type="submit">Login</button>
         </form>
 
+        {/* Reset Password Link */}
+        <p
+          className="reset-password-link"
+          onClick={() => setShowResetModal(true)}
+        >
+          Forgot Password?
+        </p>
+
         <div className="register-link">
           <p>Don't have an account?</p>
           <button onClick={() => setShowRegister(true)}>
@@ -190,6 +256,7 @@ const Login = () => {
         </div>
       </div>
 
+      {/* Registration Modal */}
       {showRegister && (
         <div className="register-modal">
           <div className="register-modal-content">
@@ -211,13 +278,13 @@ const Login = () => {
 
             <input
               type="email"
-              placeholder="Email"
+              placeholder="example@email.com"
               value={registerEmail}
               onChange={(e) => setRegisterEmail(e.target.value)}
             />
             <input
               type="password"
-              placeholder="Password"
+              placeholder="Password (minimum 6 characters)"
               value={registerPassword}
               onChange={(e) => setRegisterPassword(e.target.value)}
             />
@@ -242,6 +309,41 @@ const Login = () => {
                   setRegisterError("");
                   setRegisterSuccess("");
                   setConfirmPasswordError("");
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset Modal */}
+      {showResetModal && (
+        <div className="reset-modal">
+          <div className="reset-modal-content">
+            <h3>Reset Password</h3>
+            {resetError && <div className="error-message">{resetError}</div>}
+            {resetSuccess && (
+              <div className="success-message">{resetSuccess}</div>
+            )}
+
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+            />
+
+            <div className="reset-modal-buttons">
+              <button onClick={handleResetRequest} disabled={loading}>Submit Request</button>
+              <button
+                className="cancel-btn"
+                onClick={() => {
+                  setShowResetModal(false);
+                  setResetEmail("");
+                  setResetError("");
+                  setResetSuccess("");
                 }}
               >
                 Cancel
