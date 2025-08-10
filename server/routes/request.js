@@ -9,7 +9,7 @@ const {
 } = require('../controllers/requestController');
 
 // Create a registration request
-router.post('/register', authenticateToken, registrationRequest);
+router.post('/register', registrationRequest);
 
 // Approve a request (creates a user, deletes the request)
 router.post('/approve/:id', authenticateToken, requestApprove);

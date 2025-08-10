@@ -58,14 +58,14 @@ const UserManagement = () => {
     })
       .then((res) => res.json())
       .then((data) => setResetRequests(data))
-      .catch((err) => console.error("Error fetching requests:", err));
+      .catch((err) => console.error("Error fetching reset requests:", err));
   }, [API_BASE, token]);
 
   useEffect(() => {
     fetchUsers();
     fetchRequests();
     fetchResetRequests();
-  }, [fetchUsers, fetchRequests]);
+  }, [fetchUsers, fetchRequests, fetchResetRequests]);
 
   // Approve registration requests
   const handleApprove = async (id) => {
@@ -75,10 +75,10 @@ const UserManagement = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      showPopup(data.message);
+
+      showPopup(data.message || "Request approved.", "success");
       fetchRequests();
       fetchUsers();
-      fetchRequests();
     } catch (err) {
       console.error("Error approving request:", err);
       showPopup("There was an error approving the request.", "error");
@@ -93,7 +93,7 @@ const UserManagement = () => {
     })
       .then(() => {
         showPopup("Request rejected successfully!");
-        setRequests(requests.filter((req) => req._id !== id));
+        setRequests((prev) => prev.filter((req) => req._id !== id));
       })
       .catch((err) => {
         console.error("Error rejecting request:", err);
@@ -173,38 +173,48 @@ const UserManagement = () => {
   // Approve password reset
   const handleApproveReset = async (id) => {
     try {
-      const response = await fetch(`/api/password-resets/${id}/approve`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch(`${API_BASE}/api/resetRequest/${id}/approve`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
-      if (response.ok) {
-        setResetRequests((prev) =>
-          prev.filter((request) => request._id !== id)
-        );
-      } else {
-        console.error("Failed to approve reset request");
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`Approve failed: ${res.status} ${text}`);
       }
-    } catch (error) {
-      console.error("Error approving reset request:", error);
+
+      showPopup("Reset request approved.", "success");
+      fetchResetRequests();
+    } catch (err) {
+      console.error("Error approving reset request:", err);
+      showPopup("Failed to approve reset request.", "error");
     }
   };
 
   // Reject password reset
   const handleRejectReset = async (id) => {
     try {
-      const response = await fetch(`/api/password-resets/${id}/reject`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch(`${API_BASE}/api/resetRequest/${id}/reject`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
-      if (response.ok) {
-        setResetRequests((prev) =>
-          prev.filter((request) => request._id !== id)
-        );
-      } else {
-        console.error("Failed to reject reset request");
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`Reject failed: ${res.status} ${text}`);
       }
-    } catch (error) {
-      console.error("Error rejecting reset request:", error);
+
+      showPopup("Reset request rejected.", "success");
+      fetchResetRequests();
+    } catch (err) {
+      console.error("Error rejecting reset request:", err);
+      showPopup("Failed to reject reset request.", "error");
     }
   };
 
