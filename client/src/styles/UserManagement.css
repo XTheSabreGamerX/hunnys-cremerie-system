@@ -27,8 +27,7 @@
   flex: 1 1 auto;
   min-height: 180px;
   max-height: 38vh;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow:hidden;
   flex-shrink: 1;
 }
 
@@ -36,6 +35,11 @@
   font-size: 1.8rem;
   margin-bottom: 1rem;
   font-weight: bold;
+}
+
+.table-wrapper {
+  max-height: 150px;
+  overflow-y: auto;
 }
 
 .management-container table {
@@ -57,6 +61,9 @@
   background-color: #921A40;
   color: white;
   text-align: left;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .management-container button {
@@ -89,6 +96,6 @@
 }
 
 .reset-password-container th:nth-child(1) { width: 20% }
-.reset-password-container th:nth-child(2) { width: 25% }
-.reset-password-container th:nth-child(3) { width: 10% }
-.reset-password-container th:nth-child(4) { width: 15% }
+.reset-password-container th:nth-child(2) { width: 15% }
+.reset-password-container th:nth-child(3) { width: 8% }
+.reset-password-container th:nth-child(4) { width: 20% }

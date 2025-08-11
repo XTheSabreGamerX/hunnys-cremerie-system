@@ -169,9 +169,12 @@ const Login = () => {
       },
       body: JSON.stringify({ email: resetEmail }),
     })
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to send reset request");
-        return res.json();
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || "Failed to send reset request");
+        }
+        return data;
       })
       .then((data) => {
         setResetError("");
@@ -336,7 +339,9 @@ const Login = () => {
             />
 
             <div className="reset-modal-buttons">
-              <button onClick={handleResetRequest} disabled={loading}>Submit Request</button>
+              <button onClick={handleResetRequest} disabled={loading}>
+                Submit Request
+              </button>
               <button
                 className="cancel-btn"
                 onClick={() => {

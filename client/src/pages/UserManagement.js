@@ -198,7 +198,7 @@ const UserManagement = () => {
   const handleRejectReset = async (id) => {
     try {
       const res = await fetch(`${API_BASE}/api/resetRequest/${id}/reject`, {
-        method: "DELETE",
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -215,6 +215,27 @@ const UserManagement = () => {
     } catch (err) {
       console.error("Error rejecting reset request:", err);
       showPopup("Failed to reject reset request.", "error");
+    }
+  };
+
+  const handleDeleteReset = async (id) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/resetRequest/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Delete failed: ${res.status} ${await res.text()}`);
+      }
+
+      showPopup("Password reset request has been successfully deleted!", "success");
+      setResetRequests((prev) => prev.filter((req) => req._id !== id));
+    } catch (err) {
+      console.error("Error deleting reset request:", err);
     }
   };
 
@@ -252,159 +273,187 @@ const UserManagement = () => {
       <main className="user-management-main-content">
         <div className="management-container requests-container">
           <h1>Registration Requests</h1>
-          <table>
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Date Requested</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {requests.map((request) => (
-                <tr key={request._id}>
-                  <td>{request.email}</td>
-                  <td>{new Date(request.dateRequested).toLocaleString()}</td>
-                  <td>{request.status}</td>
-                  <td>
-                    <button
-                      onClick={() => {
-                        setConfirmMessage(
-                          "Are you sure you want to accept this registration?"
-                        );
-                        setOnConfirmAction(
-                          () => () => handleApprove(request._id)
-                        );
-                        setShowConfirm(true);
-                      }}
-                    >
-                      Accept
-                    </button>
-                    <button
-                      onClick={() => {
-                        setConfirmMessage(
-                          "Are you sure you want to reject this registration?"
-                        );
-                        setOnConfirmAction(
-                          () => () => handleReject(request._id)
-                        );
-                        setShowConfirm(true);
-                      }}
-                    >
-                      Reject
-                    </button>
-                  </td>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Date Requested</th>
+                  <th>Status</th>
+                  <th>Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {requests.map((request) => (
+                  <tr key={request._id}>
+                    <td>{request.email}</td>
+                    <td>{new Date(request.dateRequested).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}</td>
+                    <td>{request.status}</td>
+                    <td>
+                      <button
+                        onClick={() => {
+                          setConfirmMessage(
+                            "Are you sure you want to accept this registration?"
+                          );
+                          setOnConfirmAction(
+                            () => () => handleApprove(request._id)
+                          );
+                          setShowConfirm(true);
+                        }}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => {
+                          setConfirmMessage(
+                            "Are you sure you want to reject this registration?"
+                          );
+                          setOnConfirmAction(
+                            () => () => handleReject(request._id)
+                          );
+                          setShowConfirm(true);
+                        }}
+                      >
+                        Reject
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="management-container accounts-container">
           <h1>List of Accounts</h1>
-          <table>
-            <thead>
-              <tr>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user._id}>
-                  <td>{user.username}</td>
-                  <td>{user.email}</td>
-                  <td>{user.role || "User"}</td>
-                  <td>{user.status}</td>
-                  <td>
-                    {user.email !== "admin@hunnys.com" ? (
-                      <>
-                        <button
-                          onClick={() => {
-                            const action =
-                              user.status === "deactivated"
-                                ? "reactivate"
-                                : "deactivate";
-                            setConfirmMessage(
-                              `Are you sure you want to ${action} this account?`
-                            );
-                            setOnConfirmAction(() => async () => {
-                              if (user.status === "deactivated") {
-                                await handleReactivate(user._id);
-                              } else {
-                                await handleDeactivate(user._id);
-                              }
-                            });
-                            setShowConfirm(true);
-                          }}
-                        >
-                          {user.status === "deactivated"
-                            ? "Reactivate"
-                            : "Deactivate"}
-                        </button>
-                        <button onClick={() => handleEditClick(user)}>
-                          Edit
-                        </button>
-                      </>
-                    ) : (
-                      <em>System Account</em>
-                    )}
-                  </td>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user._id}>
+                    <td>{user.username}</td>
+                    <td>{user.email}</td>
+                    <td>{user.role || "User"}</td>
+                    <td>{user.status}</td>
+                    <td>
+                      {user.email !== "admin@hunnys.com" ? (
+                        <>
+                          <button
+                            onClick={() => {
+                              const action =
+                                user.status === "deactivated"
+                                  ? "reactivate"
+                                  : "deactivate";
+                              setConfirmMessage(
+                                `Are you sure you want to ${action} this account?`
+                              );
+                              setOnConfirmAction(() => async () => {
+                                if (user.status === "deactivated") {
+                                  await handleReactivate(user._id);
+                                } else {
+                                  await handleDeactivate(user._id);
+                                }
+                              });
+                              setShowConfirm(true);
+                            }}
+                          >
+                            {user.status === "deactivated"
+                              ? "Reactivate"
+                              : "Deactivate"}
+                          </button>
+                          <button onClick={() => handleEditClick(user)}>
+                            Edit
+                          </button>
+                        </>
+                      ) : (
+                        <em>System Account</em>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="management-container reset-password-container">
           <h1>Password Reset Requests</h1>
-          <table>
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Date Requested</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {resetRequests.map((request) => (
-                <tr key={request._id}>
-                  <td>{request.email}</td>
-                  <td>{new Date(request.createdAt).toLocaleString()}</td>
-                  <td>{request.status}</td>
-                  <td>
-                    <button
-                      onClick={() => {
-                        setConfirmMessage("Approve this password reset?");
-                        setOnConfirmAction(
-                          () => () => handleApproveReset(request._id)
-                        );
-                        setShowConfirm(true);
-                      }}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => {
-                        setConfirmMessage("Reject this password reset?");
-                        setOnConfirmAction(
-                          () => () => handleRejectReset(request._id)
-                        );
-                        setShowConfirm(true);
-                      }}
-                    >
-                      Reject
-                    </button>
-                  </td>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Email</th>
+                  <th>Date Requested</th>
+                  <th>Status</th>
+                  <th>Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {resetRequests.map((request) => (
+                  <tr key={request._id}>
+                    <td>{request.email}</td>
+                    <td>{new Date(request.createdAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}</td>
+                    <td>{request.status}</td>
+                    <td>
+                      {request.status === "pending" ? (
+                        <>
+                          <button
+                            onClick={() => {
+                              setConfirmMessage(
+                                "Are you sure you want to approve this password reset request?"
+                              );
+                              setOnConfirmAction(() => async () => {
+                                handleApproveReset(request._id);
+                              });
+                              setShowConfirm(true);
+                            }}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => {
+                              setConfirmMessage(
+                                "Are you sure you want to reject this password reset request?"
+                              );
+                              setOnConfirmAction(() => async () => {
+                                await handleRejectReset(request._id);
+                              });
+                              setShowConfirm(true);
+                            }}
+                          >
+                            Reject
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setConfirmMessage(
+                              "Are you sure you want to delete this password reset request?"
+                            );
+                            setOnConfirmAction(() => async () => {
+                              await handleDeleteReset(request._id);
+                            });
+                            setShowConfirm(true);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </main>
     </>
