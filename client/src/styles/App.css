@@ -72,8 +72,8 @@ html, body, #root {
 /* === Shared Table Container === */
 .module-table-container {
   width: 100%;
-  max-width: 1000px;
-  max-height: 600px;
+  max-width: 1300px;
+  max-height: 500px;
   background-color: rgba(128, 128, 128, 0.3);
   padding: 1.5rem;
   border-radius: 10px;

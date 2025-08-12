@@ -5,7 +5,8 @@ const {
   getAllInventoryItems,
   addInventoryItem,
   updateInventoryItem,
-  deleteInventoryItem
+  deleteInventoryItem,
+  batchUpdateStatuses,
 } = require('../controllers/inventoryController');
 
 // Routes
@@ -16,5 +17,7 @@ router.post('/', authenticateToken, addInventoryItem);
 router.put('/:id', authenticateToken, updateInventoryItem);
 
 router.delete('/:id', authenticateToken, deleteInventoryItem);
+
+router.post('/inventory/check-status', batchUpdateStatuses);
 
 module.exports = router;

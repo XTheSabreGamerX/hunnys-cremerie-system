@@ -28,7 +28,7 @@ const Inventory = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  const nanoid = customAlphabet('0123456789', 6);
+  const nanoid = customAlphabet("0123456789", 6);
   const containerRef = useRef(null);
 
   const navigate = useNavigate();
@@ -48,11 +48,13 @@ const Inventory = () => {
       name: "itemId",
       placeholder: "e.g. BOX-001, CAKE-025, etc... Leave empty for default ID",
     },
-    { label: "Item Name", name: "name", required: "true" },
+    { label: "Item Name", name: "name", required: true },
     { label: "Stock", name: "stock", type: "number" },
     { label: "Category", name: "category" },
+    { label: "Purchase Price", name: "purchasePrice", type: "number" },
     { label: "Unit Price", name: "unitPrice", type: "number" },
     { label: "Supplier", name: "supplier" },
+    { label: "Restock Threshold", name: "restockThreshold", type: "number" },
     { label: "Expiration Date", name: "expirationDate", type: "date" },
   ];
 
@@ -314,13 +316,21 @@ const Inventory = () => {
             { name: "name", label: "Item Name" },
             { name: "category", label: "Category" },
             { name: "stock", label: "Stock" },
+            { name: "purchasePrice", label: "Purchase Price" },
             { name: "unitPrice", label: "Price" },
             { name: "supplier", label: "Supplier" },
+            { name: "restockThreshold", label: "Restock Threshold" },
             {
               name: "expirationDate",
               label: "Expiration Date",
-              formatter: (val) => new Date(val).toLocaleDateString(),
+              render: (val) =>
+                val
+                  ? new Date(val).toLocaleDateString("en-PH", {
+                      timeZone: "Asia/Manila",
+                    })
+                  : "N/A",
             },
+            { name: "status", label: "Status" },
           ]}
           onClose={() => {
             setIsViewOpen(false);
@@ -417,16 +427,18 @@ const Inventory = () => {
                 <th>Item Name</th>
                 <th>Stock</th>
                 <th>Category</th>
+                <th>Purchase Price</th>
                 <th>Unit Price</th>
                 <th>Supplier</th>
                 <th>Expiration Date</th>
+                <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {(isFiltering ? filteredItems : items).length === 0 ? (
                 <tr>
-                  <td colSpan="8">No items found.</td>
+                  <td colSpan="10">No items found.</td>
                 </tr>
               ) : (
                 (isFiltering ? filteredItems : items).map((item) => (
@@ -435,13 +447,17 @@ const Inventory = () => {
                     <td>{item.name}</td>
                     <td>{item.stock}</td>
                     <td>{item.category || "—"}</td>
+                    <td>₱{item.purchasePrice}</td>
                     <td>₱{item.unitPrice}</td>
                     <td>{item.supplier || "—"}</td>
                     <td>
                       {item.expirationDate
-                        ? new Date(item.expirationDate).toLocaleDateString()
+                        ? new Date(item.expirationDate).toLocaleDateString("en-PH", {
+                            timeZone: "Asia/Manila",
+                          })
                         : "N/A"}
                     </td>
+                    <td>{item.status}</td>
                     <td>
                       <button
                         className="module-action-btn module-edit-btn"

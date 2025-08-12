@@ -1,6 +1,25 @@
 const InventoryItem = require("../models/InventoryItem");
 const { createLog } = require("../controllers/activityLogController");
 
+// Computes inventory item status
+function computeStatus(item) {
+  const now = new Date();
+
+  if (item.expirationDate && new Date(item.expirationDate) < now) {
+    return "Expired";
+  }
+
+  if (item.stock <= 0) {
+    return "Out of stock";
+  }
+
+  if (item.stock <= (item.restockThreshold ?? 5)) {
+    return "Low-stock";
+  }
+
+  return "Well-stocked";
+}
+
 // GET all inventory items
 const getAllInventoryItems = async (req, res) => {
   try {
@@ -108,9 +127,28 @@ const deleteInventoryItem = async (req, res) => {
   }
 };
 
+// Periodic update for status
+const batchUpdateStatuses = async () => {
+  try {
+    const items = await InventoryItem.find();
+
+    for (const item of items) {
+      const newStatus = computeStatus(item);
+      if (item.status !== newStatus) {
+        item.status = newStatus;
+        await item.save();
+      }
+    }
+    console.log('Batch status update complete');
+  } catch (error) {
+    console.error('Error during batch status update:', error);
+  }
+};
+
 module.exports = {
   getAllInventoryItems,
   addInventoryItem,
   updateInventoryItem,
   deleteInventoryItem,
+  batchUpdateStatuses,
 };

@@ -11,6 +11,16 @@
   padding-bottom: 6px;
 }
 
+.view-modal .modal-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  width: 100%;
+  padding-top: 6px;
+  box-sizing: border-box;
+}
+
 .customer-btn {
   padding: 8px 16px;
   border: none;

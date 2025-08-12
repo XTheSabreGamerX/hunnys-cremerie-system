@@ -1,16 +1,30 @@
+.inventory-main .module-table-container table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.inventory-main .module-table-container table th,
+.inventory-main .module-table-container table td {
+  padding: 8px 10px;
+  white-space: normal;
+  word-break: break-word;
+  text-overflow: ellipsis;
+}
+
 .inventory-main .module-table-container table th:nth-child(1),
 .inventory-main .module-table-container table td:nth-child(1) {
-  width: 10%;
+  width: 8%;
 }
 
 .inventory-main .module-table-container table th:nth-child(2),
 .inventory-main .module-table-container table td:nth-child(2) {
-  width: 10%;
+  width: 12%;
 }
 
 .inventory-main .module-table-container table th:nth-child(3),
 .inventory-main .module-table-container table td:nth-child(3) {
-  width: 5%;
+  width: 6%;
 }
 
 .inventory-main .module-table-container table th:nth-child(4),
@@ -20,7 +34,7 @@
 
 .inventory-main .module-table-container table th:nth-child(5),
 .inventory-main .module-table-container table td:nth-child(5) {
-  width: 5%;
+  width: 8%;
 }
 
 .inventory-main .module-table-container table th:nth-child(6),
@@ -30,10 +44,20 @@
 
 .inventory-main .module-table-container table th:nth-child(7),
 .inventory-main .module-table-container table td:nth-child(7) {
-  width: 12%;
+  width: 10%;
 }
 
 .inventory-main .module-table-container table th:nth-child(8),
 .inventory-main .module-table-container table td:nth-child(8) {
-  width: 15%;
+  width: 12%;
+}
+
+.inventory-main .module-table-container table th:nth-child(9),
+.inventory-main .module-table-container table td:nth-child(9) {
+  width: 12%;
+}
+
+.inventory-main .module-table-container table th:nth-child(10),
+.inventory-main .module-table-container table td:nth-child(10) {
+  width: 16%;
 }
