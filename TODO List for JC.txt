@@ -1,8 +1,9 @@
 - Search with filter for Activity Log
 - Inventory, Sales, Customer, and Supplier need to connect with one another (dropdowns for customers in sale creation, etc...)
-- Register show password
 - Adjust register sizing not fitting because of new confirm password field
 - Adjust Activity Log styling
 - Replace Confirmation Message popups with toast
 - Add logs for User Management
 - Create Notification Module
+- New Sales Modal that includes a toggle for Walk In customer that enables/disables the name field
+- Inventory toggle for cake mode that pulls away from inventory per sale

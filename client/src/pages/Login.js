@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PopupMessage from "../components/PopupMessage";
+import ResetPasswordModal from "../components/ResetPasswordModal";
 import "../styles/Login.css";
 
 const Login = () => {
@@ -27,6 +28,7 @@ const Login = () => {
   const [showResetModal, setShowResetModal] = useState(false);
   const [resetError, setResetError] = useState("");
   const [resetSuccess, setResetSuccess] = useState("");
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("");
@@ -68,15 +70,20 @@ const Login = () => {
 
       if (res.ok) {
         localStorage.setItem("token", data.token);
-
         localStorage.setItem("user", JSON.stringify(data.user));
         localStorage.setItem("isLoggedIn", "true");
 
-        setPopupMessage("Login successful! Redirecting to dashboard...");
-        setPopupType("success");
-        setTimeout(() => {
-          navigate("/dashboard");
-        }, 2000);
+        if (data.user.needsPasswordReset) {
+          setShowChangePasswordModal(true);
+          setPopupMessage("You must reset your password before continuing.");
+          setPopupType("error");
+        } else {
+          setPopupMessage("Login successful! Redirecting to dashboard...");
+          setPopupType("success");
+          setTimeout(() => {
+            navigate("/dashboard");
+          }, 2000);
+        }
       } else {
         const message = data.message || "Invalid email or password";
         setPopupMessage(message);
@@ -187,6 +194,38 @@ const Login = () => {
         setResetError(error.message);
         setResetSuccess("");
       });
+  };
+
+  const handleResetPasswordSubmit = async (newPassword) => {
+    try {
+      setLoading(true);
+
+      const user = JSON.parse(localStorage.getItem("user"));
+
+      const res = await fetch(`${API_BASE}/api/resetRequest/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, newPassword }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setPopupMessage(
+          "Password reset successfully! You can now log in."
+        );
+        setPopupType("success");
+        setShowChangePasswordModal(false);
+      } else {
+        setPopupMessage(data.message || "Failed to reset password");
+        setPopupType("error");
+      }
+    } catch (error) {
+      setPopupMessage("Server error. Please try again later.");
+      setPopupType("error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -356,6 +395,15 @@ const Login = () => {
             </div>
           </div>
         </div>
+      )}
+      {showChangePasswordModal && (
+        <ResetPasswordModal
+          isOpen={showChangePasswordModal}
+          onClose={() => setShowChangePasswordModal(false)}
+          onSubmit={handleResetPasswordSubmit}
+          setPopUpMessage={setPopupMessage}
+          setPopUpType={setPopupType}
+        />
       )}
     </div>
   );

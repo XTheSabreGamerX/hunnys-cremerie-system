@@ -6,7 +6,8 @@ const {
   getResetRequests,
   approveResetRequest,
   rejectResetRequest,
-  deleteResetRequest
+  deleteResetRequest,
+  resetPassword
 } = require("../controllers/resetRequestController");
 
 router.post('/', createResetRequest);
@@ -18,5 +19,7 @@ router.put('/:id/approve', authenticateToken, approveResetRequest);
 router.put('/:id/reject', authenticateToken, rejectResetRequest);
 
 router.delete('/:id', authenticateToken, deleteResetRequest);
+
+router.post ('/reset-password', resetPassword);
 
 module.exports = router;

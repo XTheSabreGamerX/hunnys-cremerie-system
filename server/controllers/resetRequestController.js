@@ -78,6 +78,7 @@ const approveResetRequest = async (req, res) => {
     const hashedPassword = await bcrypt.hash(tempPassword, salt);
 
     user.password = hashedPassword;
+    user.needsPasswordReset = true;
     await user.save();
 
     request.status = "approved";
@@ -153,10 +154,35 @@ const deleteResetRequest = async (req, res) => {
   }
 };
 
+const resetPassword = async (req, res) => {
+  try {
+    const { userId, newPassword } = req.body;
+
+    if (!newPassword) {
+      return res.status(400).json({ message: "New password is required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    user.needsPasswordReset = false;
+    await user.save();
+
+    res.status(200).json({ message: "Password has been reset successfully! You may now login!" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 module.exports = {
   createResetRequest,
   getResetRequests,
   approveResetRequest,
   rejectResetRequest,
   deleteResetRequest,
+  resetPassword
 };
