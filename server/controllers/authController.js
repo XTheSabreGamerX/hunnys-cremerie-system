@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
+const { createLog } = require("../controllers/activityLogController");
 
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
@@ -11,6 +12,12 @@ const loginUser = async (req, res) => {
     console.log("User found:", user);
 
     if (!user) {
+      await createLog({
+        action: "Failed login attempt",
+        module: "Login",
+        description: `A failed login attempt for non-existing user: ${email}`,
+        userId: null,
+      });
       return res.status(400).json({ message: "User not found" });
     }
 
@@ -23,6 +30,12 @@ const loginUser = async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      await createLog({
+        action: "Failed login attempt",
+        module: "Login",
+        description: `A failed login attempt was performed: ${user.username}`,
+        userId: user._id,
+      });
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
@@ -32,7 +45,7 @@ const loginUser = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
-        needsPasswordReset: user.needsPasswordReset
+        needsPasswordReset: user.needsPasswordReset,
       },
       process.env.JWT_SECRET,
       { expiresIn: "24h" }
@@ -46,8 +59,14 @@ const loginUser = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
-        needsPasswordReset: user.needsPasswordReset
+        needsPasswordReset: user.needsPasswordReset,
       },
+    });
+    await createLog({
+      action: "Login attempt",
+      module: "Login",
+      description: `User has logged in: ${user.username}`,
+      userId: user._id,
     });
   } catch (err) {
     console.error("Login error:", err);
