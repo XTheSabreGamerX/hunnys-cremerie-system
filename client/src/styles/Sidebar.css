@@ -74,6 +74,12 @@
   padding: 0.5rem;
   cursor: pointer;
 }
+/* Keep current page highlighted */
+.sidebar-nav a.active {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  color: #fff;
+}
 
 .sidebar-nav a:hover {
   background-color: rgba(255, 255, 255, 0.1);

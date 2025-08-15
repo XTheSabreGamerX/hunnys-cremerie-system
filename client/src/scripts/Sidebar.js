@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import "../styles/Sidebar.css";
 import Logo from "../elements/images/icon32x32.png";
 import { Menu } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, NavLink } from "react-router-dom";
 
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -10,9 +10,7 @@ const Sidebar = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   const role = user?.role ? user.role.toLowerCase() : null;
 
-  const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
-  };
+  const toggleSidebar = () => setIsCollapsed(!isCollapsed);
 
   const logout = () => {
     localStorage.removeItem("token");
@@ -21,91 +19,94 @@ const Sidebar = () => {
     navigate("/login");
   };
 
+  // Helper to apply "active" class to current route
+  const linkClass = ({ isActive }) => (isActive ? "active" : "");
+
   return (
     <div className={`sidebar ${isCollapsed ? "collapsed" : ""}`}>
       <div className="sidebar-header">
         <img src={Logo} alt="Logo" className="sidebar-logo" />
-        <button onClick={toggleSidebar} className="sidebar-toggle">
+        <button onClick={toggleSidebar} className="sidebar-toggle" aria-label="Toggle sidebar">
           <Menu />
         </button>
       </div>
 
       <div className="sidebar-scroll">
         <nav className="sidebar-nav">
-          <Link to="/dashboard">
+          <NavLink to="/dashboard" className={linkClass} end>
             <span className="label">Dashboard</span>
-          </Link>
+          </NavLink>
 
           {(role === "admin" || role === "manager") && (
             <>
-              <Link to="/user-management">
+              <NavLink to="/user-management" className={linkClass}>
                 <span className="label">User Management</span>
-              </Link>
-              <Link to="/activity-log">
+              </NavLink>
+              <NavLink to="/activity-log" className={linkClass}>
                 <span className="label">Activity Log</span>
-              </Link>
+              </NavLink>
             </>
           )}
 
           {(role === "admin" || role === "manager" || role === "staff") && (
             <>
-              <Link to="/inventory">
+              <NavLink to="/inventory" className={linkClass}>
                 <span className="label">Inventory</span>
-              </Link>
-              <Link to="/sales-management">
+              </NavLink>
+              <NavLink to="/sales-management" className={linkClass}>
                 <span className="label">Sales Management</span>
-              </Link>
-              <Link to="/dashboard">
+              </NavLink>
+              <NavLink to="/dashboard" className={linkClass}>
                 <span className="label">Sales Report</span>
-              </Link>
-              <Link to="/dashboard">
+              </NavLink>
+              <NavLink to="/dashboard" className={linkClass}>
                 <span className="label">Profitability Dashboard</span>
-              </Link>
-              <Link to="/supplier-management">
+              </NavLink>
+              <NavLink to="/supplier-management" className={linkClass}>
                 <span className="label">Supplier Management</span>
-              </Link>
-              <Link to="/customer-management">
+              </NavLink>
+              <NavLink to="/customer-management" className={linkClass}>
                 <span className="label">Customer Management</span>
-              </Link>
+              </NavLink>
             </>
           )}
 
           {role === "admin" && (
             <>
-              <Link to="/dashboard">
+              <NavLink to="/dashboard" className={linkClass}>
                 <span className="label">Pricing Management</span>
-              </Link>
-              <Link to="/dashboard">
+              </NavLink>
+              <NavLink to="/dashboard" className={linkClass}>
                 <span className="label">Backup and Restore</span>
-              </Link>
-              <Link to="/dashboard">
+              </NavLink>
+              <NavLink to="/dashboard" className={linkClass}>
                 <span className="label">Notifications</span>
-              </Link>
+              </NavLink>
             </>
           )}
 
           {role === "manager" && (
             <>
-              <Link to="/dashboard">
+              <NavLink to="/dashboard" className={linkClass}>
                 <span className="label">Pricing Management</span>
-              </Link>
-              <Link to="/dashboard">
+              </NavLink>
+              <NavLink to="/dashboard" className={linkClass}>
                 <span className="label">Backup and Restore</span>
-              </Link>
-              <Link to="/dashboard">
+              </NavLink>
+              <NavLink to="/dashboard" className={linkClass}>
                 <span className="label">Notifications</span>
-              </Link>
+              </NavLink>
             </>
           )}
 
           {role === "staff" && (
             <>
-              <Link to="/dashboard">
+              <NavLink to="/dashboard" className={linkClass}>
                 <span className="label">Backup and Restore</span>
-              </Link>
-              <Link to="/dashboard">
+              </NavLink>
+              <NavLink to="/dashboard" className={linkClass}>
                 <span className="label">Notifications</span>
-              </Link>
+              </NavLink>
             </>
           )}
         </nav>
