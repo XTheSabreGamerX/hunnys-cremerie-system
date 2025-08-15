@@ -1,14 +1,7 @@
-body, html {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  overflow-x: hidden;
-}
-
 .dashboard-main-content {
   margin-top: 60px;
   margin-left: 250px;
-  padding: 2rem;
+  padding: 3rem;
   background-color: #f4f4f4;
   box-sizing: border-box;
 
@@ -18,4 +11,46 @@ body, html {
 
 .sidebar.collapsed + .dashboard-main-content {
   margin-left: 70px;
+}
+
+.dashboard-title {
+  margin-bottom: 20px;
+  font-size: 1.8rem;
+  font-weight: bold;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.dashboard-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  text-align: center;
+  transition: transform 0.15s ease-in-out;
+}
+
+.dashboard-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-3px);
+}
+
+.dashboard-card h2 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+
+.dashboard-card p {
+  font-size: 1.6rem;
+  font-weight: bold;
+  color: #333;
 }
