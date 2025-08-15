@@ -39,13 +39,24 @@ const getSaleById = async (req, res) => {
 // POST function to create a new sale
 const createSale = async (req, res) => {
   try {
-    const newSale = new Sale(req.body);
+    const saleItemsWithCost = await Promise.all(
+      req.body.items.map(async (item) => {
+        const inventoryItem = await Inventory.findOne({ itemId: item.itemId });
+        return {
+          ...item,
+          purchasePrice: inventoryItem?.purchasePrice || 0,
+        };
+      })
+    );
+
+    const newSale = new Sale({
+      ...req.body,
+      items: saleItemsWithCost,
+    });
     await newSale.save();
 
     for (const soldItem of newSale.items) {
-      const inventoryItem = await Inventory.findOne({
-        itemId: soldItem.itemId,
-      });
+      const inventoryItem = await Inventory.findOne({ itemId: soldItem.itemId });
       if (!inventoryItem) continue;
 
       inventoryItem.stock -= soldItem.quantity;
@@ -64,10 +75,7 @@ const createSale = async (req, res) => {
         userId: req.user.id,
       });
     } catch (logErr) {
-      console.error(
-        "[Activity Log] Failed to log sale creation:",
-        logErr.message
-      );
+      console.error("[Activity Log] Failed to log sale creation:", logErr.message);
     }
 
     res.status(201).json({
