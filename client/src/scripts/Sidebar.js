@@ -10,7 +10,7 @@ const Sidebar = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   const role = user?.role ? user.role.toLowerCase() : null;
 
-  const toggleSidebar = () => setIsCollapsed(!isCollapsed);
+  const toggleSidebar = () => setIsCollapsed((v) => !v);
 
   const logout = () => {
     localStorage.removeItem("token");
@@ -19,7 +19,6 @@ const Sidebar = () => {
     navigate("/login");
   };
 
-  // Helper to apply "active" class to current route
   const linkClass = ({ isActive }) => (isActive ? "active" : "");
 
   return (
@@ -39,10 +38,10 @@ const Sidebar = () => {
 
           {(role === "admin" || role === "manager") && (
             <>
-              <NavLink to="/user-management" className={linkClass}>
+              <NavLink to="/user-management" className={linkClass} end>
                 <span className="label">User Management</span>
               </NavLink>
-              <NavLink to="/activity-log" className={linkClass}>
+              <NavLink to="/activity-log" className={linkClass} end>
                 <span className="label">Activity Log</span>
               </NavLink>
             </>
@@ -50,22 +49,23 @@ const Sidebar = () => {
 
           {(role === "admin" || role === "manager" || role === "staff") && (
             <>
-              <NavLink to="/inventory" className={linkClass}>
+              <NavLink to="/inventory" className={linkClass} end>
                 <span className="label">Inventory</span>
               </NavLink>
-              <NavLink to="/sales-management" className={linkClass}>
+              <NavLink to="/sales-management" className={linkClass} end>
                 <span className="label">Sales Management</span>
               </NavLink>
-              <NavLink to="/dashboard" className={linkClass}>
+              {/* The following paths should be real routes to avoid multiple active states */}
+              <NavLink to="/sales-report" className={linkClass} end>
                 <span className="label">Sales Report</span>
               </NavLink>
-              <NavLink to="/dashboard" className={linkClass}>
+              <NavLink to="/profitability-dashboard" className={linkClass} end>
                 <span className="label">Profitability Dashboard</span>
               </NavLink>
-              <NavLink to="/supplier-management" className={linkClass}>
+              <NavLink to="/supplier-management" className={linkClass} end>
                 <span className="label">Supplier Management</span>
               </NavLink>
-              <NavLink to="/customer-management" className={linkClass}>
+              <NavLink to="/customer-management" className={linkClass} end>
                 <span className="label">Customer Management</span>
               </NavLink>
             </>
@@ -73,13 +73,13 @@ const Sidebar = () => {
 
           {role === "admin" && (
             <>
-              <NavLink to="/dashboard" className={linkClass}>
+              <NavLink to="/pricing-management" className={linkClass} end>
                 <span className="label">Pricing Management</span>
               </NavLink>
-              <NavLink to="/dashboard" className={linkClass}>
+              <NavLink to="/backup-and-restore" className={linkClass} end>
                 <span className="label">Backup and Restore</span>
               </NavLink>
-              <NavLink to="/dashboard" className={linkClass}>
+              <NavLink to="/notifications" className={linkClass} end>
                 <span className="label">Notifications</span>
               </NavLink>
             </>
@@ -87,13 +87,13 @@ const Sidebar = () => {
 
           {role === "manager" && (
             <>
-              <NavLink to="/dashboard" className={linkClass}>
+              <NavLink to="/pricing-management" className={linkClass} end>
                 <span className="label">Pricing Management</span>
               </NavLink>
-              <NavLink to="/dashboard" className={linkClass}>
+              <NavLink to="/backup-and-restore" className={linkClass} end>
                 <span className="label">Backup and Restore</span>
               </NavLink>
-              <NavLink to="/dashboard" className={linkClass}>
+              <NavLink to="/notifications" className={linkClass} end>
                 <span className="label">Notifications</span>
               </NavLink>
             </>
@@ -101,10 +101,10 @@ const Sidebar = () => {
 
           {role === "staff" && (
             <>
-              <NavLink to="/dashboard" className={linkClass}>
+              <NavLink to="/backup-and-restore" className={linkClass} end>
                 <span className="label">Backup and Restore</span>
               </NavLink>
-              <NavLink to="/dashboard" className={linkClass}>
+              <NavLink to="/notifications" className={linkClass} end>
                 <span className="label">Notifications</span>
               </NavLink>
             </>
