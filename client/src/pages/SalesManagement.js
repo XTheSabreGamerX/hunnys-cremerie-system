@@ -292,10 +292,7 @@ const SalesManagement = () => {
       taxRate: saleData.taxRate || 0,
       taxAmount,
       totalAmount,
-      paymentMethod: saleData.paymentMethod,
-      date: saleData.date
-        ? new Date(saleData.date).toISOString()
-        : new Date().toISOString(),
+      paymentMethod: saleData.paymentMethod
     };
 
     try {
@@ -463,7 +460,7 @@ const SalesManagement = () => {
                     <td>{sale.orderType}</td>
                     <td>₱{sale.totalAmount?.toFixed(2)}</td>
                     <td>{sale.paymentMethod}</td>
-                    <td>{new Date(sale.date).toLocaleDateString()}</td>
+                    <td>{new Date(sale.createdAt).toLocaleString()}</td>
                     <td>
                       <button
                         className="module-action-btn module-view-btn"

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cron = require('node-cron');
 const authRoutes = require('./routes/auth');
 const requestRoutes = require('./routes/request');
+const dashboardRoutes = require('./routes/dashboard');
 const userRoutes = require('./routes/user');
 const resetRequestRoutes = require('./routes/resetRequest');
 const activityRoutes = require('./routes/activityLog');
@@ -40,6 +41,7 @@ app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/request', requestRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/resetRequest', resetRequestRoutes);
 app.use('/api/activitylog', activityRoutes)
