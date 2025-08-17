@@ -80,7 +80,7 @@ const Sidebar = () => {
 
                 <span className="label">Sales Report</span>
               </NavLink>
-              <NavLink to="/profitability-dashboard" className={linkClass} end>
+              <NavLink to="/dashboard" className={linkClass} end>
                 <span className="label">Profitability Dashboard</span>
               </NavLink>
               <NavLink to="/supplier-management" className={linkClass} end>
@@ -94,10 +94,10 @@ const Sidebar = () => {
 
           {role === "admin" && (
             <>
-              <NavLink to="/pricing-management" className={linkClass} end>
+              <NavLink to="/dashboard" className={linkClass} end>
                 <span className="label">Pricing Management</span>
               </NavLink>
-              <NavLink to="/backup-and-restore" className={linkClass} end>
+              <NavLink to="/dashboard" className={linkClass} end>
                 <span className="label">Backup and Restore</span>
               </NavLink>
               <NavLink to="/notifications" className={linkClass} end>
@@ -108,10 +108,10 @@ const Sidebar = () => {
 
           {role === "manager" && (
             <>
-              <NavLink to="/pricing-management" className={linkClass} end>
+              <NavLink to="/dashboard" className={linkClass} end>
                 <span className="label">Pricing Management</span>
               </NavLink>
-              <NavLink to="/backup-and-restore" className={linkClass} end>
+              <NavLink to="/dashboard" className={linkClass} end>
                 <span className="label">Backup and Restore</span>
               </NavLink>
               <NavLink to="/notifications" className={linkClass} end>
@@ -122,7 +122,7 @@ const Sidebar = () => {
 
           {role === "staff" && (
             <>
-              <NavLink to="/backup-and-restore" className={linkClass} end>
+              <NavLink to="/dashboard" className={linkClass} end>
                 <span className="label">Backup and Restore</span>
               </NavLink>
               <NavLink to="/notifications" className={linkClass} end>
