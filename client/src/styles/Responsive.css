@@ -1,0 +1,10 @@
+@media (max-width: 768px) {
+  .module-main-content,
+  .dashboard-main-content,
+  .activity-log-main-content,
+  .user-management-main-content {
+    margin-left: 0 !important;   /* remove desktop sidebar offset */
+    margin-top: 60px;            /* clear the fixed header */
+    min-height: calc(100vh - 60px);
+  }
+}

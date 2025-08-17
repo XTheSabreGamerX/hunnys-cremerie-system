@@ -1,5 +1,6 @@
 import React from 'react';
 import '../styles/Header.css'; // link to CSS
+import { Menu } from "lucide-react";
 
 const Header = () => {
   return (

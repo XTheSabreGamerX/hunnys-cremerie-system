@@ -17,6 +17,7 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import SupplierManagement from "../pages/SupplierManagement";
 import CustomerManagement from "../pages/CustomerManagement";
 import SalesManagement from "../pages/SalesManagement";
+import "../styles/Responsive.css";
 
 function App() {
   return (

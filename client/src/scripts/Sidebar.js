@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../styles/Sidebar.css";
 import Logo from "../elements/images/icon32x32.png";
 import { Menu } from "lucide-react";
@@ -6,11 +6,31 @@ import { useNavigate, NavLink } from "react-router-dom";
 
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isOpen, setIsOpen] = useState(false); // mobile open/close
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
   const role = user?.role ? user.role.toLowerCase() : null;
 
-  const toggleSidebar = () => setIsCollapsed((v) => !v);
+  useEffect(() => {
+    const onCmd = (e) => {
+      const cmd = e?.detail || "toggle";
+      const isMobile = window.innerWidth <= 768;
+      if (!isMobile) return;
+      if (cmd === "toggle") setIsOpen((v) => !v);
+      if (cmd === "open") setIsOpen(true);
+      if (cmd === "close") setIsOpen(false);
+    };
+    window.addEventListener("hc:sidebar", onCmd);
+    return () => window.removeEventListener("hc:sidebar", onCmd);
+  }, []);
+
+  const toggleSidebar = () => {
+    if (window.innerWidth <= 768) {
+      setIsOpen((v) => !v);      // mobile: open/close drop-down
+    } else {
+      setIsCollapsed((v) => !v); // desktop: collapse/expand
+    }
+  };
 
   const logout = () => {
     localStorage.removeItem("token");
@@ -22,7 +42,7 @@ const Sidebar = () => {
   const linkClass = ({ isActive }) => (isActive ? "active" : "");
 
   return (
-    <div className={`sidebar ${isCollapsed ? "collapsed" : ""}`}>
+    <div className={`sidebar ${isCollapsed ? "collapsed" : ""} ${isOpen ? "open" : ""}`}>
       <div className="sidebar-header">
         <img src={Logo} alt="Logo" className="sidebar-logo" />
         <button onClick={toggleSidebar} className="sidebar-toggle" aria-label="Toggle sidebar">

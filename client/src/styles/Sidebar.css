@@ -103,3 +103,58 @@
   pointer-events: none;
   opacity: 0.5;
 }
+
+/* === Mobile: sidebar drops from the top === */
+@media (max-width: 768px) {
+  html, body { overflow-x: hidden; }
+
+  .sidebar {
+    position: fixed;
+    top: 60px;                 /* below the main header */
+    left: 0;
+    right: 0;                  /* full width */
+    height: calc(100vh - 60px);
+    width: auto;
+    max-width: 100%;
+    box-sizing: border-box;
+    background-color: #921A40;
+    transform: translateY(-100%) !important; /* start hidden above; force override */
+    visibility: hidden;                       /* prevent click-through zones when closed */
+    pointer-events: none;
+    transition: transform 0.25s ease, visibility 0s linear 0.25s;
+    z-index: 1100;
+    overflow: hidden;
+    padding: 12px 16px;
+    box-shadow: none;            /* avoid stray shadows on phones */
+  }
+
+  .sidebar.open {
+    transform: translateY(0) !important;     /* drop down */
+    visibility: visible;                      /* immediately visible */
+    pointer-events: auto;
+    transition: transform 0.25s ease, visibility 0s;
+  }
+
+  /* On mobile we don't need the internal sidebar header row */
+  .sidebar-header,
+  .sidebar-logo,
+  .sidebar-toggle {
+    display: none !important;
+  }
+
+  /* collapsed state is irrelevant on mobile; neutralize */
+  .sidebar.collapsed { width: auto; }
+
+  /* make links easier to tap on phones */
+  .sidebar-nav a {
+    display: block;
+    border-radius: 8px;
+  }
+
+  .sidebar-scroll {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    max-height: calc(100vh - 60px - 24px); /* header height + small padding */
+    padding-bottom: 8px;
+  }
+}
