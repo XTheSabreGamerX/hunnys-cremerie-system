@@ -1,14 +1,13 @@
 .user-management-main-content {
   margin-top: 60px;
   margin-left: 250px;
-  height: calc(100vh - 60px);
+  min-height: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   overflow-x: hidden;
   overflow-y: auto;
   padding: 2rem;
-  box-sizing: border-box;
   background-color: #f4f4f4;
 }
 
@@ -17,7 +16,7 @@
 }
 
 .management-container {
-  width: 1000px;
+  width: 1500px;
   max-width: 100%;
   background-color: rgba(128, 128, 128, 0.3);
   padding: 1.5rem;
@@ -25,8 +24,6 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   margin: 1rem 0;
   flex: 1 1 auto;
-  min-height: 180px;
-  max-height: 38vh;
   overflow:hidden;
   flex-shrink: 1;
 }
@@ -38,7 +35,6 @@
 }
 
 .table-wrapper {
-  max-height: 150px;
   overflow-y: auto;
 }
 
@@ -86,9 +82,9 @@
 .requests-container th:nth-child(3) { width: 15%; }
 .requests-container th:nth-child(4) { width: 15%; }
 
-.accounts-container th:nth-child(1) { width: 25%; }
+.accounts-container th:nth-child(1) { width: 15%; }
 .accounts-container th:nth-child(2) { width: 25%; }
-.accounts-container th:nth-child(3) { width: 15%; }
+.accounts-container th:nth-child(3) { width: 12%; }
 .accounts-container th:nth-child(4) { width: 12%; }
 .accounts-container th:nth-child(5) {
   width: 20%;

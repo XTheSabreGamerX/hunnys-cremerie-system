@@ -77,6 +77,7 @@ const Sidebar = () => {
               </NavLink>
               {/* The following paths should be real routes to avoid multiple active states */}
               <NavLink to="/sales-report" className={linkClass} end>
+
                 <span className="label">Sales Report</span>
               </NavLink>
               <NavLink to="/profitability-dashboard" className={linkClass} end>

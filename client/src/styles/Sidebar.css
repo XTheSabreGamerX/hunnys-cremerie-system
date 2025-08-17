@@ -158,3 +158,26 @@
     padding-bottom: 8px;
   }
 }
+
+/* Position the nav-toggle button at the far top-left inside the header */
+.nav-toggle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  width: 44px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  z-index: 1201; /* above sidebar */
+}
+
+.nav-toggle svg {
+  width: 24px;
+  height: 24px;
+}
