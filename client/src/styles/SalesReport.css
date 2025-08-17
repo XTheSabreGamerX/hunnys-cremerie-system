@@ -95,13 +95,13 @@
 }
 
 .records-table th {
-  background: #e6f1f4;
-  color: #2c5282;
+  background: #92ffb6;
+  color: #044726;
   font-weight: 600;
 }
 
 .records-table tr:hover {
-  background: #f1faff;
+  background: #badfcc;
 }
 
 .sales-report-main {
@@ -121,7 +121,8 @@
   border-radius: 12px;
   box-shadow: 0px 3px 8px rgba(0, 0, 0, 0.05);
   margin-top: 20px;
-  padding: 10px;
+  padding: 20px;
+  height: 400px;
 }
 
 .sales-chart-title {
