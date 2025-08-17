@@ -9,6 +9,7 @@ const resetRequestRoutes = require('./routes/resetRequest');
 const activityRoutes = require('./routes/activityLog');
 const inventoryRoutes = require('./routes/inventory');
 const saleRoutes = require('./routes/sale');
+const salesReportRoutes = require('./routes/salesReport');
 const supplierRoutes = require('./routes/supplier');
 const customerRoutes = require('./routes/customer');
 const cors = require('cors');
@@ -47,6 +48,7 @@ app.use('/api/resetRequest', resetRequestRoutes);
 app.use('/api/activitylog', activityRoutes)
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/sales', saleRoutes);
+app.use('/api/salesReport', salesReportRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/customers', customerRoutes);
 

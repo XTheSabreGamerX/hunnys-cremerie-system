@@ -55,7 +55,7 @@ const Sidebar = () => {
               <Link to="/sales-management">
                 <span className="label">Sales Management</span>
               </Link>
-              <Link to="/dashboard">
+              <Link to="/sales-report">
                 <span className="label">Sales Report</span>
               </Link>
               <Link to="/dashboard">

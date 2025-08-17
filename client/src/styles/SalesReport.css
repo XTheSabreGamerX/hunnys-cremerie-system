@@ -1,0 +1,131 @@
+.sales-report-main {
+  padding: 5rem;
+  margin-left: 250px;
+  background: #f7fafc;
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar.collapsed + .sales-report-main {
+  margin-left: 70px;
+}
+
+.sales-report-title {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  color: #003f5c;
+  font-weight: 700;
+}
+
+.sales-report-analytics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.sales-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 1.2rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  transition: transform 0.2s ease;
+}
+
+.sales-card:hover {
+  transform: translateY(-3px);
+}
+
+.sales-card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.6rem;
+  color: #2d3748;
+}
+
+.sales-card p {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #0a9396;
+}
+
+.sales-card ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sales-card li {
+  margin-bottom: 0.3rem;
+  display: flex;
+  justify-content: space-between;
+  color: #4a5568;
+}
+
+.sales-card.highlight {
+  background: linear-gradient(#059669);
+  color: white;
+}
+
+.sales-card.highlight p {
+  color: #fffbea;
+}
+
+.sales-report-records h2 {
+  margin-bottom: 1rem;
+  color: #003f5c;
+}
+
+.records-table-wrapper {
+  overflow-x: auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+}
+
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.records-table th,
+.records-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.records-table th {
+  background: #e6f1f4;
+  color: #2c5282;
+  font-weight: 600;
+}
+
+.records-table tr:hover {
+  background: #f1faff;
+}
+
+.sales-report-main {
+  background: #f9fff9;
+  min-height: 100vh;
+}
+
+.sales-report-title {
+  font-size: 28px;
+  font-weight: bold;
+  color: #27ae60;
+}
+
+.sales-chart-container {
+  background: #ffffff;
+  border: 1px solid #d4f5d4;
+  border-radius: 12px;
+  box-shadow: 0px 3px 8px rgba(0, 0, 0, 0.05);
+  margin-top: 20px;
+  padding: 10px;
+}
+
+.sales-chart-title {
+  font-size: 20px;
+  margin-bottom: 15px;
+  color: #2ecc71;
+}

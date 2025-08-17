@@ -2,7 +2,7 @@
     padding: 2rem;
     margin-top: 60px;
     margin-left: 270px;
-    min-height: 100vh;
+    min-height: auto;
     box-sizing: border-box;
 }
 

@@ -17,6 +17,7 @@ import ProtectedRoute from "../components/ProtectedRoute";
 import SupplierManagement from "../pages/SupplierManagement";
 import CustomerManagement from "../pages/CustomerManagement";
 import SalesManagement from "../pages/SalesManagement";
+import SalesReport from "../pages/SalesReport";
 
 function App() {
   return (
@@ -90,6 +91,18 @@ function App() {
               <ProtectedRoute>
                 <DashboardHeader />
                 <SalesManagement />
+              </ProtectedRoute>
+            </>
+          }
+        />
+
+        <Route //Sales Report route
+          path="/sales-report"
+          element={
+            <>
+              <ProtectedRoute>
+                <DashboardHeader />
+                <SalesReport />
               </ProtectedRoute>
             </>
           }

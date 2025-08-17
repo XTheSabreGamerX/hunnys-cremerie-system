@@ -1,3 +1,9 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html {
   scrollbar-width: none;
 }
@@ -10,7 +16,7 @@ html, body, #root {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
-  overflow-y: hidden;
+  overflow-y: auto;
   height: 100%;
 }
 
@@ -18,9 +24,9 @@ html, body, #root {
 .module-main-content {
   margin-top: 60px;
   margin-left: 250px;
-  padding: 2rem;
+  padding: 0.5rem;
   background-color: #fdfdfd;
-  min-height: calc(100vh - 60px);
+  min-height: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -81,9 +87,9 @@ html, body, #root {
 .module-table-container {
   width: 100%;
   max-width: 1300px;
-  max-height: 500px;
+  max-height: 600px;
   background-color: rgba(128, 128, 128, 0.3);
-  padding: 1.5rem;
+  padding: 1rem;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow-x: hidden;
