@@ -3,6 +3,18 @@ import "../styles/Sidebar.css";
 import Logo from "../elements/images/icon32x32.png";
 import { Menu } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
+import { ImHome, ImUsers, ImList } from "react-icons/im";
+import { CgBox } from "react-icons/cg";
+import {
+  FaCashRegister,
+  FaMoneyBillWave,
+  FaChartLine,
+  FaCalculator,
+  FaTruck,
+  FaUserTag,
+  FaDownload,
+  FaEnvelope,
+} from "react-icons/fa";
 
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -21,6 +33,81 @@ const Sidebar = () => {
     navigate("/login");
   };
 
+  const sidebarItems = [
+    {
+      label: "Dashboard",
+      icon: <ImHome />,
+      path: "/dashboard",
+      roles: ["admin", "owner", "manager", "staff"],
+    },
+    {
+      label: "User Management",
+      icon: <ImUsers />,
+      path: "/user-management",
+      roles: ["admin", "owner", "manager"],
+    },
+    {
+      label: "Activity Log",
+      icon: <ImList />,
+      path: "/activity-log",
+      roles: ["admin", "owner", "manager"],
+    },
+    {
+      label: "Inventory",
+      icon: <CgBox />,
+      path: "/inventory",
+      roles: ["admin", "owner", "manager", "staff"],
+    },
+    {
+      label: "Sales Management",
+      icon: <FaCashRegister />,
+      path: "/sales-management",
+      roles: ["admin", "owner", "manager", "staff"],
+    },
+    {
+      label: "Sales Report",
+      icon: <FaChartLine />,
+      path: "/sales-report",
+      roles: ["admin", "owner"],
+    },
+    {
+      label: "Profitability Dashboard",
+      icon: <FaCalculator />,
+      path: "/dashboard",
+      roles: ["admin", "owner"],
+    },
+    {
+      label: "Supplier Management",
+      icon: <FaTruck />,
+      path: "/supplier-management",
+      roles: ["admin", "owner", "manager"],
+    },
+    {
+      label: "Customer Management",
+      icon: <FaUserTag />,
+      path: "/customer-management",
+      roles: ["admin", "owner", "manager"],
+    },
+    {
+      label: "Pricing Management",
+      icon: <FaMoneyBillWave />,
+      path: "/dashboard",
+      roles: ["admin", "owner", "manager"],
+    },
+    {
+      label: "Backup and Restore",
+      icon: <FaDownload />,
+      path: "/dashboard",
+      roles: ["admin", "manager", "staff"],
+    },
+    {
+      label: "Notifications",
+      icon: <FaEnvelope />,
+      path: "/dashboard",
+      roles: ["admin", "manager", "staff"],
+    },
+  ];
+
   return (
     <div className={`sidebar ${isCollapsed ? "collapsed" : ""}`}>
       <div className="sidebar-header">
@@ -32,84 +119,17 @@ const Sidebar = () => {
 
       <div className="sidebar-scroll">
         <nav className="sidebar-nav">
-          <Link to="/dashboard">
-            <span className="label">Dashboard</span>
-          </Link>
-
-          {(role === "admin" || role === "manager") && (
-            <>
-              <Link to="/user-management">
-                <span className="label">User Management</span>
-              </Link>
-              <Link to="/activity-log">
-                <span className="label">Activity Log</span>
-              </Link>
-            </>
-          )}
-
-          {(role === "admin" || role === "manager" || role === "staff") && (
-            <>
-              <Link to="/inventory">
-                <span className="label">Inventory</span>
-              </Link>
-              <Link to="/sales-management">
-                <span className="label">Sales Management</span>
-              </Link>
-              <Link to="/sales-report">
-                <span className="label">Sales Report</span>
-              </Link>
-              <Link to="/dashboard">
-                <span className="label">Profitability Dashboard</span>
-              </Link>
-              <Link to="/supplier-management">
-                <span className="label">Supplier Management</span>
-              </Link>
-              <Link to="/customer-management">
-                <span className="label">Customer Management</span>
-              </Link>
-            </>
-          )}
-
-          {role === "admin" && (
-            <>
-              <Link to="/dashboard">
-                <span className="label">Pricing Management</span>
-              </Link>
-              <Link to="/dashboard">
-                <span className="label">Backup and Restore</span>
-              </Link>
-              <Link to="/dashboard">
-                <span className="label">Notifications</span>
-              </Link>
-            </>
-          )}
-
-          {role === "manager" && (
-            <>
-              <Link to="/dashboard">
-                <span className="label">Pricing Management</span>
-              </Link>
-              <Link to="/dashboard">
-                <span className="label">Backup and Restore</span>
-              </Link>
-              <Link to="/dashboard">
-                <span className="label">Notifications</span>
-              </Link>
-            </>
-          )}
-
-          {role === "staff" && (
-            <>
-              <Link to="/dashboard">
-                <span className="label">Backup and Restore</span>
-              </Link>
-              <Link to="/dashboard">
-                <span className="label">Notifications</span>
-              </Link>
-            </>
+          {sidebarItems.map(
+            (item) =>
+              item.roles.includes(role) && (
+                <Link to={item.path} className="sidebar-item" key={item.label}>
+                  {item.icon}
+                  <span className="label">{item.label}</span>
+                </Link>
+              )
           )}
         </nav>
-
+        
         {!isCollapsed && (
           <button onClick={logout} className="logout-button">
             Logout
