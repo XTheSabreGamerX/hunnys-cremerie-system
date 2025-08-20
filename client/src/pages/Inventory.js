@@ -464,7 +464,7 @@ const Inventory = () => {
             <tbody>
               {(isFiltering ? filteredItems : items).length === 0 ? (
                 <tr>
-                  <td colSpan="10">No items found.</td>
+                  <td colSpan="11">No items found.</td>
                 </tr>
               ) : (
                 (isFiltering ? filteredItems : items).map((item) => (

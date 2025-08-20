@@ -139,8 +139,14 @@ const batchUpdateStatuses = async () => {
   try {
     const items = await InventoryItem.find();
 
+    const systemUserId = '6891c3c178b2ff675c9cdfd7';
+
     for (const item of items) {
       const newStatus = computeStatus(item);
+      if (!item.createdBy) {
+        item.createdBy = systemUserId;
+      }
+      
       if (item.status !== newStatus) {
         item.status = newStatus;
         await item.save();
