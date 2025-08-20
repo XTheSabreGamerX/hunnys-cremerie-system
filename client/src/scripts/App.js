@@ -18,6 +18,10 @@ import SupplierManagement from "../pages/SupplierManagement";
 import CustomerManagement from "../pages/CustomerManagement";
 import SalesManagement from "../pages/SalesManagement";
 import SalesReport from "../pages/SalesReport";
+import "../styles/Responsive.css";
+
+
+
 
 function App() {
   return (
