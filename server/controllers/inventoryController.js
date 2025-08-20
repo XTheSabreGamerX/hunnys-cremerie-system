@@ -1,4 +1,5 @@
 const InventoryItem = require("../models/InventoryItem");
+const UnitOfMeasurement = require("../models/UnitOfMeasurement");
 const { createLog } = require("../controllers/activityLogController");
 
 // Computes inventory item status
@@ -33,7 +34,9 @@ const getAllInventoryItems = async (req, res) => {
     const items = await InventoryItem.find()
       .skip(skip)
       .limit(limit)
-      .sort({ itemId: 1 });
+      .sort({ itemId: 1 })
+      .populate("unit", "name")
+      .populate("createdBy", "username");
 
     res.json({
       items,
@@ -50,24 +53,28 @@ const getAllInventoryItems = async (req, res) => {
 // Adding a new inventory item
 const addInventoryItem = async (req, res) => {
   try {
-    const item = new InventoryItem(req.body);
+    const item = new InventoryItem({
+      ...req.body,
+      createdBy: req.user.id,
+    });
+
     await item.save();
 
     try {
       await createLog({
-        action: 'Added Item',
-        module: 'Inventory',
+        action: "Added Item",
+        module: "Inventory",
         description: `An inventory item was added: ${item.name}`,
         userId: req.user.id,
       });
     } catch (logErr) {
-      console.error('[Activity Log] Failed to log addition:', logErr.message);
+      console.error("[Activity Log] Failed to log addition:", logErr.message);
     }
 
     res.status(201).json(item);
   } catch (err) {
-    console.error('Add item failed:', err);
-    res.status(500).json({ error: 'Failed to add item.' });
+    console.error("Add item failed:", err);
+    res.status(500).json({ error: "Failed to add item." });
   }
 };
 
@@ -85,13 +92,13 @@ const updateInventoryItem = async (req, res) => {
 
     try {
       await createLog({
-        action: 'Updated Item',
-        module: 'Inventory',
+        action: "Updated Item",
+        module: "Inventory",
         description: `User ${req.user.username} updated an item: ${updated.name}`,
         userId: req.user.id,
       });
     } catch (logErr) {
-      console.error('[Activity Log] Failed to log update:', logErr.message);
+      console.error("[Activity Log] Failed to log update:", logErr.message);
     }
 
     res.json(updated);
@@ -106,24 +113,24 @@ const deleteInventoryItem = async (req, res) => {
   try {
     const deletedItem = await InventoryItem.findByIdAndDelete(req.params.id);
     if (!deletedItem) {
-      return res.status(404).json({ message: 'Item not found' });
+      return res.status(404).json({ message: "Item not found" });
     }
 
     try {
       await createLog({
-        action: 'Deleted Item',
-        module: 'Inventory',
+        action: "Deleted Item",
+        module: "Inventory",
         description: `User ${req.user.username} deleted an item: ${deletedItem.name}`,
         userId: req.user.id,
       });
     } catch (logErr) {
-      console.error('[Activity Log] Failed to log deletion:', logErr.message);
+      console.error("[Activity Log] Failed to log deletion:", logErr.message);
     }
 
-    res.status(200).json({ message: 'Item has been deleted successfully' });
+    res.status(200).json({ message: "Item has been deleted successfully" });
   } catch (err) {
-    console.error('[DELETE] Server error:', err.message);
-    res.status(500).json({ message: 'Server error during deletion' });
+    console.error("[DELETE] Server error:", err.message);
+    res.status(500).json({ message: "Server error during deletion" });
   }
 };
 
@@ -139,9 +146,73 @@ const batchUpdateStatuses = async () => {
         await item.save();
       }
     }
-    console.log('Batch status update complete');
+    console.log("Batch status update complete");
   } catch (error) {
-    console.error('Error during batch status update:', error);
+    console.error("Error during batch status update:", error);
+  }
+};
+
+// Get all Units of Measurement
+const getAllUoms = async (req, res) => {
+  try {
+    const uoms = await UnitOfMeasurement.find().sort({ name: 1 });
+    res.json(uoms);
+  } catch (err) {
+    console.error('Error fetching UoMs:', err.message);
+    res.status(500).json({ message: 'Server error fetching UoMs' });
+  }
+};
+
+// Create new Unit of Measurement
+const createUom = async (req, res) => {
+  try {
+    const { name } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ message: 'Unit name is required' });
+    }
+
+    const existing = await UnitOfMeasurement.findOne({ name });
+    if (existing) {
+      return res.status(409).json({ message: 'Unit already exists' });
+    }
+
+    const uom = new UnitOfMeasurement({
+      name
+    });
+
+    await uom.save();
+    res.status(201).json(uom);
+  } catch (err) {
+    console.error('Error creating UoM:', err.message);
+    res.status(500).json({ message: 'Server error creating UoM' });
+  }
+};
+
+// Update Unit of Measurement
+const updateUom = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+
+    const uom = await UnitOfMeasurement.findById(id);
+    if (!uom) {
+      return res.status(404).json({ message: 'Unit not found' });
+    }
+
+    if (name && name !== uom.name) {
+      const exists = await UnitOfMeasurement.findOne({ name });
+      if (exists) {
+        return res.status(409).json({ message: 'Another unit with this name already exists' });
+      }
+      uom.name = name;
+    }
+
+    await uom.save();
+    res.json(uom);
+  } catch (err) {
+    console.error('Error updating UoM:', err.message);
+    res.status(500).json({ message: 'Server error updating UoM' });
   }
 };
 
@@ -151,4 +222,7 @@ module.exports = {
   updateInventoryItem,
   deleteInventoryItem,
   batchUpdateStatuses,
+  getAllUoms,
+  createUom,
+  updateUom
 };

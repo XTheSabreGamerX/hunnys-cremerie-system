@@ -29,12 +29,12 @@
 
 .inventory-main .module-table-container table th:nth-child(4),
 .inventory-main .module-table-container table td:nth-child(4) {
-  width: 8%;
+  width: 10%;
 }
 
 .inventory-main .module-table-container table th:nth-child(5),
 .inventory-main .module-table-container table td:nth-child(5) {
-  width: 8%;
+  width: 10%;
 }
 
 .inventory-main .module-table-container table th:nth-child(6),
@@ -54,10 +54,15 @@
 
 .inventory-main .module-table-container table th:nth-child(9),
 .inventory-main .module-table-container table td:nth-child(9) {
-  width: 12%;
+  width: 10%;
 }
 
 .inventory-main .module-table-container table th:nth-child(10),
 .inventory-main .module-table-container table td:nth-child(10) {
+  width: 12%;
+}
+
+.inventory-main .module-table-container table th:nth-child(11),
+.inventory-main .module-table-container table td:nth-child(11) {
   width: 16%;
 }

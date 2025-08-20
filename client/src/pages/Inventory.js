@@ -12,6 +12,7 @@ import "../styles/Inventory.css";
 const Inventory = () => {
   const [items, setItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
+  const [uoms, setUoms] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchField, setSearchField] = useState("itemId");
   const [selectedItem, setSelectedItem] = useState(null);
@@ -53,6 +54,7 @@ const Inventory = () => {
     { label: "Category", name: "category" },
     { label: "Purchase Price", name: "purchasePrice", type: "number" },
     { label: "Unit Price", name: "unitPrice", type: "number" },
+    { label: "Unit of Measurement", name: "unit", type: "select", options: uoms.map(u => ({ value: u._id, label: u.name }))},
     { label: "Supplier", name: "supplier" },
     { label: "Restock Threshold", name: "restockThreshold", type: "number" },
     { label: "Expiration Date", name: "expirationDate", type: "date" },
@@ -101,6 +103,26 @@ const Inventory = () => {
       console.error("Error fetching inventory:", err);
     }
   }, [API_BASE, page, token]);
+
+  useEffect(() => {
+  const fetchUoms = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/inventory/uom`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) throw new Error('Failed to fetch UoMs');
+      const data = await res.json();
+      setUoms(data);
+    } catch (err) {
+      console.error('Failed to fetch UoM:', err);
+    }
+  };
+
+  if (token) fetchUoms();
+}, [API_BASE, page, token]);
+
 
   useEffect(() => {
     fetchItems();
@@ -318,6 +340,7 @@ const Inventory = () => {
             { name: "stock", label: "Stock" },
             { name: "purchasePrice", label: "Purchase Price" },
             { name: "unitPrice", label: "Price" },
+            { name: 'unit', label: 'Unit of Measurement', render: (val) => (val?.name || '—') },
             { name: "supplier", label: "Supplier" },
             { name: "restockThreshold", label: "Restock Threshold" },
             {
@@ -331,6 +354,7 @@ const Inventory = () => {
                   : "N/A",
             },
             { name: "status", label: "Status" },
+            { name: 'createdBy', label: 'Created By', render: (val) => (val?.username || '—') },
           ]}
           onClose={() => {
             setIsViewOpen(false);
@@ -366,6 +390,7 @@ const Inventory = () => {
           mode={modalMode}
           formData={formData}
           setFormData={setFormData}
+          uoms={uoms}
         />
       )}
 
@@ -429,6 +454,7 @@ const Inventory = () => {
                 <th>Category</th>
                 <th>Purchase Price</th>
                 <th>Unit Price</th>
+                <th>UoM</th>
                 <th>Supplier</th>
                 <th>Expiration Date</th>
                 <th>Status</th>
@@ -449,6 +475,7 @@ const Inventory = () => {
                     <td>{item.category || "—"}</td>
                     <td>₱{item.purchasePrice}</td>
                     <td>₱{item.unitPrice}</td>
+                    <td>{item.unit?.name}</td>
                     <td>{item.supplier || "—"}</td>
                     <td>
                       {item.expirationDate

@@ -1,11 +1,12 @@
 import React from 'react';
-import '../styles/Header.css'; // link to CSS
+import loginLogo from '../elements/images/loginlogo.svg';
+import '../styles/Header.css';
 
 const Header = () => {
   return (
     <nav className="navbar">
       <div className="navbar-content">
-        <h1 className="navbar-title">Insert Logo Here</h1>
+        <img src={loginLogo} alt="Insert Logo Here" className='navbar-logo'/>
       </div>
     </nav>
   );
