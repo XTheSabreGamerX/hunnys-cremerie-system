@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import "../styles/Sidebar.css";
 import Logo from "../elements/images/icon32x32.png";
 import { Menu } from "lucide-react";
-<<<<<<< HEAD
 import { useNavigate, Link } from "react-router-dom";
 import { ImHome, ImUsers, ImList } from "react-icons/im";
 import { CgBox } from "react-icons/cg";
@@ -16,9 +15,6 @@ import {
   FaDownload,
   FaEnvelope,
 } from "react-icons/fa";
-=======
-import { useNavigate, NavLink } from "react-router-dom";
->>>>>>> origin/mobile-ui
 
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -55,7 +51,6 @@ const Sidebar = () => {
     navigate("/login");
   };
 
-<<<<<<< HEAD
   const sidebarItems = [
     {
       label: "Dashboard",
@@ -130,9 +125,6 @@ const Sidebar = () => {
       roles: ["admin", "manager", "staff"],
     },
   ];
-=======
-  const linkClass = ({ isActive }) => (isActive ? "active" : "");
->>>>>>> origin/mobile-ui
 
   return (
     <div className={`sidebar ${isCollapsed ? "collapsed" : ""} ${isOpen ? "open" : ""}`}>
@@ -145,7 +137,6 @@ const Sidebar = () => {
 
       <div className="sidebar-scroll">
         <nav className="sidebar-nav">
-<<<<<<< HEAD
           {sidebarItems.map(
             (item) =>
               item.roles.includes(role) && (
@@ -154,85 +145,6 @@ const Sidebar = () => {
                   <span className="label">{item.label}</span>
                 </Link>
               )
-=======
-          <NavLink to="/dashboard" className={linkClass} end>
-            <span className="label">Dashboard</span>
-          </NavLink>
-
-          {(role === "admin" || role === "manager") && (
-            <>
-              <NavLink to="/user-management" className={linkClass} end>
-                <span className="label">User Management</span>
-              </NavLink>
-              <NavLink to="/activity-log" className={linkClass} end>
-                <span className="label">Activity Log</span>
-              </NavLink>
-            </>
-          )}
-
-          {(role === "admin" || role === "manager" || role === "staff") && (
-            <>
-              <NavLink to="/inventory" className={linkClass} end>
-                <span className="label">Inventory</span>
-              </NavLink>
-              <NavLink to="/sales-management" className={linkClass} end>
-                <span className="label">Sales Management</span>
-              </NavLink>
-              {/* The following paths should be real routes to avoid multiple active states */}
-              <NavLink to="/sales-report" className={linkClass} end>
-
-                <span className="label">Sales Report</span>
-              </NavLink>
-              <NavLink to="/dashboard" className={linkClass} end>
-                <span className="label">Profitability Dashboard</span>
-              </NavLink>
-              <NavLink to="/supplier-management" className={linkClass} end>
-                <span className="label">Supplier Management</span>
-              </NavLink>
-              <NavLink to="/customer-management" className={linkClass} end>
-                <span className="label">Customer Management</span>
-              </NavLink>
-            </>
-          )}
-
-          {role === "admin" && (
-            <>
-              <NavLink to="/dashboard" className={linkClass} end>
-                <span className="label">Pricing Management</span>
-              </NavLink>
-              <NavLink to="/dashboard" className={linkClass} end>
-                <span className="label">Backup and Restore</span>
-              </NavLink>
-              <NavLink to="/notifications" className={linkClass} end>
-                <span className="label">Notifications</span>
-              </NavLink>
-            </>
-          )}
-
-          {role === "manager" && (
-            <>
-              <NavLink to="/dashboard" className={linkClass} end>
-                <span className="label">Pricing Management</span>
-              </NavLink>
-              <NavLink to="/dashboard" className={linkClass} end>
-                <span className="label">Backup and Restore</span>
-              </NavLink>
-              <NavLink to="/notifications" className={linkClass} end>
-                <span className="label">Notifications</span>
-              </NavLink>
-            </>
-          )}
-
-          {role === "staff" && (
-            <>
-              <NavLink to="/dashboard" className={linkClass} end>
-                <span className="label">Backup and Restore</span>
-              </NavLink>
-              <NavLink to="/notifications" className={linkClass} end>
-                <span className="label">Notifications</span>
-              </NavLink>
-            </>
->>>>>>> origin/mobile-ui
           )}
         </nav>
         

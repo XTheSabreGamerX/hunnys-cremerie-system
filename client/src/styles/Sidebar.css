@@ -124,7 +124,7 @@
 
 /* === Mobile: sidebar drops from the top === */
 @media (max-width: 768px) {
-  html, body { overflow-x: hidden; }
+  /*html, body { overflow-x: hidden; }*/
 
   .sidebar {
     position: fixed;
@@ -160,6 +160,7 @@
     display: none !important;
   }
 
+
   /* collapsed state is irrelevant on mobile; neutralize */
   .sidebar.collapsed { width: auto; }
 
@@ -167,6 +168,13 @@
   .sidebar-nav a {
     display: block;
     border-radius: 8px;
+  }
+
+  .sidebar-nav .sidebar-item {
+    display: flex;       /* keep icon + label in a row */
+    align-items: center; /* vertically center */
+    gap: 10px;           /* spacing between icon and label */
+    padding: 12px 16px;  /* adjust for mobile taps */
   }
 
   .sidebar-scroll {
