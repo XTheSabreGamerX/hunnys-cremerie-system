@@ -74,7 +74,13 @@ const addInventoryItem = async (req, res) => {
     res.status(201).json(item);
   } catch (err) {
     console.error("Add item failed:", err);
-    res.status(500).json({ error: "Failed to add item." });
+
+    if (err.name === "ValidationError") {
+      const messages = Object.values(err.errors).map((e) => e.message);
+      return res.status(400).json({ message: messages.join(", ") });
+    }
+
+    res.status(500).json({ message: err.message || "Failed to add item." });
   }
 };
 
@@ -139,14 +145,14 @@ const batchUpdateStatuses = async () => {
   try {
     const items = await InventoryItem.find();
 
-    const systemUserId = '6891c3c178b2ff675c9cdfd7';
+    const systemUserId = "6891c3c178b2ff675c9cdfd7";
 
     for (const item of items) {
       const newStatus = computeStatus(item);
       if (!item.createdBy) {
         item.createdBy = systemUserId;
       }
-      
+
       if (item.status !== newStatus) {
         item.status = newStatus;
         await item.save();
@@ -164,8 +170,8 @@ const getAllUoms = async (req, res) => {
     const uoms = await UnitOfMeasurement.find().sort({ name: 1 });
     res.json(uoms);
   } catch (err) {
-    console.error('Error fetching UoMs:', err.message);
-    res.status(500).json({ message: 'Server error fetching UoMs' });
+    console.error("Error fetching UoMs:", err.message);
+    res.status(500).json({ message: "Server error fetching UoMs" });
   }
 };
 
@@ -175,23 +181,23 @@ const createUom = async (req, res) => {
     const { name } = req.body;
 
     if (!name) {
-      return res.status(400).json({ message: 'Unit name is required' });
+      return res.status(400).json({ message: "Unit name is required" });
     }
 
     const existing = await UnitOfMeasurement.findOne({ name });
     if (existing) {
-      return res.status(409).json({ message: 'Unit already exists' });
+      return res.status(409).json({ message: "Unit already exists" });
     }
 
     const uom = new UnitOfMeasurement({
-      name
+      name,
     });
 
     await uom.save();
     res.status(201).json(uom);
   } catch (err) {
-    console.error('Error creating UoM:', err.message);
-    res.status(500).json({ message: 'Server error creating UoM' });
+    console.error("Error creating UoM:", err.message);
+    res.status(500).json({ message: "Server error creating UoM" });
   }
 };
 
@@ -203,13 +209,15 @@ const updateUom = async (req, res) => {
 
     const uom = await UnitOfMeasurement.findById(id);
     if (!uom) {
-      return res.status(404).json({ message: 'Unit not found' });
+      return res.status(404).json({ message: "Unit not found" });
     }
 
     if (name && name !== uom.name) {
       const exists = await UnitOfMeasurement.findOne({ name });
       if (exists) {
-        return res.status(409).json({ message: 'Another unit with this name already exists' });
+        return res
+          .status(409)
+          .json({ message: "Another unit with this name already exists" });
       }
       uom.name = name;
     }
@@ -217,8 +225,8 @@ const updateUom = async (req, res) => {
     await uom.save();
     res.json(uom);
   } catch (err) {
-    console.error('Error updating UoM:', err.message);
-    res.status(500).json({ message: 'Server error updating UoM' });
+    console.error("Error updating UoM:", err.message);
+    res.status(500).json({ message: "Server error updating UoM" });
   }
 };
 
@@ -230,5 +238,5 @@ module.exports = {
   batchUpdateStatuses,
   getAllUoms,
   createUom,
-  updateUom
+  updateUom,
 };
