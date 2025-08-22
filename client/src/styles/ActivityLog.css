@@ -11,7 +11,10 @@
 }
 
 .activity-log-header {
-    margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
 }
 
 .activity-log-title {
@@ -22,8 +25,8 @@
 }
 
 .activity-log-actions-container {
-    margin-bottom: 1rem;
-    /* Add styles here later for search/filter inputs */
+  display: flex;
+  gap: 0.5rem;
 }
 
 .activity-log-table-container {

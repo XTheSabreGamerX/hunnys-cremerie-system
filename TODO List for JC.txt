@@ -1,4 +1,3 @@
-- Search with filter for Activity Log
 - Inventory, Sales, Customer, and Supplier need to connect with one another (dropdowns for customers in sale creation, etc...)
 - Adjust Activity Log styling
 - Replace Confirmation Message popups with toast

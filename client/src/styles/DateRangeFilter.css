@@ -1,0 +1,30 @@
+.date-filter-container {
+  display: inline-flex;
+  gap: 0;
+  border: 1px solid #ccc;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: #f8f9fa;
+}
+
+.date-filter-btn {
+  padding: 6px 14px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.date-filter-btn:not(:last-child) {
+  border-right: 1px solid #ccc;
+}
+
+.date-filter-btn.active {
+  background: #cc06cc;
+  color: white;
+}
+
+.date-filter-btn:hover {
+  background: #e9ecef;
+}
