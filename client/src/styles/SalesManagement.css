@@ -1,0 +1,297 @@
+/* ================= MAIN CONTAINER ================= */
+.pos-main {
+  margin-top: 60px;
+  margin-left: 250px;
+  width: calc(100% - 250px);
+  padding: 0.5rem;
+  background-color: #f8f9fa;
+  min-height: calc(100vh - 60px);
+  display: flex;
+  gap: 1rem;
+  flex-direction: row;
+  transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+.sidebar.collapsed + .pos-main {
+  margin-left: 100px;
+  width: calc(100% - 100px);
+}
+
+/* ================= PRODUCTS SECTION ================= */
+.pos-products {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.pos-products-header {
+  margin-bottom: 1rem;
+}
+
+.pos-search-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+/* Products list */
+.pos-products-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+  padding: 0.5rem;
+  overflow-y: auto;
+}
+
+/* Individual product cards */
+.pos-product-card {
+  background: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+
+.pos-product-card.disabled-product {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pos-product-card.disabled-product:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.product-status {
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.product-status.well-stocked {
+  color: #396d45;
+  background-color: #97d8a6;
+}
+
+.product-status.low-stock {
+  color: #816511;
+  background-color: #e9d8a3;
+}
+
+.product-status.out-of-stock {
+  color: #721c24;
+  background-color: #f8d7da;
+}
+
+.product-status.expired {
+  color: #721c24;
+  background-color: #f5c6cb;
+}
+
+
+.pos-product-card:hover {
+  transform: scale(1.03);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.pos-product-card:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.pos-product-card h3 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.pos-product-card p {
+  font-size: 0.9rem;
+  color: #333;
+}
+
+/* ================= CART SECTION ================= */
+.pos-cart {
+  width: 350px; /* fixed width */
+  min-width: 300px;
+  max-height: calc(100vh - 60px);
+  background-color: #fff;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-left: 1px solid #ddd;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.05);
+  overflow-y: auto;
+}
+
+.pos-cart-header {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+/* Cart items list */
+.pos-cart-items {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pos-cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+  cursor: default;
+}
+
+.pos-cart-item span {
+  font-size: 0.95rem;
+}
+
+/* Cart summary & checkout */
+.pos-cart-summary {
+  border-top: 1px solid #ddd;
+  padding-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pos-checkout-btn {
+  background-color: #007bff;
+  color: #fff;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.pos-checkout-btn:hover {
+  background-color: #0056b3;
+}
+
+/* Cart Quantity Controls */
+.cart-quantity-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cart-quantity-controls button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
+  color: #333;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.cart-quantity-controls button:hover {
+  background-color: #e0e0e0;
+}
+
+.cart-quantity-controls button:active {
+  transform: scale(0.95);
+}
+
+.cart-quantity-controls button:disabled {
+  background-color: #f9f9f9;
+  border-color: #ddd;
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+.cart-quantity-controls span {
+  min-width: 20px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Order info container inside the cart */
+.pos-order-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Label wrapper for inputs and selects */
+.pos-order-info label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Dropdown and text input styling */
+.pos-order-info select,
+.pos-order-info input[type="text"] {
+  margin-top: 0.25rem;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.95rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.pos-order-info select:focus,
+.pos-order-info input[type="text"]:focus {
+  border-color: #007bff;
+}
+
+/* Unregistered toggle checkbox */
+.pos-unregistered-toggle {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+  cursor: pointer;
+  gap: 0.4rem;
+  color: #555;
+}
+
+.pos-unregistered-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #007bff; /* blue color for checkbox */
+}
+
+/* Optional: adjust spacing if toggle and input appear on the same row */
+.customer-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ================= SCROLLBARS ================= */
+.pos-products-list::-webkit-scrollbar,
+.pos-cart-items::-webkit-scrollbar {
+  width: 6px;
+}
+
+.pos-products-list::-webkit-scrollbar-thumb,
+.pos-cart-items::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}

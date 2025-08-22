@@ -1,42 +1,27 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-  useMemo,
-} from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { nanoid } from "nanoid/non-secure";
 import Sidebar from "../scripts/Sidebar";
-import EditModal from "../components/EditModal";
-import ViewModal from "../components/ViewModal";
-import ConfirmationModal from "../components/ConfirmationModal";
 import PopupMessage from "../components/PopupMessage";
-import "../styles/App.css";
+import "../styles/SalesManagement.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const SalesManagement = () => {
-  const [sales, setSales] = useState([]);
-  const [popupMessage, setPopupMessage] = useState("");
-  const [popupType, setPopupType] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchField, setSearchField] = useState("saleId");
   const [inventoryItems, setInventoryItems] = useState([]);
   const [customers, setCustomers] = useState([]);
-  const [filteredSales, setFilteredSales] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [saleToDelete, setSaleToDelete] = useState(null);
-  const [isViewOpen, setIsViewOpen] = useState(false);
-  const [viewedSale, setViewedSale] = useState(null);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const containerRef = useRef(null);
+  const [cartItems, setCartItems] = useState([]);
+  const [orderType, setOrderType] = useState("Walk-in");
+  const [isUnregistered, setIsUnregistered] = useState(false);
+  const [customerName, setCustomerName] = useState("");
+  const [taxRate, setTaxRate] = useState(0);
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [popupMessage, setPopupMessage] = useState("");
+  const [popupType, setPopupType] = useState("");
 
-  const token = localStorage.getItem("token");
   const navigate = useNavigate();
+  const token = localStorage.getItem("token");
 
   const authHeader = useMemo(
     () => ({
@@ -47,94 +32,21 @@ const SalesManagement = () => {
   );
 
   useEffect(() => {
-    if (!token) {
-      navigate("/login");
-    }
+    if (!token) navigate("/login");
   }, [token, navigate]);
 
-  const generateSaleID = () => {
-    return `SALE-${nanoid(8).toUpperCase()}`;
+  const showPopup = (message, type = "success") => {
+    setPopupMessage(message);
+    setPopupType(type);
+    setTimeout(() => {
+      setPopupMessage("");
+      setPopupType("success");
+    }, 2000);
   };
 
-  // Fields for creating a sale
-  const saleFields = useMemo(
-    () => [
-      {
-        name: "customerName",
-        label: "Customer Name",
-        type: "select",
-        placeholder:
-          "Choose from registered customers, otherwise, leave this empty if needed",
-        options: [
-          {
-            value: "Unregistered",
-            label: "Unregistered",
-          },
-          ...customers.map((cust) => ({
-            value: cust.name,
-            label: `${cust.name} (${cust.customerId})`,
-          })),
-        ],
-      },
-      {
-        name: "orderType",
-        label: "Order Type",
-        type: "select",
-        required: true,
-        options: [
-          { value: "Walk-in", label: "Walk-in" },
-          { value: "Online", label: "Online" },
-        ],
-      },
-      {
-        name: "taxRate",
-        label: "Tax Rate (%)",
-        type: "number",
-        placeholder: "Leave empty if no tax applies",
-        required: false,
-      },
-      {
-        name: "paymentMethod",
-        label: "Payment Method",
-        type: "select",
-        required: true,
-        options: [
-          { value: "Cash", label: "Cash" },
-          { value: "Credit Card", label: "Credit Card" },
-          { value: "GCash", label: "GCash" },
-          { value: "PayMaya", label: "PayMaya" },
-          { value: "Others", label: "Others" },
-        ],
-      },
-    ],
-    [customers]
-  );
+  const generateSaleID = () => `SALE-${nanoid(8).toUpperCase()}`;
 
-  // Fields for viewing a sale's details
-  const displaySale = [
-    { name: "saleId", label: "Sale ID" },
-    { name: "customerId", label: "Customer ID" },
-    { name: "customerName", label: "Customer Name" },
-    { name: "orderType", label: "Order Type" },
-    {
-      name: "items",
-      label: "Items Sold",
-      render: (items) =>
-        Array.isArray(items)
-          ? items.map((item) => `${item.name} x${item.quantity}`).join(", ")
-          : "No items",
-    },
-    { name: "totalAmount", label: "Total" },
-    { name: "taxRate", label: "Tax Rate" },
-    { name: "date", label: "Date" },
-  ];
-
-  const [itemForm, setItemForm] = useState({
-    itemId: "",
-    quantity: 1,
-  });
-
-  // Fetch inventory items
+  // Fetch inventory
   useEffect(() => {
     fetch(`${API_BASE}/api/inventory?page=1&limit=1000`, {
       headers: authHeader,
@@ -145,154 +57,115 @@ const SalesManagement = () => {
         setInventoryItems(items || []);
       })
       .catch((err) => console.error("Failed to fetch inventory items", err));
-  }, [token, authHeader]);
+  }, [authHeader]);
 
-  // Fetch Customers
+  // Fetch customers
   useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/customers?page=1&limit=1000`, {
-          headers: authHeader,
-        });
+    fetch(`${API_BASE}/api/customers?page=1&limit=1000`, {
+      headers: authHeader,
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const custs = Array.isArray(data.customers) ? data.customers : [];
+        setCustomers(custs);
+        if (!isUnregistered && custs[0]) setCustomerName(custs[0].name);
+      })
+      .catch(() => console.error("Failed to fetch customers"));
+  }, [authHeader, isUnregistered]);
 
-        if (!res.ok) return;
+  const handleAddToCart = (product) => {
+    if (product.stock <= 0) return;
 
-        const data = await res.json();
-        const customers = Array.isArray(data.customers) ? data.customers : [];
-        setCustomers(customers);
-      } catch (err) {
-        console.error("Failed to fetch customers");
-      }
-    };
-
-    fetchCustomers();
-  }, [token, authHeader]);
-
-  // Fetch sales with pagination
-  const fetchSales = useCallback(async () => {
-    try {
-      const response = await fetch(
-        `${API_BASE}/api/sales?page=${page}&limit=10`,
-        {
-          headers: authHeader,
-        }
-      );
-      const data = await response.json();
-
-      const wrappedData = Array.isArray(data)
-        ? {
-            sales: data,
-            currentPage: 1,
-            totalPages: 1,
-          }
-        : data;
-
-      const newSales = Array.isArray(wrappedData.sales)
-        ? wrappedData.sales
-        : [];
-
-      setSales((prev) =>
-        page === 1 ? newSales : [...(prev || []), ...newSales]
-      );
-      setHasMore(page < wrappedData.totalPages);
-    } catch (error) {
-      console.error("Error fetching sales:", error);
-      setHasMore(false);
-    }
-  }, [page, authHeader]);
-
-  useEffect(() => {
-    fetchSales();
-  }, [fetchSales, token]);
-
-  // Infinite scrolling for pagination
-  useEffect(() => {
-    const container = containerRef.current;
-
-    const handleScroll = () => {
-      if (
-        container &&
-        container.scrollTop + container.clientHeight >=
-          container.scrollHeight - 100 &&
-        hasMore
-      ) {
-        setPage((prevPage) => prevPage + 1);
-      }
-    };
-
-    if (container) {
-      container.addEventListener("scroll", handleScroll);
-    }
-
-    return () => {
-      if (container) {
-        container.removeEventListener("scroll", handleScroll);
-      }
-    };
-  }, [hasMore]);
-
-  // Filter sales
-  useEffect(() => {
-    const filtered = sales.filter((sale) => {
-      if (searchField === "greaterPrice") {
-        return sale.totalAmount >= parseFloat(searchQuery || 0);
-      } else if (searchField === "lessPrice") {
-        return sale.totalAmount <= parseFloat(searchQuery || 0);
-      } else {
-        const value = sale[searchField]?.toString().toLowerCase();
-        return value && value.includes(searchQuery.toLowerCase());
-      }
-    });
-
-    setFilteredSales(filtered);
-  }, [searchQuery, searchField, sales]);
-
-  // Creating sale handler
-  const handleAddSale = () => {
-    setItemForm({ itemId: "", quantity: 1 });
-    setSelectedItem(null);
-    setShowModal(true);
-  };
-
-  // Handles saving a created sale
-  const handleSaveSale = async (saleData) => {
-    if (!saleData.items || saleData.items.length === 0) {
-      setPopupMessage("Please add at least one item to the sale.");
-      setPopupType("error");
-      return;
-    }
-
-    if (!saleData.orderType) {
-      setPopupMessage("Please select a order type.");
-      setPopupType("error");
-      return;
-    }
-
-    if (!saleData.paymentMethod) {
-      setPopupMessage("Please select a payment method.");
-      setPopupType("error");
-      return;
-    }
-
-    const subtotal = saleData.items.reduce(
-      (sum, item) => sum + item.quantity * item.price,
-      0
+    setInventoryItems((prev) =>
+      prev.map((i) =>
+        i._id === product._id ? { ...i, stock: i.stock - 1 } : i
+      )
     );
 
-    const hasTax = saleData.taxRate && saleData.taxRate > 0;
-    const taxAmount = hasTax ? (subtotal * saleData.taxRate) / 100 : 0;
+    setCartItems((prev) => {
+      const exists = prev.find((i) => i._id === product._id);
+      return exists
+        ? prev.map((i) =>
+            i._id === product._id ? { ...i, quantity: i.quantity + 1 } : i
+          )
+        : [...prev, { ...product, quantity: 1 }];
+    });
+  };
+
+  const handleIncreaseQuantity = (itemId) => {
+    setCartItems((prev) =>
+      prev.map((cartItem) => {
+        if (cartItem._id === itemId && cartItem.quantity < cartItem.stock) {
+          setInventoryItems((prevInv) =>
+            prevInv.map((invItem) =>
+              invItem._id === itemId
+                ? { ...invItem, stock: invItem.stock - 1 }
+                : invItem
+            )
+          );
+          return { ...cartItem, quantity: cartItem.quantity + 1 };
+        }
+        return cartItem;
+      })
+    );
+  };
+
+  const handleDecreaseQuantity = (itemId) => {
+    setCartItems((prev) =>
+      prev.map((cartItem) => {
+        if (cartItem._id === itemId && cartItem.quantity > 1) {
+          setInventoryItems((prevInv) =>
+            prevInv.map((invItem) =>
+              invItem._id === itemId
+                ? { ...invItem, stock: invItem.stock + 1 }
+                : invItem
+            )
+          );
+          return { ...cartItem, quantity: cartItem.quantity - 1 };
+        }
+        return cartItem;
+      })
+    );
+  };
+
+  const handleSaveSale = async () => {
+    if (cartItems.length === 0) {
+      showPopup("Please add at least one item to the sale.", "error");
+      return;
+    }
+    if (!orderType) {
+      showPopup("Please select an order type.", "error");
+      return;
+    }
+    if (!paymentMethod) {
+      showPopup("Please select a payment method.", "error");
+      return;
+    }
+
+    const subtotal = cartItems.reduce(
+      (sum, i) => sum + i.unitPrice * i.quantity,
+      0
+    );
+    const taxAmount = taxRate > 0 ? (subtotal * taxRate) / 100 : 0;
     const totalAmount = subtotal + taxAmount;
 
     const saleToSend = {
       saleId: generateSaleID(),
-      customerName: saleData.customerName,
-      orderType: saleData.orderType,
-      items: saleData.items,
+      customerName:
+        isUnregistered || !customerName ? "Unregistered" : customerName,
+      orderType,
+      items: cartItems.map((i) => ({
+        itemId: i._id,
+        name: i.name,
+        price: i.unitPrice,
+        quantity: i.quantity,
+        purchasePrice: i.purchasePrice || 0,
+      })),
       subtotal,
-      taxRate: saleData.taxRate || 0,
+      taxRate: taxRate || 0,
       taxAmount,
       totalAmount,
-      paymentMethod: saleData.paymentMethod
+      paymentMethod,
     };
 
     try {
@@ -304,52 +177,31 @@ const SalesManagement = () => {
 
       if (!res.ok) throw new Error("Failed to create sale.");
 
-      setPopupMessage("Sale created successfully!");
-      setPopupType("success");
-      setShowModal(false);
-      fetchSales();
-    } catch (err) {
-      setPopupMessage(err.message || "Something went wrong.");
-      setPopupType("error");
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!saleToDelete) return;
-
-    try {
-      const response = await fetch(
-        `${API_BASE}/api/sales/${saleToDelete._id}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      await Promise.all(
+        cartItems.map((item) =>
+          fetch(`${API_BASE}/api/inventory/${item._id}`, {
+            method: "PUT",
+            headers: authHeader,
+            body: JSON.stringify({ stock: item.stock - item.quantity }),
+          })
+        )
       );
 
-      if (response.ok) {
-        setSales((prev) => prev.filter((s) => s._id !== saleToDelete._id));
+      showPopup("Sale created successfully!", "success");
 
-        setIsViewOpen(false);
-        setViewedSale(null);
-
-        setPopupMessage("Sale deleted successfully.");
-        setPopupType("success");
-      } else {
-        setPopupMessage("Failed to delete sale.");
-        setPopupType("error");
-      }
-    } catch (error) {
-      console.error("Delete error:", error);
-      setPopupMessage("An error occurred while deleting.");
-      setPopupType("error");
-    } finally {
-      setShowConfirmModal(false);
-      setSaleToDelete(null);
+      setCartItems([]);
+      setOrderType("Walk-in");
+      setCustomerName("");
+      setIsUnregistered(false);
+      setTaxRate(0);
+      setPaymentMethod("");
+    } catch (err) {
+      showPopup(err.message || "Something went wrong.", "error");
     }
   };
 
-  const handleCloseModal = () => {
-    setShowModal(false);
+  const handleClosePopup = () => {
+    setPopupMessage("");
   };
 
   return (
@@ -358,131 +210,188 @@ const SalesManagement = () => {
         <PopupMessage
           message={popupMessage}
           type={popupType}
-          onClose={() => setPopupMessage("")}
+          onClose={handleClosePopup}
         />
       )}
-
-      {isViewOpen && viewedSale && (
-        <ViewModal
-          item={viewedSale}
-          fields={displaySale}
-          onClose={() => {
-            setIsViewOpen(false);
-            setViewedSale(null);
-          }}
-          onDelete={() => {
-            setSaleToDelete(viewedSale);
-            setShowConfirmModal(true);
-          }}
-        />
-      )}
-
-      {showConfirmModal && saleToDelete && (
-        <ConfirmationModal
-          message={`Are you sure you want to delete Sale ID: ${saleToDelete._id}?`}
-          onConfirm={handleDelete}
-          onCancel={() => {
-            setShowConfirmModal(false);
-            setSaleToDelete(null);
-          }}
-        />
-      )}
-
-      {showModal && (
-        <EditModal
-          item={selectedItem}
-          fields={saleFields}
-          onSave={handleSaveSale}
-          onClose={handleCloseModal}
-          mode="add"
-          modalType="sale"
-          allItems={Array.isArray(inventoryItems) ? inventoryItems : []}
-          itemForm={itemForm}
-          setItemForm={setItemForm}
-          setPopupMessage={setPopupMessage}
-          setPopupType={setPopupType}
-        />
-      )}
-
       <Sidebar />
-      <main className="module-main-content">
-        <div className="module-header">
-          <h1 className="module-title">Sales Management</h1>
-        </div>
+      <main className="pos-main">
+        <section className="pos-products">
+          <div className="pos-products-header">
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pos-search-input"
+            />
+          </div>
 
-        <div className="module-actions-container">
-          <select
-            className="module-filter-dropdown"
-            value={searchField}
-            onChange={(e) => setSearchField(e.target.value)}
-          >
-            <option value="saleId">Sale ID</option>
-            <option value="customerName">Customer</option>
-            <option value="greaterPrice">&gt; Price</option>
-            <option value="lessPrice">&lt; Price</option>
-          </select>
+          <div className="pos-products-list">
+            {inventoryItems
+              .filter((item) =>
+                item.name.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+              .map((item) => (
+                <div
+                  key={item._id}
+                  className={`pos-product-card ${
+                    item.stock <= 0 ||
+                    item.status === "Out of stock" ||
+                    item.status === "Expired"
+                      ? "disabled-product"
+                      : ""
+                  }`}
+                  onClick={() =>
+                    item.stock > 0 &&
+                    item.status !== "Out of stock" &&
+                    item.status !== "Expired"
+                      ? handleAddToCart(item)
+                      : null
+                  }
+                >
+                  <h3>{item.name}</h3>
+                  <p>₱{item.unitPrice}</p>
+                  <p>Stock: {item.stock}</p>
+                  <p>
+                    <span
+                      className={`product-status ${item.status
+                        .replace(/\s+/g, "-")
+                        .toLowerCase()}`}
+                    >
+                      {item.status}
+                    </span>
+                  </p>
+                </div>
+              ))}
+          </div>
+        </section>
 
-          <input
-            type="text"
-            className="module-search-input"
-            placeholder="Search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        <section className="pos-cart">
+          <div className="pos-cart-header">
+            <h2>Cart</h2>
+          </div>
 
-          <button
-            className="module-action-btn module-add-btn"
-            onClick={handleAddSale}
-          >
-            Create Sale
-          </button>
-        </div>
+          <div className="pos-order-info">
+            <label>
+              Order Type
+              <select
+                value={orderType}
+                onChange={(e) => setOrderType(e.target.value)}
+              >
+                <option value="Walk-in">Walk-in</option>
+                <option value="Online">Online</option>
+              </select>
+            </label>
 
-        <section className="module-table-container">
-          <table className="module-table">
-            <thead>
-              <tr>
-                <th>Sale ID</th>
-                <th>Customer Name</th>
-                <th>Order Type</th>
-                <th>Total</th>
-                <th>Payment Method</th>
-                <th>Date Created</th>
-                <th className="action-column">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSales.length > 0 ? (
-                filteredSales.map((sale) => (
-                  <tr key={sale._id}>
-                    <td>{sale.saleId}</td>
-                    <td>{sale.customerName}</td>
-                    <td>{sale.orderType}</td>
-                    <td>₱{sale.totalAmount?.toFixed(2)}</td>
-                    <td>{sale.paymentMethod}</td>
-                    <td>{new Date(sale.createdAt).toLocaleString()}</td>
-                    <td>
-                      <button
-                        className="module-action-btn module-view-btn"
-                        onClick={() => {
-                          setViewedSale(sale);
-                          setIsViewOpen(true);
-                        }}
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))
+            <label>
+              Customer
+              {isUnregistered ? (
+                <input
+                  type="text"
+                  placeholder="Enter customer name or leave blank."
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                />
               ) : (
-                <tr>
-                  <td colSpan="7">No sales found.</td>
-                </tr>
+                <select
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                >
+                  {customers.map((cust) => (
+                    <option key={cust._id} value={cust.name}>
+                      {cust.name} ({cust.customerId})
+                    </option>
+                  ))}
+                </select>
               )}
-            </tbody>
-          </table>
+            </label>
+
+            {orderType === "Walk-in" && (
+              <label className="pos-unregistered-toggle">
+                <input
+                  type="checkbox"
+                  checked={isUnregistered}
+                  onChange={(e) => {
+                    setIsUnregistered(e.target.checked);
+                    setCustomerName(
+                      e.target.checked
+                        ? ""
+                        : customers[0]?.name || "Unregistered"
+                    );
+                  }}
+                />
+                Unregistered Customer
+              </label>
+            )}
+
+            <label>
+              Tax Rate (%)
+              <input
+                type="number"
+                value={taxRate}
+                min={0}
+                onChange={(e) => setTaxRate(Number(e.target.value))}
+              />
+            </label>
+
+            <label>
+              Payment Method
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              >
+                <option value="">Select</option>
+                <option value="Cash">Cash</option>
+                <option value="Credit Card">Credit Card</option>
+                <option value="GCash">GCash</option>
+                <option value="PayMaya">PayMaya</option>
+                <option value="Others">Others</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="pos-cart-items">
+            {cartItems.length === 0 ? (
+              <p>Your cart is empty.</p>
+            ) : (
+              cartItems.map((item) => (
+                <div key={item._id} className="pos-cart-item">
+                  <span>{item.name}</span>
+                  <div className="cart-quantity-controls">
+                    <button
+                      onClick={() => handleDecreaseQuantity(item._id)}
+                      disabled={item.quantity <= 1}
+                    >
+                      -
+                    </button>
+                    <span>{item.quantity}</span>
+                    <button
+                      onClick={() => handleIncreaseQuantity(item._id)}
+                      disabled={item.quantity >= item.stock}
+                    >
+                      +
+                    </button>
+                  </div>
+                  <span>₱{(item.unitPrice * item.quantity).toFixed(2)}</span>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="pos-cart-summary">
+            <p>
+              Subtotal: ₱
+              {cartItems
+                .reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
+                .toFixed(2)}
+            </p>
+            <button className="pos-checkout-btn" onClick={handleSaveSale}>
+              Checkout
+            </button>
+          </div>
         </section>
       </main>
+      {popupMessage && <PopupMessage type={popupType} message={popupMessage} />}
     </>
   );
 };
