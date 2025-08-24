@@ -18,6 +18,7 @@ import SupplierManagement from "../pages/SupplierManagement";
 import CustomerManagement from "../pages/CustomerManagement";
 import SalesManagement from "../pages/SalesManagement";
 import SalesReport from "../pages/SalesReport";
+import PricingManagement from "../pages/PricingManagement";   
 import "../styles/Responsive.css";
 
 
@@ -36,6 +37,17 @@ function App() {
               <Header />
               <Login />
               <Footer />
+            </>
+          }
+        />
+        <Route //Pricing Management route
+          path="/pricing-management"
+          element={
+            <>
+              <ProtectedRoute>
+                <DashboardHeader />
+                <PricingManagement />
+              </ProtectedRoute>
             </>
           }
         />

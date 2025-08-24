@@ -94,7 +94,7 @@ const Sidebar = () => {
 
           {role === "admin" && (
             <>
-              <NavLink to="/dashboard" className={linkClass} end>
+              <NavLink to="/pricing-management" className={linkClass} end>
                 <span className="label">Pricing Management</span>
               </NavLink>
               <NavLink to="/dashboard" className={linkClass} end>
@@ -108,7 +108,7 @@ const Sidebar = () => {
 
           {role === "manager" && (
             <>
-              <NavLink to="/dashboard" className={linkClass} end>
+              <NavLink to="/pricing-management" className={linkClass} end>
                 <span className="label">Pricing Management</span>
               </NavLink>
               <NavLink to="/dashboard" className={linkClass} end>
