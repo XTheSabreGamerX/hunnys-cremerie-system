@@ -12,6 +12,7 @@ import "../styles/Inventory.css";
 const Inventory = () => {
   const [items, setItems] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
+  const [uoms, setUoms] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchField, setSearchField] = useState("itemId");
   const [selectedItem, setSelectedItem] = useState(null);
@@ -53,6 +54,12 @@ const Inventory = () => {
     { label: "Category", name: "category" },
     { label: "Purchase Price", name: "purchasePrice", type: "number" },
     { label: "Unit Price", name: "unitPrice", type: "number" },
+    {
+      label: "Unit of Measurement",
+      name: "unit",
+      type: "select",
+      options: uoms.map((u) => ({ value: u._id, label: u.name })),
+    },
     { label: "Supplier", name: "supplier" },
     { label: "Restock Threshold", name: "restockThreshold", type: "number" },
     { label: "Expiration Date", name: "expirationDate", type: "date" },
@@ -100,6 +107,25 @@ const Inventory = () => {
     } catch (err) {
       console.error("Error fetching inventory:", err);
     }
+  }, [API_BASE, page, token]);
+
+  useEffect(() => {
+    const fetchUoms = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/inventory/uom`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) throw new Error("Failed to fetch UoMs");
+        const data = await res.json();
+        setUoms(data);
+      } catch (err) {
+        console.error("Failed to fetch UoM:", err);
+      }
+    };
+
+    if (token) fetchUoms();
   }, [API_BASE, page, token]);
 
   useEffect(() => {
@@ -223,11 +249,17 @@ const Inventory = () => {
       });
 
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error("Backend Error:", errorText);
-        throw new Error(
-          `Request failed: ${res.status} ${res.statusText} - ${errorText}`
-        );
+        let errorMsg = "Something went wrong.";
+        try {
+          const errorData = await res.json();
+          if (errorData.message) {
+            errorMsg = errorData.message;
+          }
+        } catch {
+          const errorText = await res.text();
+          errorMsg = errorText;
+        }
+        throw new Error(errorMsg);
       }
 
       setPage(1);
@@ -318,6 +350,11 @@ const Inventory = () => {
             { name: "stock", label: "Stock" },
             { name: "purchasePrice", label: "Purchase Price" },
             { name: "unitPrice", label: "Price" },
+            {
+              name: "unit",
+              label: "Unit of Measurement",
+              render: (val) => val?.name || "—",
+            },
             { name: "supplier", label: "Supplier" },
             { name: "restockThreshold", label: "Restock Threshold" },
             {
@@ -331,6 +368,11 @@ const Inventory = () => {
                   : "N/A",
             },
             { name: "status", label: "Status" },
+            {
+              name: "createdBy",
+              label: "Created By",
+              render: (val) => val?.username || "—",
+            },
           ]}
           onClose={() => {
             setIsViewOpen(false);
@@ -366,6 +408,7 @@ const Inventory = () => {
           mode={modalMode}
           formData={formData}
           setFormData={setFormData}
+          uoms={uoms}
         />
       )}
 
@@ -429,6 +472,7 @@ const Inventory = () => {
                 <th>Category</th>
                 <th>Purchase Price</th>
                 <th>Unit Price</th>
+                <th>UoM</th>
                 <th>Supplier</th>
                 <th>Expiration Date</th>
                 <th>Status</th>
@@ -438,7 +482,7 @@ const Inventory = () => {
             <tbody>
               {(isFiltering ? filteredItems : items).length === 0 ? (
                 <tr>
-                  <td colSpan="10">No items found.</td>
+                  <td colSpan="11">No items found.</td>
                 </tr>
               ) : (
                 (isFiltering ? filteredItems : items).map((item) => (
@@ -449,12 +493,16 @@ const Inventory = () => {
                     <td>{item.category || "—"}</td>
                     <td>₱{item.purchasePrice}</td>
                     <td>₱{item.unitPrice}</td>
+                    <td>{item.unit?.name}</td>
                     <td>{item.supplier || "—"}</td>
                     <td>
                       {item.expirationDate
-                        ? new Date(item.expirationDate).toLocaleDateString("en-PH", {
-                            timeZone: "Asia/Manila",
-                          })
+                        ? new Date(item.expirationDate).toLocaleDateString(
+                            "en-PH",
+                            {
+                              timeZone: "Asia/Manila",
+                            }
+                          )
                         : "N/A"}
                     </td>
                     <td>{item.status}</td>

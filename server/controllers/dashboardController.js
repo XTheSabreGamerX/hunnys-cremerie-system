@@ -29,7 +29,7 @@ const getDashboardStats = async (req, res) => {
     ] = await Promise.all([
       Inventory.countDocuments(),
 
-      Inventory.countDocuments({ status: "Low-Stock" }),
+      Inventory.countDocuments({ status: "Low-stock" }),
 
       Inventory.countDocuments({ status: "Out of stock" }),
 

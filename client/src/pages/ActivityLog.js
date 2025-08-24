@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../scripts/Sidebar";
+import DateRangeFilter from "../components/DateRangeFilter";
 import "../styles/ActivityLog.css";
 
 const ActivityLog = () => {
   const [logs, setLogs] = useState([]);
+  const [selectedRange, setSelectedRange] = useState("All");
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
@@ -20,11 +22,16 @@ const ActivityLog = () => {
     const fetchLogs = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch(`${API_BASE}/api/activitylog`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await fetch(
+          `${API_BASE}/api/activitylog?range=${encodeURIComponent(
+            selectedRange
+          )}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
         const data = await res.json();
         setLogs(data.logs || []);
@@ -35,21 +42,22 @@ const ActivityLog = () => {
     };
 
     fetchLogs();
-  }, [API_BASE]);
+  }, [API_BASE, selectedRange]);
 
   return (
     <>
-      {/* Modals or popups here */}
-
       <Sidebar />
 
       <main className="activity-log-main-content">
         <div className="activity-log-header">
           <h1 className="activity-log-title">Activity Logs</h1>
-        </div>
 
-        <div className="activity-log-actions-container">
-          {/* Search/filter inputs here later */}
+          <div className="activity-log-actions-container">
+            <DateRangeFilter
+              options={["All", "Today", "This Week", "This Month", "This Year"]}
+              onChange={setSelectedRange}
+            />
+          </div>
         </div>
 
         <div className="activity-log-table-container">
@@ -71,7 +79,11 @@ const ActivityLog = () => {
               ) : (
                 logs.map((log) => (
                   <tr key={log._id}>
-                    <td>{new Date(log.createdAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}</td>
+                    <td>
+                      {new Date(log.createdAt).toLocaleString("en-PH", {
+                        timeZone: "Asia/Manila",
+                      })}
+                    </td>
                     <td>{log.userId?.username || "Unknown"}</td>
                     <td>{log.action}</td>
                     <td>{log.module}</td>

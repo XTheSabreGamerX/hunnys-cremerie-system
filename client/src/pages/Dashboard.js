@@ -40,6 +40,59 @@ const Dashboard = () => {
     }
   }, [token, navigate]);
 
+  const user = JSON.parse(localStorage.getItem("user"));
+  const role = user?.role ? user.role.toLowerCase() : null;
+  const canView = (allowedRoles) => allowedRoles.includes(role);
+
+  // Dashboard card arrays for role based render
+  const dashboardCards = [
+    {
+      title: "Total Inventory",
+      value: stats.totalInventoryCount,
+      icon: <FaBox className="dashboard-card-icon" />,
+      link: "/inventory",
+      allowedRoles: ["admin", "owner", "manager", "staff"],
+    },
+    {
+      title: "Low Stock",
+      value: stats.lowStockCount,
+      icon: (
+        <FaExclamationTriangle
+          className="dashboard-card-icon"
+          style={{ color: "#FFC107" }}
+        />
+      ),
+      link: "/inventory",
+      allowedRoles: ["admin", "owner", "manager", "staff"],
+    },
+    {
+      title: "Out Of Stock",
+      value: stats.outOfStockCount,
+      icon: (
+        <FaExclamationTriangle
+          className="dashboard-card-icon"
+          style={{ color: "red" }}
+        />
+      ),
+      link: "/inventory",
+      allowedRoles: ["admin", "owner", "manager", "staff"],
+    },
+    {
+      title: "Sales Today",
+      value: stats.salesToday,
+      icon: <FaMoneyBill className="dashboard-card-icon" />,
+      link: "/sales-management",
+      allowedRoles: ["admin", "owner", "manager"],
+    },
+    {
+      title: "Activity Logs Today",
+      value: stats.activityLogsToday,
+      icon: <FaClipboardList className="dashboard-card-icon" />,
+      link: "/activity-log",
+      allowedRoles: ["admin", "owner"],
+    },
+  ];
+
   // Fetch dashboard stats
   useEffect(() => {
     const fetchStats = async () => {
@@ -54,6 +107,7 @@ const Dashboard = () => {
         if (!res.ok) throw new Error("Failed to fetch dashboard stats");
 
         const data = await res.json();
+        console.log("Dashboard API data:", data);
         setStats(data);
       } catch (err) {
         console.error("Error fetching dashboard stats:", err);
@@ -92,80 +146,46 @@ const Dashboard = () => {
       <main className="dashboard-main-content">
         <h1 className="dashboard-title">Dashboard</h1>
         <div className="dashboard-grid">
-          <Link to="/inventory" className="dashboard-card-link">
-            <div className="dashboard-card">
-              <FaBox className="dashboard-card-icon" />
-              <h2>Total Inventory</h2>
-              <p>{stats.totalInventoryCount}</p>
-            </div>
-          </Link>
-
-          <Link to="/inventory" className="dashboard-card-link">
-            <div className="dashboard-card">
-              <FaExclamationTriangle
-                className="dashboard-card-icon"
-                style={{ color: "#FFC107" }}
-              />
-              <h2>Low Stock</h2>
-              <p>{stats.lowStockCount}</p>
-            </div>
-          </Link>
-
-          <Link to="/inventory" className="dashboard-card-link">
-            <div className="dashboard-card">
-              <FaExclamationTriangle
-                className="dashboard-card-icon"
-                style={{ color: "red" }}
-              />
-              <h2>Out Of Stock</h2>
-              <p>{stats.outOfStockCount}</p>
-            </div>
-          </Link>
-
-          <Link to="/sales-management" className="dashboard-card-link">
-            <div className="dashboard-card">
-              <FaMoneyBill className="dashboard-card-icon" />
-              <h2>Sales Today</h2>
-              <p>{stats.salesToday}</p>
-            </div>
-          </Link>
-
-          <Link to="/activity-log" className="dashboard-card-link">
-            <div className="dashboard-card">
-              <FaClipboardList className="dashboard-card-icon" />
-              <h2>Activity Logs Today</h2>
-              <p>{stats.activityLogsToday}</p>
-            </div>
-          </Link>
+          {dashboardCards
+            .filter((card) => card.allowedRoles.includes(role))
+            .map((card, index) => (
+              <Link key={index} to={card.link} className="dashboard-card-link">
+                <div className="dashboard-card">
+                  {card.icon}
+                  <h2>{card.title}</h2>
+                  <p>{card.value}</p>
+                </div>
+              </Link>
+            ))}
         </div>
 
-        <div className="dashboard-line-chart-container">
-          <h2 className="dashboard-line-chart-title">
-            Financial Overview
-          </h2>
-          <div className="dashboard-line-chart">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={lineData}>
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#4CAF50"
-                  name="Revenue"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="cost"
-                  stroke="#FF5722"
-                  name="Cost"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+        {canView(["admin", "owner", "manager"]) && (
+          <div className="dashboard-line-chart-container">
+            <h2 className="dashboard-line-chart-title">Financial Overview</h2>
+            <div className="dashboard-line-chart">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={lineData}>
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#4CAF50"
+                    name="Revenue"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="cost"
+                    stroke="#FF5722"
+                    name="Cost"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-        </div>
+        )}
       </main>
     </>
   );

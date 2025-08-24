@@ -99,20 +99,24 @@ const SalesReport = () => {
           else paymentBreakdown[sale.paymentMethod] = sale.totalAmount;
         });
 
+        const bestSellingArray = Object.entries(bestSelling)
+          .map(([name, totalSold]) => ({ _id: name, totalSold }))
+          .sort((a, b) => b.totalSold - a.totalSold)
+          .slice(0, 5);
+
+        const paymentArray = Object.entries(paymentBreakdown).map(
+          ([method, total]) => ({
+            _id: method,
+            total,
+          })
+        );
+
         setAnalytics({
           totalSales,
           totalProfit,
           totalTransactions,
-          bestSelling: Object.entries(bestSelling).map(([name, totalSold]) => ({
-            _id: name,
-            totalSold,
-          })),
-          paymentBreakdown: Object.entries(paymentBreakdown).map(
-            ([method, total]) => ({
-              _id: method,
-              total,
-            })
-          ),
+          bestSelling: bestSellingArray,
+          paymentBreakdown: paymentArray
         });
 
         // Graph Data setters

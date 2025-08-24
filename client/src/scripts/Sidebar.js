@@ -3,6 +3,18 @@ import "../styles/Sidebar.css";
 import Logo from "../elements/images/icon32x32.png";
 import { Menu } from "lucide-react";
 import { useNavigate, NavLink } from "react-router-dom";
+import { ImHome, ImUsers, ImList } from "react-icons/im";
+import { CgBox } from "react-icons/cg";
+import {
+  FaCashRegister,
+  FaMoneyBillWave,
+  FaChartLine,
+  FaCalculator,
+  FaTruck,
+  FaUserTag,
+  FaDownload,
+  FaEnvelope,
+} from "react-icons/fa";
 
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -41,6 +53,81 @@ const Sidebar = () => {
 
   const linkClass = ({ isActive }) => (isActive ? "active" : "");
 
+  const sidebarItems = [
+    {
+      label: "Dashboard",
+      icon: <ImHome />,
+      path: "/dashboard",
+      roles: ["admin", "owner", "manager", "staff"],
+    },
+    {
+      label: "User Management",
+      icon: <ImUsers />,
+      path: "/user-management",
+      roles: ["admin", "owner", "manager"],
+    },
+    {
+      label: "Activity Log",
+      icon: <ImList />,
+      path: "/activity-log",
+      roles: ["admin", "owner", "manager"],
+    },
+    {
+      label: "Inventory",
+      icon: <CgBox />,
+      path: "/inventory",
+      roles: ["admin", "owner", "manager", "staff"],
+    },
+    {
+      label: "Sales Management",
+      icon: <FaCashRegister />,
+      path: "/sales-management",
+      roles: ["admin", "owner", "manager", "staff"],
+    },
+    {
+      label: "Sales Report",
+      icon: <FaChartLine />,
+      path: "/sales-report",
+      roles: ["admin", "owner"],
+    },
+    {
+      label: "Profitability Dashboard",
+      icon: <FaCalculator />,
+      path: "/dashboard",
+      roles: ["admin", "owner"],
+    },
+    {
+      label: "Supplier Management",
+      icon: <FaTruck />,
+      path: "/supplier-management",
+      roles: ["admin", "owner", "manager"],
+    },
+    {
+      label: "Customer Management",
+      icon: <FaUserTag />,
+      path: "/customer-management",
+      roles: ["admin", "owner", "manager"],
+    },
+    {
+      label: "Pricing Management",
+      icon: <FaMoneyBillWave />,
+      path: "/dashboard",
+      roles: ["admin", "owner", "manager"],
+    },
+    {
+      label: "Backup and Restore",
+      icon: <FaDownload />,
+      path: "/dashboard",
+      roles: ["admin", "owner", "manager", "staff"],
+    },
+    {
+      label: "Notifications",
+      icon: <FaEnvelope />,
+      path: "/dashboard",
+      roles: ["admin", "owner", "manager", "staff"],
+    },
+  ];
+
   return (
     <div className={`sidebar ${isCollapsed ? "collapsed" : ""} ${isOpen ? "open" : ""}`}>
       <div className="sidebar-header">
@@ -52,86 +139,17 @@ const Sidebar = () => {
 
       <div className="sidebar-scroll">
         <nav className="sidebar-nav">
-          <NavLink to="/dashboard" className={linkClass} end>
-            <span className="label">Dashboard</span>
-          </NavLink>
-
-          {(role === "admin" || role === "manager") && (
-            <>
-              <NavLink to="/user-management" className={linkClass} end>
-                <span className="label">User Management</span>
-              </NavLink>
-              <NavLink to="/activity-log" className={linkClass} end>
-                <span className="label">Activity Log</span>
-              </NavLink>
-            </>
-          )}
-
-          {(role === "admin" || role === "manager" || role === "staff") && (
-            <>
-              <NavLink to="/inventory" className={linkClass} end>
-                <span className="label">Inventory</span>
-              </NavLink>
-              <NavLink to="/sales-management" className={linkClass} end>
-                <span className="label">Sales Management</span>
-              </NavLink>
-              {/* The following paths should be real routes to avoid multiple active states */}
-              <NavLink to="/sales-report" className={linkClass} end>
-
-                <span className="label">Sales Report</span>
-              </NavLink>
-              <NavLink to="/profitability-dashboard" className={linkClass} end>
-                <span className="label">Profitability Dashboard</span>
-              </NavLink>
-              <NavLink to="/supplier-management" className={linkClass} end>
-                <span className="label">Supplier Management</span>
-              </NavLink>
-              <NavLink to="/customer-management" className={linkClass} end>
-                <span className="label">Customer Management</span>
-              </NavLink>
-            </>
-          )}
-
-          {role === "admin" && (
-            <>
-              <NavLink to="/pricing-management" className={linkClass} end>
-                <span className="label">Pricing Management</span>
-              </NavLink>
-              <NavLink to="/backup-and-restore" className={linkClass} end>
-                <span className="label">Backup and Restore</span>
-              </NavLink>
-              <NavLink to="/notifications" className={linkClass} end>
-                <span className="label">Notifications</span>
-              </NavLink>
-            </>
-          )}
-
-          {role === "manager" && (
-            <>
-              <NavLink to="/pricing-management" className={linkClass} end>
-                <span className="label">Pricing Management</span>
-              </NavLink>
-              <NavLink to="/backup-and-restore" className={linkClass} end>
-                <span className="label">Backup and Restore</span>
-              </NavLink>
-              <NavLink to="/notifications" className={linkClass} end>
-                <span className="label">Notifications</span>
-              </NavLink>
-            </>
-          )}
-
-          {role === "staff" && (
-            <>
-              <NavLink to="/backup-and-restore" className={linkClass} end>
-                <span className="label">Backup and Restore</span>
-              </NavLink>
-              <NavLink to="/notifications" className={linkClass} end>
-                <span className="label">Notifications</span>
-              </NavLink>
-            </>
+          {sidebarItems.map(
+            (item) =>
+              item.roles.includes(role) && (
+                <NavLink to={item.path} className={linkClass} key={item.label} end>
+                  {item.icon}
+                  <span className="label">{item.label}</span>
+                </NavLink>
+              )
           )}
         </nav>
-
+        
         {!isCollapsed && (
           <button onClick={logout} className="logout-button">
             Logout

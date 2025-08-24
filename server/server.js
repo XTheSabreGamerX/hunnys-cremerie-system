@@ -52,8 +52,8 @@ app.use('/api/salesReport', salesReportRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/customers', customerRoutes);
 
-// Crong scheduler. Runs every 12 AM to update inventory item status.
-cron.schedule('0 0 * * *', async () => {
+// Cron scheduler. Runs every 15 minutes to update inventory item status.
+cron.schedule('*/15 * * * *', async () => {
   console.log('Running inventory status batch update...');
   try {
     await batchUpdateStatuses();
