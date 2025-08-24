@@ -98,13 +98,13 @@ const Sidebar = () => {
       label: "Backup and Restore",
       icon: <FaDownload />,
       path: "/dashboard",
-      roles: ["admin", "manager", "staff"],
+      roles: ["admin", "owner", "manager", "staff"],
     },
     {
       label: "Notifications",
       icon: <FaEnvelope />,
       path: "/dashboard",
-      roles: ["admin", "manager", "staff"],
+      roles: ["admin", "owner", "manager", "staff"],
     },
   ];
 
