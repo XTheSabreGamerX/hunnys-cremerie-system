@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../scripts/Sidebar";
+import ReceiptModal from "../components/ReceiptModal";
 import {
   LineChart,
   Line,
@@ -35,6 +36,7 @@ const SalesReport = () => {
   const [lineData, setLineData] = useState([]);
   const [barData, setBarData] = useState([]);
   const [pieData, setPieData] = useState([]);
+  const [selectedSale, setSelectedSale] = useState(null);
 
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
@@ -116,7 +118,7 @@ const SalesReport = () => {
           totalProfit,
           totalTransactions,
           bestSelling: bestSellingArray,
-          paymentBreakdown: paymentArray
+          paymentBreakdown: paymentArray,
         });
 
         // Graph Data setters
@@ -166,8 +168,23 @@ const SalesReport = () => {
     fetchSales();
   }, [API_BASE, token, authHeader]);
 
+  const openReceipt = (sale) => {
+    setSelectedSale(sale);
+  };
+
+  const closeReceipt = () => {
+    setSelectedSale(null);
+  };
+
   return (
     <>
+      {selectedSale && (
+        <ReceiptModal
+          sale={selectedSale}
+          onClose={() => setSelectedSale(null)}
+        />
+      )}
+
       <Sidebar />
 
       <main className="sales-report-main">
@@ -231,7 +248,11 @@ const SalesReport = () => {
               </thead>
               <tbody>
                 {records.map((r) => (
-                  <tr key={r.saleId}>
+                  <tr
+                    key={r.saleId}
+                    onClick={() => openReceipt(r)}
+                    style={{ cursor: "pointer" }}
+                  >
                     <td>{r.saleId}</td>
                     <td>{r.customerName}</td>
                     <td>{r.orderType}</td>
