@@ -3,7 +3,7 @@ const Inventory = require("../models/InventoryItem");
 const { createLog } = require("../controllers/activityLogController");
 
 // GET function to get all sales
-const getAllSales = async (req, res) => {
+const getAllSalesPaginated = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
 
@@ -24,6 +24,22 @@ const getAllSales = async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 };
+
+// GET function to get all sales without pagination
+const getAllSales = async (req, res) => {
+  try {
+    const sales = await Sale.find().sort({ createdAt: -1 }); // newest first
+
+    res.json({
+      sales,
+      total: sales.length,
+    });
+  } catch (err) {
+    console.error("Failed to get all sales data:", err);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
 
 // GET function to get a single sale by ID
 const getSaleById = async (req, res) => {
@@ -91,67 +107,52 @@ const createSale = async (req, res) => {
   }
 };
 
-/*
-const updateSale = async (req, res) => {
+// POST function to delete and refund a sale
+const refundSale = async (req, res) => {
   try {
-    const updatedSale = await Sale.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
-    if (!updatedSale)
-      return res.status(404).json({ message: "Sale not found" });
+    const sale = await Sale.findById(req.params.id);
 
+    if (!sale) {
+      return res.status(404).json({ message: 'Sale not found' });
+    }
+
+    // Restore stock for each item in the sale
+    for (const item of sale.items) {
+      const inventoryItem = await Inventory.findById(item.itemId);
+      if (inventoryItem) {
+        inventoryItem.stock += item.quantity;
+        await inventoryItem.save();
+      } else {
+        console.warn(`[Refund Warning] Inventory item with ID ${item.itemId} not found`);
+      }
+    }
+
+    // Delete the sale record
+    await Sale.findByIdAndDelete(req.params.id);
+
+    // Log refund action
     try {
       await createLog({
-        action: 'Created Sale',
+        action: 'Refunded Sale',
         module: 'Sales Management',
-        description: `User ${req.user.username} created a sale with: ${newSale.items.length} item(s) for customer: ${newSale.customer || 'Unknown'}`,
+        description: `User ${req.user.username} refunded a sale for customer: ${sale.customerName || 'Unknown'}`,
         userId: req.user.id,
       });
     } catch (logErr) {
-      console.error('[Activity Log] Failed to log sale creation:', logErr.message);
+      console.error('[Activity Log] Failed to log sale refund:', logErr.message);
     }
 
-    res.status(200).json({ message: "Sale updated", sale: updatedSale });
+    res.status(200).json({ message: 'Sale refunded successfully' });
   } catch (err) {
-    res.status(400).json({ message: "Failed to update sale", error: err });
-  }
-};
-*/
-
-// DELETE function to delete a sale
-const deleteSale = async (req, res) => {
-  try {
-    const deletedSale = await Sale.findByIdAndDelete(req.params.id);
-
-    if (!deletedSale) {
-      return res.status(404).json({ message: "Sale not found" });
-    }
-
-    try {
-      await createLog({
-        action: "Deleted Sale",
-        module: "Sales Management",
-        description: `User ${req.user.username} deleted a sale for customer: ${
-          deletedSale.customerName || "Unknown"
-        }`,
-        userId: req.user.id,
-      });
-    } catch (logErr) {
-      console.error(
-        "[Activity Log] Failed to log sale deletion:",
-        logErr.message
-      );
-    }
-
-    res.status(200).json({ message: "Sale deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: "Error deleting sale", error: err });
+    console.error('[Refund Error]', err);
+    res.status(500).json({ message: 'Error refunding sale', error: err });
   }
 };
 
 module.exports = {
+  getAllSalesPaginated,
   getAllSales,
   getSaleById,
   createSale,
-  deleteSale,
+  refundSale,
 };

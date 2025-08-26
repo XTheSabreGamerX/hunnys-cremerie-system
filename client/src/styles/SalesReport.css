@@ -76,6 +76,7 @@
 
 .records-table-wrapper {
   overflow-x: auto;
+  height: 30vh;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 8px rgba(0,0,0,0.08);

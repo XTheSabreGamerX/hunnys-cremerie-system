@@ -107,7 +107,6 @@ const Dashboard = () => {
         if (!res.ok) throw new Error("Failed to fetch dashboard stats");
 
         const data = await res.json();
-        console.log("Dashboard API data:", data);
         setStats(data);
       } catch (err) {
         console.error("Error fetching dashboard stats:", err);

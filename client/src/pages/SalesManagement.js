@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { nanoid } from "nanoid/non-secure";
+import { customAlphabet } from "nanoid/non-secure";
 import Sidebar from "../scripts/Sidebar";
 import PopupMessage from "../components/PopupMessage";
 import "../styles/SalesManagement.css";
@@ -44,7 +44,10 @@ const SalesManagement = () => {
     }, 2000);
   };
 
-  const generateSaleID = () => `SALE-${nanoid(8).toUpperCase()}`;
+  const alphabet =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const nanoid = customAlphabet(alphabet, 8);
+  const generateSaleID = () => `SALE-${nanoid()}`;
 
   // Fetch inventory
   useEffect(() => {
@@ -150,7 +153,7 @@ const SalesManagement = () => {
     const totalAmount = subtotal + taxAmount;
 
     const saleToSend = {
-      saleId: generateSaleID(),
+      saleId: generateSaleID(alphabet),
       customerName:
         isUnregistered || !customerName ? "Unregistered" : customerName,
       orderType,

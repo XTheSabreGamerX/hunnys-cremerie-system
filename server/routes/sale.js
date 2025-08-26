@@ -1,19 +1,22 @@
 const express = require("express");
 const router = express.Router();
-const authenticateToken = require('../middleware/auth');
+const authenticateToken = require("../middleware/auth");
 const {
+  getAllSalesPaginated,
   getAllSales,
   getSaleById,
   createSale,
-  deleteSale
+  refundSale,
 } = require("../controllers/saleController");
 
-router.get("/", authenticateToken, getAllSales);
+router.get("/", authenticateToken, getAllSalesPaginated);
+
+router.get("/all", authenticateToken, getAllSales);
 
 router.get("/:id", authenticateToken, getSaleById);
 
 router.post("/", authenticateToken, createSale);
 
-router.delete("/:id", authenticateToken, deleteSale);
+router.post("/:id/refund", authenticateToken, refundSale);
 
 module.exports = router;
