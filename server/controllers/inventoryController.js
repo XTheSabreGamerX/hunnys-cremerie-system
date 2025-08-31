@@ -1,5 +1,6 @@
 const InventoryItem = require("../models/InventoryItem");
 const UnitOfMeasurement = require("../models/UnitOfMeasurement");
+const Notification = require("../models/Notification");
 const { createLog } = require("../controllers/activityLogController");
 
 // Computes inventory item status
@@ -71,6 +72,13 @@ const addInventoryItem = async (req, res) => {
       console.error("[Activity Log] Failed to log addition:", logErr.message);
     }
 
+    await Notification.create({
+      roles: ["admin", "owner", "manager"],
+      isGlobal: false,
+      message: `A new inventory item "${item.name}" has been added.`,
+      type: "info",
+    });
+
     res.status(201).json(item);
   } catch (err) {
     console.error("Add item failed:", err);
@@ -87,11 +95,22 @@ const addInventoryItem = async (req, res) => {
 // Updating an inventory item
 const updateInventoryItem = async (req, res) => {
   try {
+    const { unitPrice, purchasePrice } = req.body;
+
+    if (unitPrice !== undefined && purchasePrice !== undefined) {
+      if (unitPrice < purchasePrice) {
+        return res.status(400).json({
+          error: "Unit Price must be greater than or equal to Purchase Price",
+        });
+      }
+    }
+
     const updated = await InventoryItem.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true, runValidators: true }
     );
+
     if (!updated) {
       return res.status(404).json({ error: "Item not found" });
     }
@@ -106,6 +125,13 @@ const updateInventoryItem = async (req, res) => {
     } catch (logErr) {
       console.error("[Activity Log] Failed to log update:", logErr.message);
     }
+
+    await Notification.create({
+      roles: ["admin", "owner", "manager"],
+      isGlobal: false,
+      message: `An inventory item "${item.name}" was edited.`,
+      type: "info",
+    });
 
     res.json(updated);
   } catch (err) {
@@ -132,6 +158,13 @@ const deleteInventoryItem = async (req, res) => {
     } catch (logErr) {
       console.error("[Activity Log] Failed to log deletion:", logErr.message);
     }
+
+    await Notification.create({
+      roles: ["admin", "owner", "manager"],
+      isGlobal: false,
+      message: `An inventory item "${item.name}" has been deleted.`,
+      type: "info",
+    });
 
     res.status(200).json({ message: "Item has been deleted successfully" });
   } catch (err) {

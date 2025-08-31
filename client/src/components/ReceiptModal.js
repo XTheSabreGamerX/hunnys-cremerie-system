@@ -28,59 +28,47 @@ const ReceiptModal = ({ sale, onClose, onRefund }) => {
       document.getElementById("receipt-content")?.innerHTML || "";
 
     const modifiedContents = printContents
-      .replace(
-        /<h3>Items<\/h3>/i,
-        '<p style="text-align:center; margin:6px 4px;">----------------------------------------</p><h3>Items</h3>'
-      )
-      .replace(
-        /<\/ul>/i,
-        '</ul><p style="text-align:center; margin:6px 4px;">----------------------------------------</p>'
-      )
+      
+      .replace(/(Date:.*<\/p>)/i, '$1<hr class="separator"/>')
+      
+      .replace(/<h3>Items<\/h3>/i, '<hr class="separator"/><h3>Items</h3>')
+      
+      .replace(/<\/ul>/i, '</ul><hr class="separator"/>')
+      
       .replace(
         /<p>\s*<strong>Total:/i,
-        '<p style="text-align:center; margin:6px 4px;">----------------------------------------</p><p><strong>Total:'
+        '<hr class="separator"/><p><strong>Total:'
       );
 
     const html = `
-      <html>
-        <head>
-          <title>Receipt</title>
-          <meta charset="utf-8"/>
-          <style>
-            @page { size: 80mm auto; margin: 5mm; }
-            body { font-family: Arial, sans-serif; margin:0; padding:6px; width:80mm; }
-            h2, h3 { text-align:center; margin:4px 0; }
-            ul { padding:0; margin:0; list-style:none; }
-            li { padding:2px 0; font-size:13px; }
-            p { margin:2px 0; font-size:12px; }
-            .separator { text-align:center; margin:6px 4px; }
-          </style>
-        </head>
-        <body>
-          ${modifiedContents}
-          <p class="separator">----------------------------------------</p>
-          <p style="text-align:center; font-size:12px;">Thank you for your purchase!</p>
-        </body>
-      </html>
-    `;
+    <html>
+      <head>
+        <title>Receipt Print</title>
+        <meta charset="utf-8"/>
+        <style>
+          @page { size: 80mm auto; margin: 5mm; }
+          body { font-family: Arial, sans-serif; margin:0; padding:6px; width:80mm; }
+          h2, h3 { text-align:center; margin:4px 0; }
+          ul { padding:0; margin:0; list-style:none; }
+          li { padding:2px 0; font-size:13px; }
+          p { margin:2px 0; font-size:12px; }
+          .separator { border: none; border-top: 1px dashed #000; margin: 6px 0; }
+        </style>
+      </head>
+      <body>
+        ${modifiedContents}
+        <hr class="separator"/>
+        <p className="receipt-center">Contact Us: 0928-191-5526</p>
+        <p className="receipt-center">Find us at Facebook: https://www.facebook.com/hunnyscremerienew</p>
+      </body>
+    </html>
+  `;
 
-    const newWindow = window.open("", "", "width=600,height=800");
-    if (!newWindow) {
-      alert("Unable to open print window. Please allow popups for this site.");
-      return;
-    }
-
-    newWindow.document.open();
-    newWindow.document.write(html);
-    newWindow.document.close();
-
-    newWindow.onload = () => {
-      newWindow.focus();
-      setTimeout(() => {
-        newWindow.print();
-        newWindow.close();
-      }, 50);
-    };
+    const printWindow = window.open("", "_blank");
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.print();
   };
 
   const handleRefund = async () => {
@@ -136,7 +124,8 @@ const ReceiptModal = ({ sale, onClose, onRefund }) => {
       <div className="receipt-overlay">
         <div className="receipt-container">
           <div id="receipt-content">
-            <h2>Receipt</h2>
+            <h2 className="receipt-center">Hunnys Crémerie Baking Supplies</h2>
+            <p className="receipt-center">12 Torres St. Burgos 1860 Rodriguez, Philippines</p>
             <p>
               <strong>Sale ID:</strong> {sale.saleId}
             </p>

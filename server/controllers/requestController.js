@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Request = require("../models/Request");
 const User = require("../models/User");
+const Notification = require("../models/Notification");
 const bcrypt = require("bcrypt");
 const { createLog } = require("../controllers/activityLogController");
 
@@ -19,6 +20,13 @@ const registrationRequest = async (req, res) => {
         userId: null,
       });
 
+      await Notification.create({
+        roles: ["admin", "owner", "manager"],
+        isGlobal: false,
+        message: `A user attempted to create an account with an existing request: ${email}.`,
+        type: "warning",
+      });
+
       return res.status(400).json({
         message:
           "A request with this email already exists. Please use a different one.",
@@ -34,6 +42,13 @@ const registrationRequest = async (req, res) => {
         userId: null,
       });
 
+      await Notification.create({
+        roles: ["admin", "owner", "manager"],
+        isGlobal: false,
+        message: `A user attempted to create an account with an existing account: ${email}.`,
+        type: "warning",
+      });
+
       return res.status(400).json({
         message:
           "This email is already being used by another user. Please register with a different email!",
@@ -42,6 +57,31 @@ const registrationRequest = async (req, res) => {
 
     const newRequest = new Request({ email, password });
     await newRequest.save();
+
+    try {
+      await Notification.create({
+        roles: ["admin", "owner", "manager"],
+        isGlobal: false,
+        message: `A user sent a registration request: ${email}. Currently awaiting approval.`,
+        type: "success",
+      });
+    } catch (notifErr) {
+      console.error("[Notification] Failed to create:", notifErr.message);
+    }
+
+    try {
+      await createLog({
+        action: "Registration Request",
+        module: "Login",
+        description: `A registration request was sent: ${email}`,
+        userId: null,
+      });
+    } catch (logErr) {
+      console.error(
+        "[Activity Log] Failed to log registration:",
+        logErr.message
+      );
+    }
 
     res.status(200).json({
       message:
@@ -96,6 +136,13 @@ const requestApprove = async (req, res) => {
       userId: newUser._id,
     });
 
+    await Notification.create({
+        roles: ["admin", "owner", "manager"],
+        isGlobal: false,
+        message: `A registration request was approved: ${request.email}.`,
+        type: "success",
+      });
+
     res
       .status(200)
       .json({ message: "Request approved and user created successfully." });
@@ -122,6 +169,13 @@ const requestReject = async (req, res) => {
       description: `Rejection of registration request for user: ${request.email}`,
       userId: null,
     });
+
+    await Notification.create({
+        roles: ["admin", "owner", "manager"],
+        isGlobal: false,
+        message: `A registration request was rejected: ${request.email}.`,
+        type: "success",
+      });
 
     res
       .status(200)

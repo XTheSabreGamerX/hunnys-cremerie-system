@@ -12,14 +12,15 @@ const inventoryItemSchema = new mongoose.Schema({
     min: 0,
     validate: {
       validator: function (value) {
+        if (this.purchasePrice === undefined) return true;
         return value >= this.purchasePrice;
       },
-      message: 'Unit Price must be greater than or equal to Purchase Price',
+      message: "Unit Price must be greater than or equal to Purchase Price",
     },
   },
-  unit: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: 'UnitOfMeasurement'
+  unit: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "UnitOfMeasurement",
   },
   supplier: { type: String },
   restockThreshold: { type: Number, default: 0 },
@@ -31,9 +32,9 @@ const inventoryItemSchema = new mongoose.Schema({
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  }
+    ref: "User",
+    required: true,
+  },
 });
 
 module.exports = mongoose.model("InventoryItem", inventoryItemSchema);

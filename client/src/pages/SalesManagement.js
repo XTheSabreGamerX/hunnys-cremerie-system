@@ -44,8 +44,7 @@ const SalesManagement = () => {
     }, 2000);
   };
 
-  const alphabet =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   const nanoid = customAlphabet(alphabet, 8);
   const generateSaleID = () => `SALE-${nanoid()}`;
 
@@ -279,7 +278,16 @@ const SalesManagement = () => {
               Order Type
               <select
                 value={orderType}
-                onChange={(e) => setOrderType(e.target.value)}
+                onChange={(e) => {
+                  const newType = e.target.value;
+                  setOrderType(newType);
+
+                  if (newType !== "Walk-in") {
+                    
+                    setIsUnregistered(false);
+                    setCustomerName(customers[0]?.name || "");
+                  }
+                }}
               >
                 <option value="Walk-in">Walk-in</option>
                 <option value="Online">Online</option>

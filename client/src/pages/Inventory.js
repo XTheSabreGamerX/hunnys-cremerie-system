@@ -11,6 +11,7 @@ import "../styles/Inventory.css";
 
 const Inventory = () => {
   const [items, setItems] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
   const [uoms, setUoms] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -60,7 +61,15 @@ const Inventory = () => {
       type: "select",
       options: uoms.map((u) => ({ value: u._id, label: u.name })),
     },
-    { label: "Supplier", name: "supplier" },
+    {
+      label: "Supplier",
+      name: "supplier",
+      type: "select",
+      options: suppliers.map((s) => ({
+        value: s._id,
+        label: s.name,
+      })),
+    },
     { label: "Restock Threshold", name: "restockThreshold", type: "number" },
     { label: "Expiration Date", name: "expirationDate", type: "date" },
   ];
@@ -109,6 +118,39 @@ const Inventory = () => {
     }
   }, [API_BASE, page, token]);
 
+  // Fetch Suppliers
+  const fetchSuppliers = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No token found.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/suppliers`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Failed to fetch suppliers");
+      }
+
+      const data = await res.json();
+      if (!Array.isArray(data)) {
+        console.error("Expected an array, got:", data);
+        return;
+      }
+
+      setSuppliers(data);
+    } catch (err) {
+      console.error("Error fetching suppliers:", err.message);
+    }
+  }, [API_BASE]);
+
+  // Fetch Units of Measurements
   useEffect(() => {
     const fetchUoms = async () => {
       try {
@@ -130,7 +172,8 @@ const Inventory = () => {
 
   useEffect(() => {
     fetchItems();
-  }, [page, fetchItems]);
+    fetchSuppliers();
+  }, [page, fetchItems, fetchSuppliers]);
 
   // Infinite Scroll for pagination
   useEffect(() => {
@@ -355,7 +398,12 @@ const Inventory = () => {
               label: "Unit of Measurement",
               render: (val) => val?.name || "—",
             },
-            { name: "supplier", label: "Supplier" },
+            {
+              name: "supplier",
+              label: "Supplier",
+              render: (val) =>
+                suppliers.find((s) => s._id === val)?.name || "—",
+            },
             { name: "restockThreshold", label: "Restock Threshold" },
             {
               name: "expirationDate",
@@ -494,7 +542,10 @@ const Inventory = () => {
                     <td>₱{item.purchasePrice}</td>
                     <td>₱{item.unitPrice}</td>
                     <td>{item.unit?.name}</td>
-                    <td>{item.supplier || "—"}</td>
+                    <td>
+                      {suppliers.find((s) => s._id === item.supplier)?.name ||
+                        "—"}
+                    </td>
                     <td>
                       {item.expirationDate
                         ? new Date(item.expirationDate).toLocaleDateString(
