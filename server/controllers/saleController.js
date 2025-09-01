@@ -57,6 +57,62 @@ const createSale = async (req, res) => {
   try {
     const saleItemsWithCost = await Promise.all(
       req.body.items.map(async (item) => {
+        
+        const inventoryItem = await Inventory.findById(item.itemId);
+        if (!inventoryItem) {
+          throw new Error(`Inventory item not found: ${item.itemId}`);
+        }
+        return {
+          ...item,
+          purchasePrice: inventoryItem.purchasePrice,
+        };
+      })
+    );
+
+    const newSale = new Sale({
+      ...req.body,
+      items: saleItemsWithCost,
+    });
+
+    await newSale.save();
+
+    for (const soldItem of newSale.items) {
+      const inventoryItem = await Inventory.findById(soldItem.itemId);
+      if (!inventoryItem) continue;
+
+      inventoryItem.stock -= soldItem.quantity;
+      if (inventoryItem.stock < 0) inventoryItem.stock = 0;
+
+      await inventoryItem.save();
+    }
+
+    try {
+      await createLog({
+        action: "Created Sale",
+        module: "Sales Management",
+        description: `User ${req.user.username} created a sale with: ${newSale.items.length} item(s) for customer: ${req.body.customerName || "Unknown"}`,
+        userId: req.user.id,
+      });
+    } catch (logErr) {
+      console.error("[Activity Log] Failed to log sale creation:", logErr.message);
+    }
+
+    res.status(201).json({
+      message: "Sale recorded and inventory updated successfully",
+      sale: newSale,
+    });
+  } catch (err) {
+    console.error("[SALE] Creation error:", err.message);
+    res.status(400).json({
+      message: "Failed to create sale",
+      error: err.message,
+    });
+  }
+};
+/* const createSale = async (req, res) => {
+  try {
+    const saleItemsWithCost = await Promise.all(
+      req.body.items.map(async (item) => {
         const inventoryItem = await Inventory.findOne({ itemId: item.itemId });
         return {
           ...item,
@@ -105,7 +161,7 @@ const createSale = async (req, res) => {
       error: err,
     });
   }
-};
+}; */
 
 // POST function to delete and refund a sale
 const refundSale = async (req, res) => {

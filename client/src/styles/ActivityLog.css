@@ -41,6 +41,7 @@
     width: 100%;
     overflow-y: auto;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .activity-log-table-container thead th {
@@ -69,4 +70,9 @@
 
 .activity-log-table-container tbody tr:hover {
     background-color: #f5f7fa;
+}
+
+.activity-log-table-container th:nth-child(5),
+.activity-log-table-container td:nth-child(5) {
+    width: 35%;
 }

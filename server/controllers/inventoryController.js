@@ -95,6 +95,51 @@ const addInventoryItem = async (req, res) => {
 // Updating an inventory item
 const updateInventoryItem = async (req, res) => {
   try {
+    const item = await InventoryItem.findById(req.params.id);
+    if (!item) return res.status(404).json({ message: "Item not found" });
+
+    Object.assign(item, req.body);
+
+    if (item.unitPrice < item.purchasePrice) {
+      return res.status(400).json({
+        message: "Unit Price must be greater than or equal to Purchase Price",
+      });
+    }
+
+    await item.save();
+    
+    try {
+      await createLog({
+        action: "Updated Item",
+        module: "Inventory",
+        description: `User ${req.user.username} updated an item: ${item.name}`,
+        userId: req.user.id,
+      });
+    } catch (logErr) {
+      console.error("[Activity Log] Failed to log update:", logErr.message);
+    }
+
+    await Notification.create({
+      roles: ["admin", "owner", "manager"],
+      isGlobal: false,
+      message: `An inventory item "${item.name}" was edited.`,
+      type: "info",
+    });
+
+    res.json(item);
+  } catch (err) {
+    console.error("Update error:", err);
+
+    if (err.name === "ValidationError") {
+      const messages = Object.values(err.errors).map((e) => e.message);
+      return res.status(400).json({ message: messages.join(", ") });
+    }
+
+    res.status(500).json({ message: err.message || "Failed to update item." });
+  }
+};
+/*const updateInventoryItem = async (req, res) => {
+  try {
     const { unitPrice, purchasePrice } = req.body;
 
     if (unitPrice !== undefined && purchasePrice !== undefined) {
@@ -129,16 +174,22 @@ const updateInventoryItem = async (req, res) => {
     await Notification.create({
       roles: ["admin", "owner", "manager"],
       isGlobal: false,
-      message: `An inventory item "${item.name}" was edited.`,
+      message: `An inventory item "${updated.name}" was edited.`,
       type: "info",
     });
 
     res.json(updated);
   } catch (err) {
     console.error("Update error:", err);
+
+    if (err.name === "ValidationError") {
+      const messages = Object.values(err.errors).map((e) => e.message);
+      return res.status(400).json({ message: messages.join(", ") });
+    }
+
     res.status(500).json({ error: "Failed to update item." });
   }
-};
+};*/
 
 // Deleting an inventory item
 const deleteInventoryItem = async (req, res) => {
@@ -162,7 +213,7 @@ const deleteInventoryItem = async (req, res) => {
     await Notification.create({
       roles: ["admin", "owner", "manager"],
       isGlobal: false,
-      message: `An inventory item "${item.name}" has been deleted.`,
+      message: `An inventory item "${deletedItem.name}" has been deleted.`,
       type: "info",
     });
 

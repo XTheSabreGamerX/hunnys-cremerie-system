@@ -6,6 +6,7 @@ import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
 import PopupMessage from "../components/PopupMessage";
 import ConfirmationModal from "../components/ConfirmationModal";
+import { showToast } from "../components/ToastContainer";
 import "../styles/App.css";
 import "../styles/Inventory.css";
 
@@ -311,14 +312,27 @@ const Inventory = () => {
       setSelectedItem(null);
       setModalMode("view");
 
-      showPopup(
+      showToast({
+        message: `Item ${
+          modalMode === "add" ? "added" : "updated"
+        } successfully!`,
+        type: "success",
+        duration: 3000,
+      });
+
+      /*showPopup(
         `Item ${modalMode === "add" ? "added" : "updated"} successfully!`,
         "success"
-      );
+      );*/
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       console.error("Save failed:", errorMessage);
-      showPopup(`Save failed: ${errorMessage}`, "error");
+      showToast({
+        message: `Save failed: ${errorMessage}`,
+        type: "error",
+        duration: 3000,
+      });
+      //showPopup(`Save failed: ${errorMessage}`, "error");
     }
   };
 
@@ -361,10 +375,20 @@ const Inventory = () => {
       setPage(1);
       setHasMore(true);
       await fetchItems();
-      showPopup("Item deleted successfully!", "success");
+      showToast({
+        message: "Item deleted successfully!",
+        type: "success",
+        duration: 3000,
+      });
+      //showPopup("Item deleted successfully!", "success");
     } catch (error) {
       console.error("Failed to delete item:", error);
-      showPopup("Failed to delete item.", "error");
+      showToast({
+        message: "Failed to delete item.",
+        type: "error",
+        duration: 3000,
+      });
+      //showPopup("Failed to delete item.", "error");
     } finally {
       setIsConfirmOpen(false);
       setIsViewOpen(false);
