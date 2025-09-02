@@ -1,36 +1,61 @@
 const Notification = require("../models/Notification");
 
 // Create notifications
-const createNotification = async (req, res) => {
-  try {
-    const { userId, role, isGlobal, message, type } = req.body;
+const createNotification = async ({
+  message,
+  type = "info",
+  roles = [],
+  userId = null,
+}) => {
+  if (!message) throw new Error("Message is required");
 
-    const notification = new Notification({
-      userId,
-      role,
-      isGlobal,
-      message,
-      type,
-    });
+  const isGlobal = !roles.length && !userId;
 
-    await notification.save();
-    res.status(201).json(notification);
-  } catch (error) {
-    res.status(500).json({ message: "Error creating notification", error });
-  }
+  const notification = new Notification({
+    message,
+    type,
+    roles,
+    userId,
+    isGlobal,
+  });
+
+  return await notification.save();
 };
 
 // Get notifications for the current user
 const getUserNotifications = async (req, res) => {
   try {
     const user = req.user;
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
 
-    const notifications = await Notification.find({
-      $or: [{ userId: user._id }, { role: user.role }, { isGlobal: true }],
-    }).sort({ createdAt: -1 });
+    const userId = user._id?.toString();  // ensure it's a string
+    const userRole = user.role;
 
-    res.json(notifications);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Build $or array safely
+    const orConditions = [{ isGlobal: true }, { roles: { $in: [userRole] } }];
+    if (userId) orConditions.push({ userId });
+
+    const query = { $or: orConditions };
+
+    const notifications = await Notification.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Notification.countDocuments(query);
+
+    res.json({
+      notifications,
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      total,
+    });
   } catch (error) {
+    console.error("Error fetching notifications:", error);
     res.status(500).json({ message: "Error fetching notifications", error });
   }
 };
@@ -60,15 +85,15 @@ const markAllAsRead = async (req, res) => {
       { $set: { read: true } }
     );
 
-    res.json({ message: 'All notifications marked as read' });
+    res.json({ message: "All notifications marked as read" });
   } catch (error) {
-    res.status(500).json({ message: 'Error marking all as read', error });
+    res.status(500).json({ message: "Error marking all as read", error });
   }
 };
 
 module.exports = {
-    createNotification,
-    getUserNotifications,
-    markAsRead,
-    markAllAsRead
+  createNotification,
+  getUserNotifications,
+  markAsRead,
+  markAllAsRead,
 };

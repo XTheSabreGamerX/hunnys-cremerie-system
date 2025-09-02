@@ -103,7 +103,7 @@ const Sidebar = () => {
     {
       label: "Notifications",
       icon: <FaEnvelope />,
-      path: "/dashboard",
+      path: "/notifications",
       roles: ["admin", "owner", "manager", "staff"],
     },
   ];

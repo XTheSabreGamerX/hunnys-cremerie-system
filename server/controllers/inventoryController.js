@@ -1,6 +1,6 @@
 const InventoryItem = require("../models/InventoryItem");
 const UnitOfMeasurement = require("../models/UnitOfMeasurement");
-const Notification = require("../models/Notification");
+const { createNotification } = require("../controllers/notificationController");
 const { createLog } = require("../controllers/activityLogController");
 
 // Computes inventory item status
@@ -68,16 +68,15 @@ const addInventoryItem = async (req, res) => {
         description: `An inventory item was added: ${item.name}`,
         userId: req.user.id,
       });
+
+      await createNotification({
+        message: `An inventory item "${item.name}" was created.`,
+        type: "success",
+        roles: ["admin", "owner", "manager"],
+      });
     } catch (logErr) {
       console.error("[Activity Log] Failed to log addition:", logErr.message);
     }
-
-    await Notification.create({
-      roles: ["admin", "owner", "manager"],
-      isGlobal: false,
-      message: `A new inventory item "${item.name}" has been added.`,
-      type: "info",
-    });
 
     res.status(201).json(item);
   } catch (err) {
@@ -107,7 +106,7 @@ const updateInventoryItem = async (req, res) => {
     }
 
     await item.save();
-    
+
     try {
       await createLog({
         action: "Updated Item",
@@ -115,16 +114,15 @@ const updateInventoryItem = async (req, res) => {
         description: `User ${req.user.username} updated an item: ${item.name}`,
         userId: req.user.id,
       });
+
+      await createNotification({
+        message: `An inventory item "${item.name}" was edited.`,
+        type: "info",
+        roles: ["admin", "owner", "manager"],
+      });
     } catch (logErr) {
       console.error("[Activity Log] Failed to log update:", logErr.message);
     }
-
-    await Notification.create({
-      roles: ["admin", "owner", "manager"],
-      isGlobal: false,
-      message: `An inventory item "${item.name}" was edited.`,
-      type: "info",
-    });
 
     res.json(item);
   } catch (err) {
@@ -206,16 +204,15 @@ const deleteInventoryItem = async (req, res) => {
         description: `User ${req.user.username} deleted an item: ${deletedItem.name}`,
         userId: req.user.id,
       });
+
+      await createNotification({
+        message: `An inventory item "${deletedItem.name}" was deleted.`,
+        type: "success",
+        roles: ["admin", "owner", "manager"],
+      });
     } catch (logErr) {
       console.error("[Activity Log] Failed to log deletion:", logErr.message);
     }
-
-    await Notification.create({
-      roles: ["admin", "owner", "manager"],
-      isGlobal: false,
-      message: `An inventory item "${deletedItem.name}" has been deleted.`,
-      type: "info",
-    });
 
     res.status(200).json({ message: "Item has been deleted successfully" });
   } catch (err) {
