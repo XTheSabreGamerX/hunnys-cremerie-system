@@ -1,5 +1,6 @@
 const Supplier = require("../models/Supplier");
 const { createLog } = require("../controllers/activityLogController");
+const { createNotification } = require("../controllers/notificationController");
 
 // GET /api/suppliers
 const getAllSuppliers = async (req, res) => {
@@ -25,6 +26,12 @@ const createSupplier = async (req, res) => {
           savedSupplier.name || "Unknown"
         }`,
         userId: req.user.id,
+      });
+
+      await createNotification({
+        message: `A supplier: "${savedSupplier.name}" was created.`,
+        type: "success",
+        roles: ["admin", "owner", "manager"],
       });
     } catch (logErr) {
       console.error(
@@ -59,6 +66,12 @@ const updateSupplier = async (req, res) => {
         }`,
         userId: req.user.id,
       });
+
+      await createNotification({
+        message: `A supplier: "${updated.name}" was edited.`,
+        type: "info",
+        roles: ["admin", "owner", "manager"],
+      });
     } catch (logErr) {
       console.error(
         "[Activity Log] Failed to log supplier creation:",
@@ -87,6 +100,12 @@ const deleteSupplier = async (req, res) => {
         module: "Supplier Management",
         description: `User ${req.user.username} deleted a supplier: ${deletedSupplier.name}`,
         userId: req.user.id,
+      });
+
+      await createNotification({
+        message: `A supplier: "${deletedSupplier.name}" was deleted.`,
+        type: "success",
+        roles: ["admin", "owner", "manager"],
       });
     } catch (logErr) {
       console.error(

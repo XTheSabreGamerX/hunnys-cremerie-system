@@ -5,6 +5,7 @@ const User = require("../models/User");
 const Notification = require("../models/Notification");
 const bcrypt = require("bcrypt");
 const { createLog } = require("../controllers/activityLogController");
+const { createNotification } = require("../controllers/notificationController");
 
 //Request registration route
 const registrationRequest = async (req, res) => {
@@ -20,11 +21,10 @@ const registrationRequest = async (req, res) => {
         userId: null,
       });
 
-      await Notification.create({
-        roles: ["admin", "owner", "manager"],
-        isGlobal: false,
-        message: `A user attempted to create an account with an existing request: ${email}.`,
+      await createNotification({
+        message: `Someone tried to register with an existing request: "${email}"`,
         type: "warning",
+        roles: ["admin", "owner", "manager"],
       });
 
       return res.status(400).json({
@@ -42,11 +42,10 @@ const registrationRequest = async (req, res) => {
         userId: null,
       });
 
-      await Notification.create({
-        roles: ["admin", "owner", "manager"],
-        isGlobal: false,
-        message: `A user attempted to create an account with an existing account: ${email}.`,
+      await createNotification({
+        message: `Someone tried to register with an existing account: "${email}"`,
         type: "warning",
+        roles: ["admin", "owner", "manager"],
       });
 
       return res.status(400).json({
@@ -59,11 +58,10 @@ const registrationRequest = async (req, res) => {
     await newRequest.save();
 
     try {
-      await Notification.create({
+      await createNotification({
+        message: `A registration request is waiting for approval: "${email}"`,
+        type: "info",
         roles: ["admin", "owner", "manager"],
-        isGlobal: false,
-        message: `A user sent a registration request: ${email}. Currently awaiting approval.`,
-        type: "success",
       });
     } catch (notifErr) {
       console.error("[Notification] Failed to create:", notifErr.message);
@@ -112,7 +110,6 @@ const requestApprove = async (req, res) => {
         description: `Approval of registration request failed for user: ${request.email}`,
         userId: existingUser._id,
       });
-
       return res
         .status(400)
         .json({ message: "A user with this email already exists." });
@@ -136,11 +133,10 @@ const requestApprove = async (req, res) => {
       userId: newUser._id,
     });
 
-    await Notification.create({
+    await createNotification({
+        message: `The account: "${email}" has been approved.`,
+        type: "info",
         roles: ["admin", "owner", "manager"],
-        isGlobal: false,
-        message: `A registration request was approved: ${request.email}.`,
-        type: "success",
       });
 
     res
@@ -170,13 +166,11 @@ const requestReject = async (req, res) => {
       userId: null,
     });
 
-    await Notification.create({
+    await createNotification({
+        message: `The account: "${email}" has been rejected.`,
+        type: "info",
         roles: ["admin", "owner", "manager"],
-        isGlobal: false,
-        message: `A registration request was rejected: ${request.email}.`,
-        type: "success",
       });
-
     res
       .status(200)
       .json({ message: "Request rejected and deleted successfully" });

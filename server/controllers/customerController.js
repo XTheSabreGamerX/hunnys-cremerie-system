@@ -1,5 +1,6 @@
 const Customer = require("../models/Customer");
 const { createLog } = require("../controllers/activityLogController");
+const { createNotification } = require("../controllers/notificationController");
 
 // Get all Customers
 const getAllCustomers = async (req, res) => {
@@ -37,6 +38,12 @@ const createCustomer = async (req, res) => {
         description: `User ${req.user.username} added a customer: ${newCustomer.name}`,
         userId: req.user.id,
       });
+
+      await createNotification({
+        message: `A new customer was created: ${newCustomer.name}.`,
+        type: "success",
+        roles: ["admin", "owner", "manager"],
+      });
     } catch (logErr) {
       console.error("[Activity Log] Failed to log update:", logErr.message);
     }
@@ -61,6 +68,12 @@ const updateCustomer = async (req, res) => {
         module: "Customer Management",
         description: `User ${req.user.username} updated a customer: ${updated.name}`,
         userId: req.user.id,
+      });
+
+      await createNotification({
+        message: `A customer was updated: ${updated.name}.`,
+        type: "info",
+        roles: ["admin", "owner", "manager"],
       });
     } catch (logErr) {
       console.error("[Activity Log] Failed to log update:", logErr.message);
@@ -87,6 +100,12 @@ const deleteCustomer = async (req, res) => {
         module: "Customer Management",
         description: `User ${req.user.username} deleted a customer: ${deletedCustomer.name}`,
         userId: req.user.id,
+      });
+
+      await createNotification({
+        message: `A customer was deleted: ${deleteCustomer.name}.`,
+        type: "success",
+        roles: ["admin", "owner", "manager"],
       });
     } catch (logErr) {
       console.error("[Activity Log] Failed to log deletion:", logErr.message);

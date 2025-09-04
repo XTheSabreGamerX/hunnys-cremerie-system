@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const { createLog } = require("../controllers/activityLogController");
+const { createNotification } = require("../controllers/notificationController");
 
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
@@ -17,6 +18,12 @@ const loginUser = async (req, res) => {
         module: "Login",
         description: `A failed login attempt for non-existing user: ${email}`,
         userId: null,
+      });
+
+      await createNotification({
+        message: `A non-existing user: "${email}" attempted to login.`,
+        type: "warning",
+        roles: ["admin", "owner", "manager"],
       });
       return res.status(400).json({ message: "User not found" });
     }
@@ -35,6 +42,12 @@ const loginUser = async (req, res) => {
         module: "Login",
         description: `A failed login attempt was performed: ${user.username}`,
         userId: user._id,
+      });
+
+      await createNotification({
+        message: `User: "${user.username}" attempted to login, but failed.`,
+        type: "warning",
+        roles: ["admin", "owner", "manager"],
       });
       return res.status(400).json({ message: "Invalid credentials" });
     }

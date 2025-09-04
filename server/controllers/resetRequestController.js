@@ -2,6 +2,8 @@ const ResetRequest = require("../models/ResetRequest");
 const bcrypt = require("bcryptjs");
 const nodemailer = require("nodemailer");
 const User = require("../models/User");
+const { createLog } = require("../controllers/activityLogController");
+const { createNotification } = require("../controllers/notificationController");
 
 // Create a new reset password request
 const createResetRequest = async (req, res) => {
@@ -30,6 +32,19 @@ const createResetRequest = async (req, res) => {
 
     const newRequest = new ResetRequest({ email, status: "pending" });
     await newRequest.save();
+
+    await createLog({
+      action: "Password Reset Request",
+      module: "Login",
+      description: `A password request was created.`,
+      userId: req.user.id,
+    });
+
+    await createNotification({
+      message: `A password reset request was sent. Please check the User Management module.`,
+      type: "warning",
+      roles: ["admin", "owner", "manager"],
+    });
 
     res
       .status(201)
@@ -109,6 +124,19 @@ const approveResetRequest = async (req, res) => {
       text: `Hello,\n\nYour temporary password is: ${tempPassword}\n\nPlease log in and change it immediately.`,
     });
 
+    await createLog({
+      action: "Password Reset Approved",
+      module: "Login",
+      description: `A password request was approved and an email was sent.`,
+      userId: req.user.id,
+    });
+
+    await createNotification({
+      message: `A password reset request was approved. The user has received the email containing the temporary password.`,
+      type: "success",
+      roles: ["admin", "owner", "manager"],
+    });
+
     res.status(200).json({
       message: "Password reset approved",
       temporaryPassword: tempPassword,
@@ -131,6 +159,19 @@ const rejectResetRequest = async (req, res) => {
     if (!request) {
       return res.status(404).json({ message: "Request not found" });
     }
+
+    await createLog({
+      action: "Password Reset Rejected",
+      module: "Login",
+      description: `A password request was rejected.`,
+      userId: req.user.id,
+    });
+
+    await createNotification({
+      message: `A password reset request was rejected.`,
+      type: "success",
+      roles: ["admin", "owner", "manager"],
+    });
 
     res.status(200).json(request);
   } catch (error) {
@@ -172,7 +213,9 @@ const resetPassword = async (req, res) => {
     user.needsPasswordReset = false;
     await user.save();
 
-    res.status(200).json({ message: "Password has been reset successfully! You may now login!" });
+    res.status(200).json({
+      message: "Password has been reset successfully! You may now login!",
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
@@ -184,5 +227,5 @@ module.exports = {
   approveResetRequest,
   rejectResetRequest,
   deleteResetRequest,
-  resetPassword
+  resetPassword,
 };

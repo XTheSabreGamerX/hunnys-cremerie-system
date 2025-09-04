@@ -125,14 +125,6 @@ const Notifications = () => {
     setHasMore(true);
   }, [token]);
 
-  // Refresh button handler
-  const refreshNotifications = () => {
-    setNotifications([]);
-    setHasMore(true);
-    setPage(1);
-    if (containerRef.current) containerRef.current.scrollTop = 0;
-  };
-
   const formatPH = (iso) =>
     new Date(iso).toLocaleString("en-PH", { timeZone: "Asia/Manila" });
 
@@ -150,9 +142,6 @@ const Notifications = () => {
             }}
           >
             <h1 className="notifications-title">Notifications</h1>
-            <div>
-              <button onClick={refreshNotifications}>Refresh</button>
-            </div>
           </div>
 
           <div

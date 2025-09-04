@@ -1,6 +1,7 @@
 const Sale = require("../models/Sale");
 const Inventory = require("../models/InventoryItem");
 const { createLog } = require("../controllers/activityLogController");
+const { createNotification } = require("../controllers/notificationController");
 
 // GET function to get all sales
 const getAllSalesPaginated = async (req, res) => {
@@ -28,7 +29,7 @@ const getAllSalesPaginated = async (req, res) => {
 // GET function to get all sales without pagination
 const getAllSales = async (req, res) => {
   try {
-    const sales = await Sale.find().sort({ createdAt: -1 }); // newest first
+    const sales = await Sale.find().sort({ createdAt: -1 });
 
     res.json({
       sales,
@@ -39,7 +40,6 @@ const getAllSales = async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 };
-
 
 // GET function to get a single sale by ID
 const getSaleById = async (req, res) => {
@@ -57,7 +57,6 @@ const createSale = async (req, res) => {
   try {
     const saleItemsWithCost = await Promise.all(
       req.body.items.map(async (item) => {
-        
         const inventoryItem = await Inventory.findById(item.itemId);
         if (!inventoryItem) {
           throw new Error(`Inventory item not found: ${item.itemId}`);
@@ -90,11 +89,22 @@ const createSale = async (req, res) => {
       await createLog({
         action: "Created Sale",
         module: "Sales Management",
-        description: `User ${req.user.username} created a sale with: ${newSale.items.length} item(s) for customer: ${req.body.customerName || "Unknown"}`,
+        description: `User ${req.user.username} created a sale with: ${
+          newSale.items.length
+        } item(s) for customer: ${req.body.customerName || "Unknown"}`,
         userId: req.user.id,
       });
+
+      await createNotification({
+        message: `User ${req.user.username} created a sale.`,
+        type: "success",
+        roles: ["admin", "owner", "manager"],
+      });
     } catch (logErr) {
-      console.error("[Activity Log] Failed to log sale creation:", logErr.message);
+      console.error(
+        "[Activity Log] Failed to log sale creation:",
+        logErr.message
+      );
     }
 
     res.status(201).json({
@@ -169,7 +179,7 @@ const refundSale = async (req, res) => {
     const sale = await Sale.findById(req.params.id);
 
     if (!sale) {
-      return res.status(404).json({ message: 'Sale not found' });
+      return res.status(404).json({ message: "Sale not found" });
     }
 
     // Restore stock for each item in the sale
@@ -179,7 +189,9 @@ const refundSale = async (req, res) => {
         inventoryItem.stock += item.quantity;
         await inventoryItem.save();
       } else {
-        console.warn(`[Refund Warning] Inventory item with ID ${item.itemId} not found`);
+        console.warn(
+          `[Refund Warning] Inventory item with ID ${item.itemId} not found`
+        );
       }
     }
 
@@ -189,19 +201,30 @@ const refundSale = async (req, res) => {
     // Log refund action
     try {
       await createLog({
-        action: 'Refunded Sale',
-        module: 'Sales Management',
-        description: `User ${req.user.username} refunded a sale for customer: ${sale.customerName || 'Unknown'}`,
+        action: "Refunded Sale",
+        module: "Sales Management",
+        description: `User ${req.user.username} refunded a sale for customer: ${
+          sale.customerName || "Unknown"
+        }`,
         userId: req.user.id,
       });
+
+      await createNotification({
+        message: `User ${req.user.username} refunded a sale for: "${sale.customerName}".`,
+        type: "info",
+        roles: ["admin", "owner", "manager"],
+      });
     } catch (logErr) {
-      console.error('[Activity Log] Failed to log sale refund:', logErr.message);
+      console.error(
+        "[Activity Log] Failed to log sale refund:",
+        logErr.message
+      );
     }
 
-    res.status(200).json({ message: 'Sale refunded successfully' });
+    res.status(200).json({ message: "Sale refunded successfully" });
   } catch (err) {
-    console.error('[Refund Error]', err);
-    res.status(500).json({ message: 'Error refunding sale', error: err });
+    console.error("[Refund Error]", err);
+    res.status(500).json({ message: "Error refunding sale", error: err });
   }
 };
 
