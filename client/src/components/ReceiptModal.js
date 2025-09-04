@@ -28,13 +28,13 @@ const ReceiptModal = ({ sale, onClose, onRefund }) => {
       document.getElementById("receipt-content")?.innerHTML || "";
 
     const modifiedContents = printContents
-      
+
       .replace(/(Date:.*<\/p>)/i, '$1<hr class="separator"/>')
-      
+
       .replace(/<h3>Items<\/h3>/i, '<hr class="separator"/><h3>Items</h3>')
-      
+
       .replace(/<\/ul>/i, '</ul><hr class="separator"/>')
-      
+
       .replace(
         /<p>\s*<strong>Total:/i,
         '<hr class="separator"/><p><strong>Total:'
@@ -95,10 +95,7 @@ const ReceiptModal = ({ sale, onClose, onRefund }) => {
       }
 
       if (onRefund) onRefund();
-      showPopup(
-        "Sale refunded successfully! Stocks have been returned to the inventory.",
-        "success"
-      );
+      showPopup("The sale has been refunded.", "success");
       setShowConfirm(false);
       setTimeout(() => onClose(), 2000);
     } catch (err) {
@@ -125,7 +122,9 @@ const ReceiptModal = ({ sale, onClose, onRefund }) => {
         <div className="receipt-container">
           <div id="receipt-content">
             <h2 className="receipt-center">Hunnys Crémerie Baking Supplies</h2>
-            <p className="receipt-center">12 Torres St. Burgos 1860 Rodriguez, Philippines</p>
+            <p className="receipt-center">
+              12 Torres St. Burgos 1860 Rodriguez, Philippines
+            </p>
             <p>
               <strong>Sale ID:</strong> {sale.saleId}
             </p>
@@ -150,7 +149,14 @@ const ReceiptModal = ({ sale, onClose, onRefund }) => {
             </ul>
             <hr />
             <p>
-              <strong>Total:</strong> ₱{sale.totalAmount}
+              <strong>Subtotal:</strong> ₱{sale.subtotal?.toFixed(2)}
+            </p>
+            <p>
+              <strong>Tax ({sale.taxRate}%):</strong> ₱
+              {sale.taxAmount?.toFixed(2)}
+            </p>
+            <p>
+              <strong>Total:</strong> ₱{sale.totalAmount?.toFixed(2)}
             </p>
             <p>
               <strong>Payment:</strong> {sale.paymentMethod}

@@ -281,12 +281,6 @@ const SalesManagement = () => {
                 onChange={(e) => {
                   const newType = e.target.value;
                   setOrderType(newType);
-
-                  if (newType !== "Walk-in") {
-                    
-                    setIsUnregistered(false);
-                    setCustomerName(customers[0]?.name || "");
-                  }
                 }}
               >
                 <option value="Walk-in">Walk-in</option>
@@ -317,23 +311,19 @@ const SalesManagement = () => {
               )}
             </label>
 
-            {orderType === "Walk-in" && (
-              <label className="pos-unregistered-toggle">
-                <input
-                  type="checkbox"
-                  checked={isUnregistered}
-                  onChange={(e) => {
-                    setIsUnregistered(e.target.checked);
-                    setCustomerName(
-                      e.target.checked
-                        ? ""
-                        : customers[0]?.name || "Unregistered"
-                    );
-                  }}
-                />
-                Unregistered Customer
-              </label>
-            )}
+            <label className="pos-unregistered-toggle">
+              <input
+                type="checkbox"
+                checked={isUnregistered}
+                onChange={(e) => {
+                  setIsUnregistered(e.target.checked);
+                  setCustomerName(
+                    e.target.checked ? "" : customers[0]?.name || "Unregistered"
+                  );
+                }}
+              />
+              Unregistered Customer
+            </label>
 
             <label>
               Tax Rate (%)
@@ -341,7 +331,38 @@ const SalesManagement = () => {
                 type="number"
                 value={taxRate}
                 min={0}
-                onChange={(e) => setTaxRate(Number(e.target.value))}
+                max={100}
+                step={0.01}
+                inputMode="decimal"
+                onKeyDown={(e) => {
+                  if (["e", "E", "+", "-", ","].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                onInput={(e) => {
+                  const input = e.target.value;
+                  const cleaned = input.replace(/[^0-9.]/g, "");
+                  if (cleaned !== input) {
+                    e.target.value = cleaned;
+                  }
+                }}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "") {
+                    setTaxRate("");
+                    return;
+                  }
+                  const num = Number(v);
+                  if (!Number.isFinite(num)) return;
+                  const clamped = Math.min(Math.max(num, 0), 100);
+                  setTaxRate(clamped);
+                }}
+                onBlur={(e) => {
+                  let num = parseFloat(e.target.value);
+                  if (!Number.isFinite(num)) num = 0;
+                  const clamped = Math.min(Math.max(num, 0), 100);
+                  setTaxRate(Number(clamped.toFixed(2)));
+                }}
               />
             </label>
 
