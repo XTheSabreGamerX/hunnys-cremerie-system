@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { customAlphabet } from "nanoid/non-secure";
-import Sidebar from "../scripts/Sidebar";
+import DashboardLayout from "../scripts/DashboardLayout";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
 import PopupMessage from "../components/PopupMessage";
@@ -494,8 +494,7 @@ const Inventory = () => {
         />
       )}
 
-      <Sidebar />
-
+      <DashboardLayout>
       <main className="module-main-content inventory-main">
         <div className="module-header">
           <h1 className="module-title">Inventory</h1>
@@ -543,7 +542,7 @@ const Inventory = () => {
                 <th>Category</th>
                 <th>Purchase Price</th>
                 <th>Unit Price</th>
-                <th>UoM</th>
+                <th>Unit</th>
                 <th>Supplier</th>
                 <th>Expiration Date</th>
                 <th>Status</th>
@@ -608,6 +607,7 @@ const Inventory = () => {
           </table>
         </div>
       </main>
+      </DashboardLayout>
     </>
   );
 };

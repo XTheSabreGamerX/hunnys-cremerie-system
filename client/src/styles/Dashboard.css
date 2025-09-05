@@ -1,16 +1,11 @@
 .dashboard-main-content {
-  margin-top: 60px;
-  margin-left: 250px;
-  padding: 3rem;
+  flex: 1;
+  margin-left: 120px;
+  padding: 1rem;
   background-color: #f4f4f4;
   box-sizing: border-box;
-
-  height: calc(100vh - 60px);
+  height: auto;
   overflow-y: auto; 
-}
-
-.sidebar.collapsed + .dashboard-main-content {
-  margin-left: 70px;
 }
 
 .dashboard-title {

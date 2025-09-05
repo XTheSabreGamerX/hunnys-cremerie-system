@@ -22,14 +22,15 @@ html, body, #root {
 
 /* Shared Main Content Container */
 .module-main-content {
-  margin-top: 60px;
-  margin-left: 250px;
+  flex: 1;
+  margin-top: 50px;
+  margin-left: 130px;
   padding: 0.5rem;
   background-color: #fdfdfd;
-  min-height: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
+  overflow-y: auto;
 }
 
 .sidebar.collapsed + .module-main-content {

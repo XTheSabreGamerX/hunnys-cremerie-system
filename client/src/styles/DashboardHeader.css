@@ -3,12 +3,88 @@
   top: 0;
   left: 0;
   width: 100%;
-  height: 60px;
-  background-color: #921A40;
+  height: 30px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 2rem;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  background-color: #921A40;
   z-index: 1000;
+  transition: padding-left 0.3s ease;
+}
+
+.dashboard-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.dashboard-container .dashboard-main-content {
+  margin-left: 120px;
+  transition: margin-left 0.3s ease;
+}
+
+.dashboard-container.collapsed .user-management-main-content {
+  margin-left: 10px;
+}
+
+.dashboard-container.collapsed .dashboard-main-content {
+  margin-left: 50px;
+}
+
+.dashboard-container.collapsed .activity-log-main-content {
+  margin-left: 40px;
+}
+
+.dashboard-container.collapsed .module-main-content {
+  margin-left: 50px;
+}
+
+.dashboard-container.collapsed .pos-main {
+  margin-left: 50px;
+}
+
+.dashboard-container.collapsed .sales-report-main {
+  margin-left: 50px;
+}
+
+.dashboard-container.collapsed .notifications-main {
+  margin-left: 30px;
+}
+
+.dashboard-header.sidebar-collapsed .dashboard-header-left {
+  margin-left: 60px;
+}
+
+.dashboard-header.sidebar-collapsed .dashboard-header-right {
+  margin-left: auto;
+}
+
+.dashboard-header-left {
+  margin-left: 230px;
+  transition: margin-left 0.3s ease;
+}
+
+.sidebar.collapsed+.dashboard-header .dashboard-header-left {
+  margin-left: 80px;
+}
+
+.dashboard-header-left h1 {
+  margin: 0;
+  font-size: 1rem;
+  color: #ffffff;
+}
+
+.dashboard-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-right: 0;
+  margin-left: auto;
+}
+
+.dashboard-header-right p {
+  margin: 0;
+  font-size: 1rem;
+  color: #ffffff
 }

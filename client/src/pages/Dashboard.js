@@ -15,7 +15,7 @@ import {
   FaMoneyBill,
   FaClipboardList,
 } from "react-icons/fa";
-import Sidebar from "../scripts/Sidebar";
+import DashboardLayout from "../scripts/DashboardLayout";
 import "../styles/Dashboard.css";
 
 const Dashboard = () => {
@@ -141,7 +141,7 @@ const Dashboard = () => {
 
   return (
     <>
-      <Sidebar />
+      <DashboardLayout>
       <main className="dashboard-main-content">
         <h1 className="dashboard-title">Dashboard</h1>
         <div className="dashboard-grid">
@@ -186,6 +186,7 @@ const Dashboard = () => {
           </div>
         )}
       </main>
+      </DashboardLayout>
     </>
   );
 };

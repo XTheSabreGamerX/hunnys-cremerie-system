@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import "../styles/Sidebar.css";
 import Logo from "../elements/images/icon32x32.png";
 import { Menu } from "lucide-react";
@@ -14,17 +14,13 @@ import {
   FaUserTag,
   FaDownload,
   FaEnvelope,
+  FaCog,
 } from "react-icons/fa";
 
-const Sidebar = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+const Sidebar = ({ isCollapsed, toggleSidebar }) => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem("user"));
-  const role = user?.role ? user.role.toLowerCase() : null;
-
-  const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
-  };
+  const role = user?.role?.toLowerCase() || null;
 
   const logout = () => {
     localStorage.removeItem("token");
@@ -105,6 +101,12 @@ const Sidebar = () => {
       icon: <FaEnvelope />,
       path: "/notifications",
       roles: ["admin", "owner", "manager", "staff"],
+    },
+    {
+      label: "Options",
+      icon: <FaCog />,
+      path: "/dashboard",
+      roles: ["admin", "owner"],
     },
   ];
 

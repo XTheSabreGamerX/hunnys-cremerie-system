@@ -91,8 +91,8 @@ const EditModal = ({
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
+    <div className="inventory-modal-overlay">
+      <div className="inventory-modal-content">
         <h2>
           {mode === "add"
             ? `Add New ${
@@ -105,14 +105,14 @@ const EditModal = ({
           {modalType === "sale" ? (
             <>
               {fields.map((field) => (
-                <div key={field.name} className="form-group">
+                <div key={field.name} className="inventory-form-group">
                   <label>
                     {field.label}{" "}
                     {field.required && <span style={{ color: "red" }}>*</span>}
                   </label>
                   {field.type === "select" ? (
                     <select
-                      className="module-dropdown"
+                      className="inventory-input"
                       value={formData[field.name] || ""}
                       onChange={(e) => handleChange(field.name, e.target.value)}
                     >
@@ -126,6 +126,7 @@ const EditModal = ({
                   ) : (
                     <input
                       type={field.type || "text"}
+                      className="inventory-input"
                       value={formData[field.name] || ""}
                       onChange={(e) => handleChange(field.name, e.target.value)}
                       min={field.type === "number" ? 0 : undefined}
@@ -136,10 +137,10 @@ const EditModal = ({
                 </div>
               ))}
 
-              <div className="form-group">
+              <div className="inventory-form-group">
                 <label htmlFor="item">Inventory Item:</label>
                 <select
-                  className="module-dropdown"
+                  className="inventory-input"
                   value={itemForm.itemId}
                   onChange={(e) =>
                     setItemForm({ ...itemForm, itemId: e.target.value })
@@ -154,10 +155,11 @@ const EditModal = ({
                 </select>
               </div>
 
-              <div className="form-group">
+              <div className="inventory-form-group">
                 <label htmlFor="quantity">Quantity:</label>
                 <input
                   type="number"
+                  className="inventory-input"
                   value={itemForm.quantity}
                   min="1"
                   onChange={(e) =>
@@ -169,19 +171,22 @@ const EditModal = ({
                 />
               </div>
 
-              <div className="form-group" style={{ marginTop: "10px" }}>
+              <div
+                className="inventory-form-group"
+                style={{ marginTop: "10px" }}
+              >
                 <button
                   type="button"
-                  className="module-action-btn module-add-btn add-item-btn"
+                  className="inventory-btn add-item-btn"
                   onClick={handleAddItem}
                 >
                   + Add Item
                 </button>
               </div>
 
-              <div className="item-list">
+              <div className="inventory-item-list">
                 {formData.items.map((item, index) => (
-                  <div key={index} className="item-row">
+                  <div key={index} className="inventory-item-row">
                     {item.name} x {item.quantity} = ₱
                     {(item.quantity * item.price).toFixed(2)}
                   </div>
@@ -189,16 +194,15 @@ const EditModal = ({
               </div>
             </>
           ) : (
-            // Default Add/Edit modal for non-sales
             fields.map((field) => (
-              <div key={field.name} className="form-group">
+              <div key={field.name} className="inventory-form-group">
                 <label>
                   {field.label}{" "}
                   {field.required && <span style={{ color: "red" }}>*</span>}
                 </label>
                 {field.type === "select" ? (
                   <select
-                    className="module-dropdown"
+                    className="inventory-input"
                     value={formData[field.name] || ""}
                     onChange={(e) => handleChange(field.name, e.target.value)}
                   >
@@ -212,6 +216,7 @@ const EditModal = ({
                 ) : (
                   <input
                     type={field.type || "text"}
+                    className="inventory-input"
                     value={formData[field.name] || ""}
                     onChange={(e) => handleChange(field.name, e.target.value)}
                     min={field.type === "number" ? 0 : undefined}
@@ -223,11 +228,15 @@ const EditModal = ({
             ))
           )}
 
-          <div className="modal-buttons">
-            <button type="submit" className="modal-save">
+          <div className="inventory-modal-buttons">
+            <button type="submit" className="inventory-btn save-btn">
               Save
             </button>
-            <button type="button" onClick={onClose} className="modal-cancel">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inventory-btn cancel-btn"
+            >
               Cancel
             </button>
           </div>

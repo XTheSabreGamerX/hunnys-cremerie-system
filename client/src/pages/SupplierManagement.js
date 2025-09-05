@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../scripts/Sidebar";
+import DashboardLayout from "../scripts/DashboardLayout";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
 import PopupMessage from "../components/PopupMessage";
@@ -289,8 +289,7 @@ const SupplierManagement = () => {
         />
       )}
 
-      <Sidebar />
-
+      <DashboardLayout>
       <main className="module-main-content supplier-main">
         <div className="module-header">
           <h1 className="module-title">Supplier Management</h1>
@@ -384,6 +383,7 @@ const SupplierManagement = () => {
           </table>
         </div>
       </main>
+      </DashboardLayout>
     </>
   );
 };

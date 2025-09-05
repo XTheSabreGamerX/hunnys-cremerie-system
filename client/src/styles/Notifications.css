@@ -1,13 +1,9 @@
 .notifications-main {
     padding: 2rem;
     margin-top: 60px;
-    margin-left: 240px;
+    margin-left: 100px;
     min-height: auto;
     box-sizing: border-box;
-}
-
-.sidebar.collapsed+.notifications-main {
-    margin-left: 70px;
 }
 
 .notifications-content {

@@ -1,13 +1,10 @@
 .activity-log-main-content {
+    flex: 1;
+    min-height: 100vh;
     padding: 2rem;
-    margin-top: 60px;
-    margin-left: 270px;
+    margin-left: 120px;
     min-height: auto;
     box-sizing: border-box;
-}
-
-.sidebar.collapsed+.activity-log-main-content {
-    margin-left: 90px;
 }
 
 .activity-log-header {
@@ -30,7 +27,7 @@
 }
 
 .activity-log-table-container {
-    max-height: 700px;
+    max-height: 780px;
     overflow-x: auto;
     background: white;
     border-radius: 6px;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { customAlphabet } from "nanoid/non-secure";
-import Sidebar from "../scripts/Sidebar";
+import DashboardLayout from "../scripts/DashboardLayout";
 import PopupMessage from "../components/PopupMessage";
 import "../styles/SalesManagement.css";
 
@@ -215,214 +215,220 @@ const SalesManagement = () => {
           onClose={handleClosePopup}
         />
       )}
-      <Sidebar />
-      <main className="pos-main">
-        <section className="pos-products">
-          <div className="pos-products-header">
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pos-search-input"
-            />
-          </div>
-
-          <div className="pos-products-list">
-            {inventoryItems
-              .filter((item) =>
-                item.name.toLowerCase().includes(searchQuery.toLowerCase())
-              )
-              .map((item) => (
-                <div
-                  key={item._id}
-                  className={`pos-product-card ${
-                    item.stock <= 0 ||
-                    item.status === "Out of stock" ||
-                    item.status === "Expired"
-                      ? "disabled-product"
-                      : ""
-                  }`}
-                  onClick={() =>
-                    item.stock > 0 &&
-                    item.status !== "Out of stock" &&
-                    item.status !== "Expired"
-                      ? handleAddToCart(item)
-                      : null
-                  }
-                >
-                  <h3>{item.name}</h3>
-                  <p>₱{item.unitPrice}</p>
-                  <p>Stock: {item.stock}</p>
-                  <p>
-                    <span
-                      className={`product-status ${item.status
-                        .replace(/\s+/g, "-")
-                        .toLowerCase()}`}
-                    >
-                      {item.status}
-                    </span>
-                  </p>
-                </div>
-              ))}
-          </div>
-        </section>
-
-        <section className="pos-cart">
-          <div className="pos-cart-header">
-            <h2>Cart</h2>
-          </div>
-
-          <div className="pos-order-info">
-            <label>
-              Order Type
-              <select
-                value={orderType}
-                onChange={(e) => {
-                  const newType = e.target.value;
-                  setOrderType(newType);
-                }}
-              >
-                <option value="Walk-in">Walk-in</option>
-                <option value="Online">Online</option>
-              </select>
-            </label>
-
-            <label>
-              Customer
-              {isUnregistered ? (
-                <input
-                  type="text"
-                  placeholder="Enter customer name or leave blank."
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                />
-              ) : (
-                <select
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                >
-                  {customers.map((cust) => (
-                    <option key={cust._id} value={cust.name}>
-                      {cust.name} ({cust.customerId})
-                    </option>
-                  ))}
-                </select>
-              )}
-            </label>
-
-            <label className="pos-unregistered-toggle">
+      <DashboardLayout>
+        <main className="pos-main">
+          <section className="pos-products">
+            <div className="pos-products-header">
               <input
-                type="checkbox"
-                checked={isUnregistered}
-                onChange={(e) => {
-                  setIsUnregistered(e.target.checked);
-                  setCustomerName(
-                    e.target.checked ? "" : customers[0]?.name || "Unregistered"
-                  );
-                }}
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pos-search-input"
               />
-              Unregistered Customer
-            </label>
+            </div>
 
-            <label>
-              Tax Rate (%)
-              <input
-                type="number"
-                value={taxRate}
-                min={0}
-                max={100}
-                step={0.01}
-                inputMode="decimal"
-                onKeyDown={(e) => {
-                  if (["e", "E", "+", "-", ","].includes(e.key)) {
-                    e.preventDefault();
-                  }
-                }}
-                onInput={(e) => {
-                  const input = e.target.value;
-                  const cleaned = input.replace(/[^0-9.]/g, "");
-                  if (cleaned !== input) {
-                    e.target.value = cleaned;
-                  }
-                }}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === "") {
-                    setTaxRate("");
-                    return;
-                  }
-                  const num = Number(v);
-                  if (!Number.isFinite(num)) return;
-                  const clamped = Math.min(Math.max(num, 0), 100);
-                  setTaxRate(clamped);
-                }}
-                onBlur={(e) => {
-                  let num = parseFloat(e.target.value);
-                  if (!Number.isFinite(num)) num = 0;
-                  const clamped = Math.min(Math.max(num, 0), 100);
-                  setTaxRate(Number(clamped.toFixed(2)));
-                }}
-              />
-            </label>
-
-            <label>
-              Payment Method
-              <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-              >
-                <option value="">Select</option>
-                <option value="Cash">Cash</option>
-                <option value="Credit Card">Credit Card</option>
-                <option value="GCash">GCash</option>
-                <option value="PayMaya">PayMaya</option>
-                <option value="Others">Others</option>
-              </select>
-            </label>
-          </div>
-
-          <div className="pos-cart-items">
-            {cartItems.length === 0 ? (
-              <p>Your cart is empty.</p>
-            ) : (
-              cartItems.map((item) => (
-                <div key={item._id} className="pos-cart-item">
-                  <span>{item.name}</span>
-                  <div className="cart-quantity-controls">
-                    <button
-                      onClick={() => handleDecreaseQuantity(item._id)}
-                      disabled={item.quantity <= 1}
-                    >
-                      -
-                    </button>
-                    <span>{item.quantity}</span>
-                    <button
-                      onClick={() => handleIncreaseQuantity(item._id)}
-                      disabled={item.quantity >= item.stock}
-                    >
-                      +
-                    </button>
+            <div className="pos-products-list">
+              {inventoryItems
+                .filter((item) =>
+                  item.name.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                .map((item) => (
+                  <div
+                    key={item._id}
+                    className={`pos-product-card ${
+                      item.stock <= 0 ||
+                      item.status === "Out of stock" ||
+                      item.status === "Expired"
+                        ? "disabled-product"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      item.stock > 0 &&
+                      item.status !== "Out of stock" &&
+                      item.status !== "Expired"
+                        ? handleAddToCart(item)
+                        : null
+                    }
+                  >
+                    <h3>{item.name}</h3>
+                    <p>₱{item.unitPrice}</p>
+                    <p>Stock: {item.stock}</p>
+                    <p>
+                      <span
+                        className={`product-status ${item.status
+                          .replace(/\s+/g, "-")
+                          .toLowerCase()}`}
+                      >
+                        {item.status}
+                      </span>
+                    </p>
                   </div>
-                  <span>₱{(item.unitPrice * item.quantity).toFixed(2)}</span>
-                </div>
-              ))
-            )}
-          </div>
+                ))}
+            </div>
+          </section>
 
-          <div className="pos-cart-summary">
-            <p>
-              Subtotal: ₱
-              {cartItems
-                .reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
-                .toFixed(2)}
-            </p>
-            <button className="pos-checkout-btn" onClick={handleSaveSale}>
-              Checkout
-            </button>
-          </div>
-        </section>
-      </main>
+          <section className="pos-cart">
+            <div className="pos-cart-header">
+              <h2>Cart</h2>
+            </div>
+
+            <div className="pos-order-info">
+              <label>
+                Order Type
+                <select
+                  value={orderType}
+                  onChange={(e) => {
+                    const newType = e.target.value;
+                    setOrderType(newType);
+                  }}
+                >
+                  <option value="Walk-in">Walk-in</option>
+                  <option value="Online">Online</option>
+                </select>
+              </label>
+
+              <label>
+                Customer
+                {isUnregistered ? (
+                  <input
+                    type="text"
+                    placeholder="Enter customer name or leave blank."
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                  />
+                ) : (
+                  <select
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                  >
+                    {customers.map((cust) => (
+                      <option key={cust._id} value={cust.name}>
+                        {cust.name} ({cust.customerId})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </label>
+
+              <label className="pos-unregistered-toggle">
+                <input
+                  type="checkbox"
+                  checked={isUnregistered}
+                  onChange={(e) => {
+                    setIsUnregistered(e.target.checked);
+                    setCustomerName(
+                      e.target.checked
+                        ? ""
+                        : customers[0]?.name || "Unregistered"
+                    );
+                  }}
+                />
+                Unregistered Customer
+              </label>
+
+              <label>
+                Tax Rate (%)
+                <input
+                  type="number"
+                  value={taxRate}
+                  min={0}
+                  max={100}
+                  step={0.01}
+                  inputMode="decimal"
+                  onKeyDown={(e) => {
+                    if (["e", "E", "+", "-", ","].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onInput={(e) => {
+                    const input = e.target.value;
+                    const cleaned = input.replace(/[^0-9.]/g, "");
+                    if (cleaned !== input) {
+                      e.target.value = cleaned;
+                    }
+                  }}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "") {
+                      setTaxRate("");
+                      return;
+                    }
+                    const num = Number(v);
+                    if (!Number.isFinite(num)) return;
+                    const clamped = Math.min(Math.max(num, 0), 100);
+                    setTaxRate(clamped);
+                  }}
+                  onBlur={(e) => {
+                    let num = parseFloat(e.target.value);
+                    if (!Number.isFinite(num)) num = 0;
+                    const clamped = Math.min(Math.max(num, 0), 100);
+                    setTaxRate(Number(clamped.toFixed(2)));
+                  }}
+                />
+              </label>
+
+              <label>
+                Payment Method
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                >
+                  <option value="">Select</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Credit Card">Credit Card</option>
+                  <option value="GCash">GCash</option>
+                  <option value="PayMaya">PayMaya</option>
+                  <option value="Others">Others</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="pos-cart-items">
+              {cartItems.length === 0 ? (
+                <p>Your cart is empty.</p>
+              ) : (
+                cartItems.map((item) => (
+                  <div key={item._id} className="pos-cart-item">
+                    <span>{item.name}</span>
+                    <div className="cart-quantity-controls">
+                      <button
+                        onClick={() => handleDecreaseQuantity(item._id)}
+                        disabled={item.quantity <= 1}
+                      >
+                        -
+                      </button>
+                      <span>{item.quantity}</span>
+                      <button
+                        onClick={() => handleIncreaseQuantity(item._id)}
+                        disabled={item.quantity >= item.stock}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <span>₱{(item.unitPrice * item.quantity).toFixed(2)}</span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="pos-cart-summary">
+              <p>
+                Subtotal: ₱
+                {cartItems
+                  .reduce(
+                    (sum, item) => sum + item.unitPrice * item.quantity,
+                    0
+                  )
+                  .toFixed(2)}
+              </p>
+              <button className="pos-checkout-btn" onClick={handleSaveSale}>
+                Checkout
+              </button>
+            </div>
+          </section>
+        </main>
+      </DashboardLayout>
       {popupMessage && <PopupMessage type={popupType} message={popupMessage} />}
     </>
   );

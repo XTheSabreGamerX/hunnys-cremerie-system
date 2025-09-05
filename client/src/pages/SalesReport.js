@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../scripts/Sidebar";
+import DashboardLayout from "../scripts/DashboardLayout";
 import ReceiptModal from "../components/ReceiptModal";
 import {
   LineChart,
@@ -282,8 +282,7 @@ const SalesReport = () => {
         />
       )}
 
-      <Sidebar />
-
+      <DashboardLayout>
       <main className="sales-report-main">
         <h1 className="sales-report-title">Sales Report</h1>
 
@@ -453,6 +452,7 @@ const SalesReport = () => {
           </ResponsiveContainer>
         </div>
       </main>
+      </DashboardLayout>
     </>
   );
 };

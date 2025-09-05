@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import Sidebar from "../scripts/Sidebar";
+import DashboardLayout from "../scripts/DashboardLayout";
 import ConfirmationModal from "../components/ConfirmationModal";
 import PopupMessage from "../components/PopupMessage";
 import EditUserModal from "../components/EditUserModal";
@@ -232,7 +232,10 @@ const UserManagement = () => {
         throw new Error(`Delete failed: ${res.status} ${await res.text()}`);
       }
 
-      showPopup("Password reset request has been successfully deleted!", "success");
+      showPopup(
+        "Password reset request has been successfully deleted!",
+        "success"
+      );
       setResetRequests((prev) => prev.filter((req) => req._id !== id));
     } catch (err) {
       console.error("Error deleting reset request:", err);
@@ -269,7 +272,7 @@ const UserManagement = () => {
         }}
       />
 
-      <Sidebar />
+      <DashboardLayout>
       <main className="user-management-main-content">
         <div className="management-container requests-container">
           <h1>Registration Requests</h1>
@@ -287,7 +290,11 @@ const UserManagement = () => {
                 {requests.map((request) => (
                   <tr key={request._id}>
                     <td>{request.email}</td>
-                    <td>{new Date(request.dateRequested).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}</td>
+                    <td>
+                      {new Date(request.dateRequested).toLocaleString("en-PH", {
+                        timeZone: "Asia/Manila",
+                      })}
+                    </td>
                     <td>{request.status}</td>
                     <td>
                       <button
@@ -401,7 +408,11 @@ const UserManagement = () => {
                 {resetRequests.map((request) => (
                   <tr key={request._id}>
                     <td>{request.email}</td>
-                    <td>{new Date(request.createdAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}</td>
+                    <td>
+                      {new Date(request.createdAt).toLocaleString("en-PH", {
+                        timeZone: "Asia/Manila",
+                      })}
+                    </td>
                     <td>{request.status}</td>
                     <td>
                       {request.status === "pending" ? (
@@ -456,6 +467,7 @@ const UserManagement = () => {
           </div>
         </div>
       </main>
+      </DashboardLayout>
     </>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../scripts/Sidebar";
+import DashboardLayout from "../scripts/DashboardLayout";
 import "../styles/Notifications.css";
 import { FiInfo, FiAlertTriangle, FiCheckCircle, FiXCircle } from "react-icons/fi";
 
@@ -130,7 +130,7 @@ const Notifications = () => {
 
   return (
     <>
-      <Sidebar />
+      <DashboardLayout>
       <main className="notifications-main">
         <div className="notifications-content">
           <div
@@ -181,6 +181,7 @@ const Notifications = () => {
           </div>
         </div>
       </main>
+      </DashboardLayout>
     </>
   );
 };

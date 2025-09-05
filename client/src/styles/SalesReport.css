@@ -1,13 +1,10 @@
 .sales-report-main {
-  padding: 5rem;
-  margin-left: 250px;
+  padding: 3rem;
+  margin-top: 40px;
+  margin-left: 130px;
   background: #f7fafc;
   min-height: 100vh;
   overflow-y: auto;
-}
-
-.sidebar.collapsed + .sales-report-main {
-  margin-left: 70px;
 }
 
 .sales-report-title {
