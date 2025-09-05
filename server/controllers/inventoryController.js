@@ -2,6 +2,7 @@ const InventoryItem = require("../models/InventoryItem");
 const UnitOfMeasurement = require("../models/UnitOfMeasurement");
 const { createNotification } = require("../controllers/notificationController");
 const { createLog } = require("../controllers/activityLogController");
+const ActionRequest = require("../models/ActionRequest");
 
 // Computes inventory item status
 function computeStatus(item) {
@@ -192,10 +193,52 @@ const updateInventoryItem = async (req, res) => {
 // Deleting an inventory item
 const deleteInventoryItem = async (req, res) => {
   try {
-    const deletedItem = await InventoryItem.findByIdAndDelete(req.params.id);
-    if (!deletedItem) {
+    const item = await InventoryItem.findById(req.params.id);
+    if (!item) {
       return res.status(404).json({ message: "Item not found" });
     }
+
+    // Staff delete request
+    if (
+      req.user.role === "staff" &&
+      item.createdBy.toString() !== req.user.id
+    ) {
+      await ActionRequest.create({
+        module: "Inventory",
+        moduleRef: "InventoryItem",
+        targetId: item._id.toString(),
+        requestType: "delete",
+        details: req.body,
+        requestedBy: req.user.id,
+      });
+
+      await createLog({
+        action: "Delete Item Request",
+        module: "Inventory",
+        description: `User ${req.user.username} requested to delete item: ${item.name}`,
+        userId: req.user.id,
+      });
+
+      await createNotification({
+        message: `A delete request for inventory item: "${item.name}" is pending for approval.`,
+        type: "success",
+        roles: ["admin", "owner", "manager"],
+      });
+
+      await createNotification({
+        message: `Your delete request for "${item.name}" is pending approval.`,
+        type: "info",
+        userId: req.user.id,
+        roles: [],
+        isGlobal: false,
+      });
+
+      return res.status(200).json({
+        message: "Your delete request has been sent for approval.",
+      });
+    }
+
+    const deletedItem = await InventoryItem.findByIdAndDelete(req.params.id);
 
     try {
       await createLog({

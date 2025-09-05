@@ -370,25 +370,24 @@ const Inventory = () => {
         },
       });
 
-      if (!res.ok) throw new Error("Delete failed");
+      const data = await res.json();
 
       setPage(1);
       setHasMore(true);
       await fetchItems();
+
       showToast({
-        message: "Item deleted successfully!",
-        type: "success",
+        message: data.message || "Action successful!",
+        type: res.ok ? "success" : "error",
         duration: 3000,
       });
-      //showPopup("Item deleted successfully!", "success");
     } catch (error) {
       console.error("Failed to delete item:", error);
       showToast({
-        message: "Failed to delete item.",
+        message: error.message || "Failed to delete item.",
         type: "error",
         duration: 3000,
       });
-      //showPopup("Failed to delete item.", "error");
     } finally {
       setIsConfirmOpen(false);
       setIsViewOpen(false);

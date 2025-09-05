@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema ({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    userId: { type: String, ref: 'User', default: null },
     roles: [{ type: String, enum: ['admin', 'owner', 'manager', 'staff'] }],
     isGlobal: { type: Boolean, default: false },
     message: { type: String, required: true },

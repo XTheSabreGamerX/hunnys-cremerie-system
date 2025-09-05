@@ -6,17 +6,18 @@ const createNotification = async ({
   type = "info",
   roles = [],
   userId = null,
+  isGlobal = null,
 }) => {
   if (!message) throw new Error("Message is required");
 
-  const isGlobal = !roles.length && !userId;
+  const finalIsGlobal = isGlobal !== null ? isGlobal : !roles.length && !userId;
 
   const notification = new Notification({
     message,
     type,
     roles,
-    userId,
-    isGlobal,
+    userId: userId || null,
+    isGlobal: finalIsGlobal,
   });
 
   return await notification.save();
@@ -28,16 +29,18 @@ const getUserNotifications = async (req, res) => {
     const user = req.user;
     if (!user) return res.status(401).json({ message: "Unauthorized" });
 
-    const userId = user._id?.toString();  // ensure it's a string
+    const userId =req.user.id?.toString();
     const userRole = user.role;
 
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Build $or array safely
     const orConditions = [{ isGlobal: true }, { roles: { $in: [userRole] } }];
-    if (userId) orConditions.push({ userId });
+
+    if (userId) {
+      orConditions.push({ userId: userId });
+    }
 
     const query = { $or: orConditions };
 
