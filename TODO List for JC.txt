@@ -1,11 +1,6 @@
 +COMPLETED
 - Login
-- Dashboard (Still needs additional information, but functional)
-- User Management (Needs to handle action requests sent by staff)
 - Activity Log
-- Inventory (Needs Cake mode)
-- Sales Management (I might need to include a "to be picked up" for online orders)
-- Sales Report (Needs additional filters and to handle the tbpu thing above)
 - Supplier Management
 - Customer Management
 
@@ -13,4 +8,12 @@
 - Profitability Dashboard
 - Pricing Management
 - Backup and Restore
-- Notifications (Currently lacking front end)
+- Settings
+
+--NEEDS IMPROVEMENTS
+- Dashboard (Still needs additional information, but functional)
+- User Management (Needs to handle action requests sent by staff)
+- Inventory (Needs Cake mode)
+- Sales Management (I might need to include a "to be picked up" for online orders)
+- Sales Report (Needs additional filters and to handle the tbpu thing above)
+- Notifications (Currently lacking marked as read function and filters/organizers)
