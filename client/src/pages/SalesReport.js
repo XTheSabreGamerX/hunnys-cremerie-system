@@ -45,6 +45,7 @@ const SalesReport = () => {
   const [selectedSale, setSelectedSale] = useState(null);
 
   const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
   const navigate = useNavigate();
   const containerRef = useRef(null);
 
@@ -56,10 +57,14 @@ const SalesReport = () => {
     [token]
   );
 
-  // Redirect if not logged in
+  // Redirect if not logged in / unauthorized role
   useEffect(() => {
-    if (!token) navigate("/login");
-  }, [token, navigate]);
+      if (!token) {
+        navigate("/login");
+      } else if(user.role === "staff") {
+        navigate("/dashboard")
+      }
+    }, [token, user.role, navigate]);
 
   // Fetch all sales for analytics and charts
   useEffect(() => {

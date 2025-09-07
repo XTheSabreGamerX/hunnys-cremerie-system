@@ -11,6 +11,7 @@ import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
 import PopupMessage from "../components/PopupMessage";
 import ConfirmationModal from "../components/ConfirmationModal";
+import { showToast } from "../components/ToastContainer";
 import "../styles/CustomerManagement.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
@@ -41,9 +42,9 @@ const CustomerManagement = () => {
   }, [token, navigate]);
 
   const authHeader = useMemo(
-    () => ({     
+    () => ({
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`
+      Authorization: `Bearer ${token}`,
     }),
     [token]
   );
@@ -163,59 +164,88 @@ const CustomerManagement = () => {
         `${API_BASE}/api/customers/${updatedCustomer._id}`,
         {
           method: "PUT",
-          headers: authHeader,
+          headers: {
+            ...authHeader,
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify(updatedCustomer),
         }
       );
 
-      if (!response.ok) throw new Error("Update failed");
+      const result = await response.json();
 
-      const updatedData = await response.json();
-      setCustomers((prev) =>
-        prev.map((customer) =>
-          customer._id === updatedData._id ? updatedData : customer
-        )
-      );
+      if (!response.ok) {
+        throw new Error(result.message || "Update failed");
+      }
 
-      setPage(1);
-      setHasMore(true);
-      await fetchCustomers();
+      if (result.message?.includes("request")) {
+        showToast({
+          message: result.message,
+          type: "info",
+          duration: 3000,
+        });
+      } else {
+        // Direct update (admin/manager/owner)
+        setCustomers((prev) =>
+          prev.map((customer) =>
+            customer._id === result._id ? result : customer
+          )
+        );
 
-      setPopupMessage("Customer updated successfully!");
-      setPopupType("success");
+        setPage(1);
+        setHasMore(true);
+        await fetchCustomers();
+
+        showToast({
+          message: "Customer updated successfully!",
+          type: "success",
+          duration: 3000,
+        });
+      }
+
       setSelectedItem(null);
       setModalMode("view");
     } catch (error) {
       console.error("Failed to update customer:", error);
-      setPopupMessage("Failed to update customer.");
-      setPopupType("error");
+      showToast({
+        message: error.message || "Failed to update customer.",
+        type: "error",
+        duration: 3000,
+      });
     }
   };
 
   const confirmDelete = async () => {
     try {
-      const response = await fetch(
-        `${API_BASE}/api/customers/${itemToDelete._id}`,
-        {
-          method: "DELETE",
-          headers: authHeader,
-        }
-      );
+      const res = await fetch(`${API_BASE}/api/customers/${itemToDelete._id}`, {
+        method: "DELETE",
+        headers: authHeader,
+      });
 
-      if (!response.ok) throw new Error("Delete failed");
+      const data = await res.json();
 
       setPage(1);
       setHasMore(true);
       await fetchCustomers();
 
-      setCustomers((prev) =>
-        (prev || []).filter((c) => c._id !== itemToDelete._id)
-      );
-      setPopupMessage("Item deleted successfully!");
-      setPopupType("success");
+      if (res.ok && data.message === "Customer deleted successfully") {
+        setCustomers((prev) =>
+          (prev || []).filter((c) => c._id !== itemToDelete._id)
+        );
+      }
+
+      showToast({
+        message: data.message || "Action successful!",
+        type: res.ok ? "success" : "error",
+        duration: 3000,
+      });
     } catch (error) {
-      setPopupMessage("Failed to delete item.");
-      setPopupType("error");
+      console.error("Failed to delete item:", error);
+      showToast({
+        message: error.message || "Failed to delete item.",
+        type: "error",
+        duration: 3000,
+      });
     } finally {
       setIsConfirmOpen(false);
       setIsViewOpen(false);
@@ -248,172 +278,183 @@ const CustomerManagement = () => {
   return (
     <>
       <DashboardLayout>
-      {(modalMode === "add" || modalMode === "edit") && (
-        <EditModal
-          item={modalMode === "edit" ? selectedItem : {}}
-          fields={[
-            { name: "customerId", label: "Customer ID", required: "true" },
-            { name: "name", label: "Name", required: "true" },
-            { name: "email", label: "Email" },
-            { name: "phoneNumber", label: "Phone Number" },
-            { name: "address", label: "Address" },
-          ]}
-          onSave={modalMode === "add" ? handleAddCustomer : handleSaveChanges}
-          modalType="customer"
-          onClose={() => {
-            setModalMode(null);
-            setSelectedItem(null);
-          }}
-          mode={modalMode}
-        />
-      )}
-
-      {isViewOpen && (
-        <ViewModal
-          item={viewedItem}
-          fields={[
-            { name: "customerId", label: "Customer ID" },
-            { name: "name", label: "Name" },
-            { name: "email", label: "Email" },
-            { name: "phoneNumber", label: "Phone Number" },
-            { name: "address", label: "Address" },
-            {
-              name: "createdAt",
-              label: "Created At",
-              formatter: (value) => new Date(value).toLocaleDateString(),
-            },
-          ]}
-          onClose={() => {
-            setIsViewOpen(false);
-            setViewedItem(null);
-          }}
-          onDelete={() => handleDelete(viewedItem)}
-        />
-      )}
-
-      {isConfirmOpen && (
-        <ConfirmationModal
-          message={`Are you sure you want to delete "${
-            itemToDelete?.name || "this item"
-          }"?`}
-          onConfirm={confirmDelete}
-          onCancel={() => {
-            setIsConfirmOpen(false);
-            setItemToDelete(null);
-          }}
-        />
-      )}
-
-      {popupMessage && (
-        <PopupMessage
-          message={popupMessage}
-          type={popupType}
-          onClose={() => {
-            setPopupMessage("");
-            setPopupType("");
-          }}
-        />
-      )}
-
-      <main className="module-main-content customer-main">
-        <div className="module-header">
-          <h1 className="module-title">Customer Management</h1>
-        </div>
-
-        <div className="module-actions-container">
-          <select
-            className="module-filter-dropdown"
-            value={searchField}
-            onChange={(e) => setSearchField(e.target.value)}
-          >
-            <option value="customerId">Customer ID</option>
-            <option value="name">Name</option>
-            <option value="email">Email</option>
-            <option value="phoneNumber">Phone</option>
-            <option value="address">Address</option>
-          </select>
-
-          <input
-            type="text"
-            className="module-search-input"
-            placeholder="Search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-
-          <button
-            className="module-action-btn module-add-btn"
-            onClick={() => {
-              setModalMode("add");
+        {(modalMode === "add" || modalMode === "edit") && (
+          <EditModal
+            item={modalMode === "edit" ? selectedItem : {}}
+            fields={[
+              { name: "customerId", label: "Customer ID", required: "true" },
+              { name: "name", label: "Name", required: "true" },
+              { name: "email", label: "Email" },
+              { name: "phoneNumber", label: "Phone Number" },
+              { name: "address", label: "Address" },
+            ]}
+            onSave={modalMode === "add" ? handleAddCustomer : handleSaveChanges}
+            modalType="customer"
+            onClose={() => {
+              setModalMode(null);
               setSelectedItem(null);
             }}
-          >
-            Add Customer
-          </button>
-        </div>
+            mode={modalMode}
+          />
+        )}
 
-        <div className="module-table-container" ref={containerRef}>
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Number</th>
-                <th>Address</th>
-                <th>Created</th>
-                <th>Updated</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayedCustomers.length === 0 ? (
+        {isViewOpen && (
+          <ViewModal
+            item={viewedItem}
+            fields={[
+              { name: "customerId", label: "Customer ID" },
+              { name: "name", label: "Name" },
+              { name: "email", label: "Email" },
+              { name: "phoneNumber", label: "Phone Number" },
+              { name: "address", label: "Address" },
+              {
+                name: "createdAt",
+                label: "Created At",
+                formatter: (value) =>
+                  value
+                    ? new Date(value).toLocaleDateString("en-PH", {
+                        timeZone: "Asia/Manila",
+                      })
+                    : "—",
+              },
+            ]}
+            onClose={() => {
+              setIsViewOpen(false);
+              setViewedItem(null);
+            }}
+            onDelete={() => handleDelete(viewedItem)}
+          />
+        )}
+
+        {isConfirmOpen && (
+          <ConfirmationModal
+            message={`Are you sure you want to delete "${
+              itemToDelete?.name || "this item"
+            }"?`}
+            onConfirm={confirmDelete}
+            onCancel={() => {
+              setIsConfirmOpen(false);
+              setItemToDelete(null);
+            }}
+          />
+        )}
+
+        {popupMessage && (
+          <PopupMessage
+            message={popupMessage}
+            type={popupType}
+            onClose={() => {
+              setPopupMessage("");
+              setPopupType("");
+            }}
+          />
+        )}
+
+        <main className="module-main-content customer-main">
+          <div className="module-header">
+            <h1 className="module-title">Customer Management</h1>
+          </div>
+
+          <div className="module-actions-container">
+            <select
+              className="module-filter-dropdown"
+              value={searchField}
+              onChange={(e) => setSearchField(e.target.value)}
+            >
+              <option value="customerId">Customer ID</option>
+              <option value="name">Name</option>
+              <option value="email">Email</option>
+              <option value="phoneNumber">Phone</option>
+              <option value="address">Address</option>
+            </select>
+
+            <input
+              type="text"
+              className="module-search-input"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+
+            <button
+              className="module-action-btn module-add-btn"
+              onClick={() => {
+                setModalMode("add");
+                setSelectedItem(null);
+              }}
+            >
+              Add Customer
+            </button>
+          </div>
+
+          <div className="module-table-container" ref={containerRef}>
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan="8">No customers found.</td>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Number</th>
+                  <th>Address</th>
+                  <th>Created</th>
+                  <th>Updated</th>
+                  <th>Actions</th>
                 </tr>
-              ) : (
-                displayedCustomers.map((customer) => (
-                  <tr key={customer._id}>
-                    <td>{customer.customerId}</td>
-                    <td>{customer.name}</td>
-                    <td>{customer.email || "—"}</td>
-                    <td>{customer.phoneNumber || "—"}</td>
-                    <td>{customer.address || "—"}</td>
-                    <td>
-                      {customer.createdAt
-                        ? new Date(customer.createdAt).toLocaleString("en-PH", {
-                            timeZone: "Asia/Manila",
-                          })
-                        : "—"}
-                    </td>
-                    <td>
-                      {customer.updatedAt
-                        ? new Date(customer.updatedAt).toLocaleString("en-PH", {
-                            timeZone: "Asia/Manila",
-                          })
-                        : "—"}
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => handleEditClick(customer)}
-                        className="module-action-btn module-edit-btn"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleViewClick(customer)}
-                        className="module-action-btn module-view-btn"
-                      >
-                        View
-                      </button>
-                    </td>
+              </thead>
+              <tbody>
+                {displayedCustomers.length === 0 ? (
+                  <tr>
+                    <td colSpan="8">No customers found.</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </main>
+                ) : (
+                  displayedCustomers.map((customer) => (
+                    <tr key={customer._id}>
+                      <td>{customer.customerId}</td>
+                      <td>{customer.name}</td>
+                      <td>{customer.email || "—"}</td>
+                      <td>{customer.phoneNumber || "—"}</td>
+                      <td>{customer.address || "—"}</td>
+                      <td>
+                        {customer.createdAt
+                          ? new Date(customer.createdAt).toLocaleString(
+                              "en-PH",
+                              {
+                                timeZone: "Asia/Manila",
+                              }
+                            )
+                          : "—"}
+                      </td>
+                      <td>
+                        {customer.updatedAt
+                          ? new Date(customer.updatedAt).toLocaleString(
+                              "en-PH",
+                              {
+                                timeZone: "Asia/Manila",
+                              }
+                            )
+                          : "—"}
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => handleEditClick(customer)}
+                          className="module-action-btn module-edit-btn"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleViewClick(customer)}
+                          className="module-action-btn module-view-btn"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </main>
       </DashboardLayout>
     </>
   );

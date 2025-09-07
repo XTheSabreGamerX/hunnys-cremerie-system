@@ -76,13 +76,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
       label: "Supplier Management",
       icon: <FaTruck />,
       path: "/supplier-management",
-      roles: ["admin", "owner", "manager"],
+      roles: ["admin", "owner", "manager", "staff"],
     },
     {
       label: "Customer Management",
       icon: <FaUserTag />,
       path: "/customer-management",
-      roles: ["admin", "owner", "manager"],
+      roles: ["admin", "owner", "manager", "staff"],
     },
     {
       label: "Pricing Management",
@@ -94,7 +94,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
       label: "Backup and Restore",
       icon: <FaDownload />,
       path: "/dashboard",
-      roles: ["admin", "owner", "manager", "staff"],
+      roles: ["admin", "owner", "manager"],
     },
     {
       label: "Notifications",

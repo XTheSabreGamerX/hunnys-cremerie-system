@@ -8,15 +8,20 @@ const ActivityLog = () => {
   const [logs, setLogs] = useState([]);
   const [selectedRange, setSelectedRange] = useState("All");
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
 
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  // Redirect if not logged in / unauthorized role
   useEffect(() => {
     if (!token) {
       navigate("/login");
+    } else if(user.role === "staff") {
+      navigate("/dashboard")
     }
-  }, [token, navigate]);
+  }, [token, user.role, navigate]);
 
   useEffect(() => {
     const fetchLogs = async () => {

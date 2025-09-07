@@ -4,7 +4,7 @@ const requestSchema = new mongoose.Schema({
   module: {
     type: String,
     required: true,
-    enum: ['Inventory', 'Sales', 'Supplier', 'Customer'],
+    enum: ['Inventory', 'Sales', 'Supplier Management', 'Customer Management'],
   },
   targetId: {
     type: mongoose.Schema.Types.ObjectId,

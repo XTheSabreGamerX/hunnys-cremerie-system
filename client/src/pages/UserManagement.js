@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../scripts/DashboardLayout";
 import ConfirmationModal from "../components/ConfirmationModal";
 import PopupMessage from "../components/PopupMessage";
@@ -23,7 +24,18 @@ const UserManagement = () => {
   const [onConfirmAction, setOnConfirmAction] = useState(() => () => {});
 
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+  const navigate = useNavigate();
   const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  
+    // Redirect if not logged in / unauthorized role
+    useEffect(() => {
+      if (!token) {
+        navigate("/login");
+      } else if(user.role === "staff") {
+        navigate("/dashboard")
+      }
+    }, [token, user.role, navigate]);
 
   const showPopup = (message, type = "success") => {
     setPopupMessage(message);

@@ -1,6 +1,7 @@
 const Customer = require("../models/Customer");
 const { createLog } = require("../controllers/activityLogController");
 const { createNotification } = require("../controllers/notificationController");
+const ActionRequest = require("../models/ActionRequest");
 
 // Get all Customers
 const getAllCustomers = async (req, res) => {
@@ -57,9 +58,55 @@ const createCustomer = async (req, res) => {
 // Update Customer
 const updateCustomer = async (req, res) => {
   try {
+    const customer = await Customer.findById(req.params.id);
+
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    // Staff update request
+    if (
+      req.user.role === "staff" &&
+      customer.createdBy?.toString() !== req.user.id
+    ) {
+      await ActionRequest.create({
+        module: "Customer Management",
+        moduleRef: "Customer",
+        targetId: customer._id.toString(),
+        requestType: "edit",
+        details: req.body,
+        requestedBy: req.user.id,
+      });
+
+      await createLog({
+        action: "Update Customer Request",
+        module: "Customer Management",
+        description: `User ${req.user.username} requested to update customer: ${customer.name}`,
+        userId: req.user.id,
+      });
+
+      await createNotification({
+        message: `An update request for customer "${customer.name}" is pending approval.`,
+        type: "warning",
+        roles: ["admin", "owner", "manager"],
+      });
+
+      await createNotification({
+        message: `Your update request for "${customer.name}" is pending approval.`,
+        type: "info",
+        userId: req.user.id,
+        roles: [],
+        isGlobal: false,
+      });
+
+      return res.status(200).json({
+        message: "Your update request has been sent for approval.",
+      });
+    }
+
     const updated = await Customer.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
-      timestamps: true,
+      runValidators: true,
     });
 
     try {
@@ -81,6 +128,7 @@ const updateCustomer = async (req, res) => {
 
     res.json(updated);
   } catch (err) {
+    console.error("[UPDATE] Customer update error:", err.message);
     res.status(400).json({ message: "Update failed" });
   }
 };
@@ -88,11 +136,53 @@ const updateCustomer = async (req, res) => {
 // Delete Customer
 const deleteCustomer = async (req, res) => {
   try {
-    const deletedCustomer = await Customer.findByIdAndDelete(req.params.id);
+    const customer = await Customer.findById(req.params.id);
 
-    if (!deletedCustomer) {
+    if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
     }
+
+    // Staff delete request
+    if (
+      req.user.role === "staff" &&
+      customer.createdBy?.toString() !== req.user.id
+    ) {
+      await ActionRequest.create({
+        module: "Customer Management",
+        moduleRef: "Customer",
+        targetId: customer._id.toString(),
+        requestType: "delete",
+        details: req.body,
+        requestedBy: req.user.id,
+      });
+
+      await createLog({
+        action: "Delete Customer Request",
+        module: "Customer Management",
+        description: `User ${req.user.username} requested to delete customer: ${customer.name}`,
+        userId: req.user.id,
+      });
+
+      await createNotification({
+        message: `A delete request for customer "${customer.name}" is pending for approval.`,
+        type: "warning",
+        roles: ["admin", "owner", "manager"],
+      });
+
+      await createNotification({
+        message: `Your delete request for "${customer.name}" is pending approval.`,
+        type: "info",
+        userId: req.user.id,
+        roles: [],
+        isGlobal: false,
+      });
+
+      return res.status(200).json({
+        message: "Your delete request has been sent for approval.",
+      });
+    }
+
+    const deletedCustomer = await Customer.findByIdAndDelete(req.params.id);
 
     try {
       await createLog({
@@ -103,7 +193,7 @@ const deleteCustomer = async (req, res) => {
       });
 
       await createNotification({
-        message: `A customer was deleted: ${deleteCustomer.name}.`,
+        message: `A customer was deleted: ${deletedCustomer.name}.`,
         type: "success",
         roles: ["admin", "owner", "manager"],
       });
