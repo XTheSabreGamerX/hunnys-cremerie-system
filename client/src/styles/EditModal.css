@@ -139,13 +139,13 @@
   transform: translateY(-1px);
 }
 
-.cancel-btn {
+.inventory-btn .cancel-btn {
   background-color: #f44336;
   color: white;
   box-shadow: 0 2px 6px rgba(244, 67, 54, 0.12);
 }
 
-.cancel-btn:hover {
+.inventory-btn .cancel-btn:hover {
   background-color: #d32f2f;
   transform: translateY(-1px);
 }

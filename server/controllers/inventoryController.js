@@ -96,45 +96,52 @@ const addInventoryItem = async (req, res) => {
 const updateInventoryItem = async (req, res) => {
   try {
     const item = await InventoryItem.findById(req.params.id);
-    if (!item) return res.status(404).json({ message: 'Item not found' });
+    if (!item) return res.status(404).json({ message: "Item not found" });
 
     // Staff update request (if not creator of the item)
     if (
-      req.user.role === 'staff' &&
+      req.user.role === "staff" &&
       item.createdBy.toString() !== req.user.id
     ) {
       await ActionRequest.create({
-        module: 'Inventory',
-        moduleRef: 'InventoryItem',
+        module: "Inventory",
+        moduleRef: "InventoryItem",
         targetId: item._id.toString(),
-        requestType: 'update',
-        details: req.body,
+        requestType: "edit",
+        details: {
+          name: item.name,
+          itemId: item.itemId,
+          category: item.category,
+          stock: item.stock,
+          unitPrice: item.unitPrice,
+          note: "Staff requested to edit this item",
+        },
         requestedBy: req.user.id,
       });
 
       await createLog({
-        action: 'Update Item Request',
-        module: 'Inventory',
+        action: "Update Item Request",
+        module: "Inventory",
         description: `User ${req.user.username} requested to update item: ${item.name}`,
         userId: req.user.id,
       });
 
       await createNotification({
         message: `An update request for inventory item: "${item.name}" is pending for approval.`,
-        type: 'warning',
-        roles: ['admin', 'owner', 'manager'],
+        type: "warning",
+        roles: ["admin", "owner", "manager"],
       });
 
       await createNotification({
         message: `Your update request for "${item.name}" is pending approval.`,
-        type: 'info',
+        type: "info",
         userId: req.user.id,
         roles: [],
         isGlobal: false,
       });
 
       return res.status(200).json({
-        message: 'Your update request has been sent for approval.',
+        message: "Your update request has been sent for approval.",
       });
     }
 
@@ -142,7 +149,7 @@ const updateInventoryItem = async (req, res) => {
 
     if (item.unitPrice < item.purchasePrice) {
       return res.status(400).json({
-        message: 'Unit Price must be greater than or equal to Purchase Price',
+        message: "Unit Price must be greater than or equal to Purchase Price",
       });
     }
 
@@ -150,31 +157,31 @@ const updateInventoryItem = async (req, res) => {
 
     try {
       await createLog({
-        action: 'Updated Item',
-        module: 'Inventory',
+        action: "Updated Item",
+        module: "Inventory",
         description: `User ${req.user.username} updated an item: ${item.name}`,
         userId: req.user.id,
       });
 
       await createNotification({
         message: `An inventory item "${item.name}" was updated.`,
-        type: 'info',
-        roles: ['admin', 'owner', 'manager'],
+        type: "info",
+        roles: ["admin", "owner", "manager"],
       });
     } catch (logErr) {
-      console.error('[Activity Log] Failed to log update:', logErr.message);
+      console.error("[Activity Log] Failed to log update:", logErr.message);
     }
 
     res.json(item);
   } catch (err) {
-    console.error('[UPDATE] Server error:', err);
+    console.error("[UPDATE] Server error:", err);
 
-    if (err.name === 'ValidationError') {
+    if (err.name === "ValidationError") {
       const messages = Object.values(err.errors).map((e) => e.message);
-      return res.status(400).json({ message: messages.join(', ') });
+      return res.status(400).json({ message: messages.join(", ") });
     }
 
-    res.status(500).json({ message: err.message || 'Failed to update item.' });
+    res.status(500).json({ message: err.message || "Failed to update item." });
   }
 };
 
@@ -249,7 +256,14 @@ const deleteInventoryItem = async (req, res) => {
         moduleRef: "InventoryItem",
         targetId: item._id.toString(),
         requestType: "delete",
-        details: req.body,
+        details: {
+          name: item.name,
+          itemId: item.itemId,
+          category: item.category,
+          stock: item.stock,
+          unitPrice: item.unitPrice,
+          note: "Staff requested deletion of this item",
+        },
         requestedBy: req.user.id,
       });
 

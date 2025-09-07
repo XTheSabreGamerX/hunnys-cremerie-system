@@ -74,7 +74,13 @@ const updateCustomer = async (req, res) => {
         moduleRef: "Customer",
         targetId: customer._id.toString(),
         requestType: "edit",
-        details: req.body,
+        details: {
+          name: customer.name,
+          email: customer.email,
+          phoneNumber: customer.phoneNumber,
+          address: customer.address,
+          note: "Staff requested to edit this customer",
+        },
         requestedBy: req.user.id,
       });
 
@@ -152,7 +158,13 @@ const deleteCustomer = async (req, res) => {
         moduleRef: "Customer",
         targetId: customer._id.toString(),
         requestType: "delete",
-        details: req.body,
+        details: {
+          name: customer.name,
+          email: customer.email,
+          phoneNumber: customer.phoneNumber,
+          address: customer.address,
+          note: "Staff requested to delete this customer",
+        },
         requestedBy: req.user.id,
       });
 

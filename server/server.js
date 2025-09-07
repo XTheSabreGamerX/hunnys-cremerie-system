@@ -13,6 +13,7 @@ const salesReportRoutes = require('./routes/salesReport');
 const supplierRoutes = require('./routes/supplier');
 const customerRoutes = require('./routes/customer');
 const notificationRoutes = require('./routes/notification');
+const actionRequestRoutes = require('./routes/actionRequest');
 const cors = require('cors');
 require('dotenv').config();
 const app = express();
@@ -53,6 +54,7 @@ app.use('/api/salesReport', salesReportRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/actionRequest', actionRequestRoutes);
 
 // Cron scheduler. Runs every 15 minutes to update inventory item status.
 cron.schedule('*/15 * * * *', async () => {

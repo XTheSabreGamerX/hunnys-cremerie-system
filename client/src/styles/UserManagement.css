@@ -90,4 +90,12 @@
 .reset-password-container th:nth-child(1) { width: 20% }
 .reset-password-container th:nth-child(2) { width: 15% }
 .reset-password-container th:nth-child(3) { width: 8% }
-.reset-password-container th:nth-child(4) { width: 20% }
+.reset-password-container th:nth-child(4) { width: 10% }
+
+.action-requests-container th:nth-child(1) { width: 15% }
+.action-requests-container th:nth-child(2) { width: 10% }
+.action-requests-container th:nth-child(3) { width: 20% }
+.action-requests-container th:nth-child(4) { width: 15% }
+.action-requests-container th:nth-child(5) { width: 17% }
+.action-requests-container th:nth-child(6) { width: 12% }
+.action-requests-container th:nth-child(7) { width: 20% }
