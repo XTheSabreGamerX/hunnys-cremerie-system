@@ -23,31 +23,64 @@ function computeStatus(item) {
   return "Well-stocked";
 }
 
-// GET all inventory items
+// GET all inventory items (with search + pagination)
 const getAllInventoryItems = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const totalItems = await InventoryItem.countDocuments();
+    const search = req.query.search?.trim() || "";
+
+    let searchFilter = {};
+    if (search) {
+      const isNumber = !isNaN(search);
+      const isDate = !isNaN(Date.parse(search));
+
+      searchFilter = {
+        $or: [
+          // String fields
+          { itemId: { $regex: search, $options: "i" } },
+          { name: { $regex: search, $options: "i" } },
+          { category: { $regex: search, $options: "i" } },
+          { supplier: { $regex: search, $options: "i" } },
+          { status: { $regex: search, $options: "i" } },
+
+          // Number fields
+          ...(isNumber
+            ? [
+                { purchasePrice: Number(search) },
+                { unitPrice: Number(search) },
+                { amount: Number(search) },
+                { restockThreshold: Number(search) },
+              ]
+            : []),
+
+          // Date fields
+          ...(isDate ? [{ expirationDate: new Date(search) }] : []),
+        ],
+      };
+    }
+
+    const totalItems = await InventoryItem.countDocuments(searchFilter);
     const totalPages = Math.ceil(totalItems / limit);
 
-    const items = await InventoryItem.find()
+    // Fetch filtered items
+    const items = await InventoryItem.find(searchFilter)
       .skip(skip)
       .limit(limit)
       .sort({ itemId: 1 })
-      .populate("unit", "name")
+      .populate("unit", "name amount")
       .populate("createdBy", "username");
 
     res.json({
-      items,
+      items: items || [],
       currentPage: page,
       totalPages,
       totalItems,
     });
   } catch (err) {
-    console.error("Server error while fetching inventory:", err);
+    console.error("[GET INVENTORY] Server error:", err);
     res.status(500).json({ message: "Server error while fetching inventory" });
   }
 };

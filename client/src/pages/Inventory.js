@@ -13,7 +13,6 @@ import "../styles/Inventory.css";
 const Inventory = () => {
   const [items, setItems] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [filteredItems, setFilteredItems] = useState([]);
   const [uoms, setUoms] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchField, setSearchField] = useState("itemId");
@@ -52,7 +51,7 @@ const Inventory = () => {
       placeholder: "e.g. BOX-001, CAKE-025, etc... Leave empty for default ID",
     },
     { label: "Item Name", name: "name", required: true },
-    { label: "Stock", name: "stock", type: "number", required: true },
+    { label: "Stock", name: "stock", type: "number" },
     { label: "Category", name: "category", required: true },
     {
       label: "Purchase Price",
@@ -95,7 +94,9 @@ const Inventory = () => {
   const fetchItems = useCallback(async () => {
     try {
       const res = await fetch(
-        `${API_BASE}/api/inventory?page=${page}&limit=10`,
+        `${API_BASE}/api/inventory?page=${page}&limit=10&search=${encodeURIComponent(
+          searchQuery
+        )}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -115,16 +116,16 @@ const Inventory = () => {
         : data;
 
       if (page === 1) {
-        setItems(wrappedData.items);
+        setItems(wrappedData.items || []);
       } else {
-        setItems((prev) => [...prev, ...wrappedData.items]);
+        setItems((prev) => [...prev, ...(wrappedData.items || [])]);
       }
 
       setHasMore(page < wrappedData.totalPages);
     } catch (err) {
       console.error("Error fetching inventory:", err);
     }
-  }, [API_BASE, page, token]);
+  }, [API_BASE, searchQuery, page, token]);
 
   // Fetch Suppliers
   const fetchSuppliers = useCallback(async () => {
@@ -179,9 +180,9 @@ const Inventory = () => {
   }, [API_BASE, page, token]);
 
   useEffect(() => {
-    fetchItems();
+    fetchItems(page, searchQuery);
     fetchSuppliers();
-  }, [page, fetchItems, fetchSuppliers]);
+  }, [page, searchQuery, fetchItems, fetchSuppliers]);
 
   // Infinite Scroll for pagination
   useEffect(() => {
@@ -208,7 +209,7 @@ const Inventory = () => {
     };
   }, [hasMore]);
 
-  useEffect(() => {
+  /* useEffect(() => {
     const query = searchQuery.toLowerCase().trim();
 
     if (!query) {
@@ -221,7 +222,7 @@ const Inventory = () => {
     );
 
     setFilteredItems(filtered);
-  }, [searchQuery, searchField, items]);
+  }, [searchQuery, searchField, items]); */
 
   const validateFormData = (data) => {
     const { itemId, name, stock, unitPrice, expirationDate } = data;
@@ -512,7 +513,7 @@ const Inventory = () => {
           </div>
 
           <div className="module-actions-container">
-            <select
+            {/* <select
               className="module-filter-dropdown"
               value={searchField}
               onChange={(e) => setSearchField(e.target.value)}
@@ -521,14 +522,17 @@ const Inventory = () => {
               <option value="name">Name</option>
               <option value="category">Category</option>
               <option value="supplier">Supplier</option>
-            </select>
+            </select> */}
 
             <input
               type="text"
               className="module-search-input"
-              placeholder="Search"
+              placeholder="Search items..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
             />
 
             <button
@@ -561,12 +565,12 @@ const Inventory = () => {
                 </tr>
               </thead>
               <tbody>
-                {(isFiltering ? filteredItems : items).length === 0 ? (
+                {items.length === 0 ? (
                   <tr>
                     <td colSpan="11">No items found.</td>
                   </tr>
                 ) : (
-                  (isFiltering ? filteredItems : items).map((item) => (
+                  items.map((item) => (
                     <tr key={item._id}>
                       <td>{item.itemId}</td>
                       <td>{item.name}</td>
