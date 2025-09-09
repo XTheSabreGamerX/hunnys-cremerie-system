@@ -44,7 +44,7 @@
 
 .inventory-main .module-table-container table th:nth-child(7),
 .inventory-main .module-table-container table td:nth-child(7) {
-  width: 10%;
+  width: 9%;
 }
 
 .inventory-main .module-table-container table th:nth-child(8),
@@ -65,4 +65,9 @@
 .inventory-main .module-table-container table th:nth-child(11),
 .inventory-main .module-table-container table td:nth-child(11) {
   width: 16%;
+}
+
+.inventory-main .module-table-container table th:nth-child(12),
+.inventory-main .module-table-container table td:nth-child(12) {
+  width: 12%;
 }

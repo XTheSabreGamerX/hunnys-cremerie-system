@@ -18,6 +18,7 @@ const inventoryItemSchema = new mongoose.Schema({
       message: "Unit Price must be greater than or equal to Purchase Price",
     },
   },
+  amount: { type: Number, required: true, min: 1 },
   unit: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "UnitOfMeasurement",
@@ -35,6 +36,47 @@ const inventoryItemSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
+});
+
+// Calculates Status After Creation/Update
+function calculateStatus(stock, threshold, expirationDate) {
+  const now = new Date();
+  if (expirationDate && expirationDate < now) return "Expired";
+  if (stock <= 0) return "Out of stock";
+  if (stock <= threshold) return "Low-stock";
+  return "Well-stocked";
+}
+
+// Pre-save hook
+inventoryItemSchema.pre("save", function (next) {
+  this.status = calculateStatus(this.stock, this.restockThreshold, this.expirationDate);
+  next();
+});
+
+// Pre-update hook
+inventoryItemSchema.pre("findOneAndUpdate", function (next) {
+  const update = this.getUpdate() || {};
+
+  if (
+    update.stock !== undefined ||
+    update.restockThreshold !== undefined ||
+    update.expirationDate !== undefined
+  ) {
+    const stock =
+      update.stock ??
+      (update.$set ? update.$set.stock : undefined);
+    const restockThreshold =
+      update.restockThreshold ??
+      (update.$set ? update.$set.restockThreshold : undefined);
+    const expirationDate =
+      update.expirationDate ??
+      (update.$set ? update.$set.expirationDate : undefined);
+
+    update.status = calculateStatus(stock, restockThreshold, expirationDate);
+    this.setUpdate(update);
+  }
+
+  next();
 });
 
 module.exports = mongoose.model("InventoryItem", inventoryItemSchema);

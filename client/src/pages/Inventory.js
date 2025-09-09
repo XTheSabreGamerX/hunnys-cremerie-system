@@ -52,15 +52,22 @@ const Inventory = () => {
       placeholder: "e.g. BOX-001, CAKE-025, etc... Leave empty for default ID",
     },
     { label: "Item Name", name: "name", required: true },
-    { label: "Stock", name: "stock", type: "number" },
-    { label: "Category", name: "category" },
-    { label: "Purchase Price", name: "purchasePrice", type: "number" },
-    { label: "Unit Price", name: "unitPrice", type: "number" },
+    { label: "Stock", name: "stock", type: "number", required: true },
+    { label: "Category", name: "category", required: true },
+    {
+      label: "Purchase Price",
+      name: "purchasePrice",
+      type: "number",
+      required: true,
+    },
+    { label: "Unit Price", name: "unitPrice", type: "number", required: true },
+    { label: "Amount", name: "amount", type: "number", required: true },
     {
       label: "Unit of Measurement",
       name: "unit",
       type: "select",
       options: uoms.map((u) => ({ value: u._id, label: u.name })),
+      required: true,
     },
     {
       label: "Supplier",
@@ -275,6 +282,7 @@ const Inventory = () => {
         itemId,
         stock: isNaN(Number(data.stock)) ? 0 : Number(data.stock),
         unitPrice: isNaN(Number(data.unitPrice)) ? 0 : Number(data.unitPrice),
+        amount: isNaN(Number(data.amount)) ? 0 : Number(data.amount),
       };
 
       const method = modalMode === "add" ? "POST" : "PUT";
@@ -417,9 +425,12 @@ const Inventory = () => {
             { name: "purchasePrice", label: "Purchase Price" },
             { name: "unitPrice", label: "Price" },
             {
-              name: "unit",
-              label: "Unit of Measurement",
-              render: (val) => val?.name || "—",
+              name: "amount",
+              label: "Unit",
+              render: (val) =>
+                viewedItem?.unit
+                  ? `${val} ${viewedItem.unit.name}`
+                  : `${val || "—"}`,
             },
             {
               name: "supplier",
@@ -495,118 +506,122 @@ const Inventory = () => {
       )}
 
       <DashboardLayout>
-      <main className="module-main-content inventory-main">
-        <div className="module-header">
-          <h1 className="module-title">Inventory</h1>
-        </div>
+        <main className="module-main-content inventory-main">
+          <div className="module-header">
+            <h1 className="module-title">Inventory</h1>
+          </div>
 
-        <div className="module-actions-container">
-          <select
-            className="module-filter-dropdown"
-            value={searchField}
-            onChange={(e) => setSearchField(e.target.value)}
-          >
-            <option value="itemId">Item ID</option>
-            <option value="name">Name</option>
-            <option value="category">Category</option>
-            <option value="supplier">Supplier</option>
-          </select>
+          <div className="module-actions-container">
+            <select
+              className="module-filter-dropdown"
+              value={searchField}
+              onChange={(e) => setSearchField(e.target.value)}
+            >
+              <option value="itemId">Item ID</option>
+              <option value="name">Name</option>
+              <option value="category">Category</option>
+              <option value="supplier">Supplier</option>
+            </select>
 
-          <input
-            type="text"
-            className="module-search-input"
-            placeholder="Search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+            <input
+              type="text"
+              className="module-search-input"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
 
-          <button
-            className="module-action-btn module-add-btn"
-            onClick={() => {
-              setModalMode("add");
-              setSelectedItem(null);
-              setFormData({});
-            }}
-          >
-            Add Item
-          </button>
-        </div>
+            <button
+              className="module-action-btn module-add-btn"
+              onClick={() => {
+                setModalMode("add");
+                setSelectedItem(null);
+                setFormData({});
+              }}
+            >
+              Add Item
+            </button>
+          </div>
 
-        <div className="module-table-container" ref={containerRef}>
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Item Name</th>
-                <th>Stock</th>
-                <th>Category</th>
-                <th>Purchase Price</th>
-                <th>Unit Price</th>
-                <th>Unit</th>
-                <th>Supplier</th>
-                <th>Expiration Date</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(isFiltering ? filteredItems : items).length === 0 ? (
+          <div className="module-table-container" ref={containerRef}>
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan="11">No items found.</td>
+                  <th>ID</th>
+                  <th>Item Name</th>
+                  <th>Stock</th>
+                  <th>Category</th>
+                  <th>Purchase Price</th>
+                  <th>Unit Price</th>
+                  <th>Unit</th>
+                  <th>Supplier</th>
+                  <th>Expiration Date</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              ) : (
-                (isFiltering ? filteredItems : items).map((item) => (
-                  <tr key={item._id}>
-                    <td>{item.itemId}</td>
-                    <td>{item.name}</td>
-                    <td>{item.stock}</td>
-                    <td>{item.category || "—"}</td>
-                    <td>₱{item.purchasePrice}</td>
-                    <td>₱{item.unitPrice}</td>
-                    <td>{item.unit?.name}</td>
-                    <td>
-                      {suppliers.find((s) => s._id === item.supplier)?.name ||
-                        "—"}
-                    </td>
-                    <td>
-                      {item.expirationDate
-                        ? new Date(item.expirationDate).toLocaleDateString(
-                            "en-PH",
-                            {
-                              timeZone: "Asia/Manila",
-                            }
-                          )
-                        : "N/A"}
-                    </td>
-                    <td>{item.status}</td>
-                    <td>
-                      <button
-                        className="module-action-btn module-edit-btn"
-                        onClick={() => {
-                          setSelectedItem(item);
-                          setModalMode("edit");
-                        }}
-                      >
-                        Edit
-                      </button>
-
-                      <button
-                        className="module-action-btn module-view-btn"
-                        onClick={() => {
-                          setViewedItem(item);
-                          setIsViewOpen(true);
-                        }}
-                      >
-                        View
-                      </button>
-                    </td>
+              </thead>
+              <tbody>
+                {(isFiltering ? filteredItems : items).length === 0 ? (
+                  <tr>
+                    <td colSpan="11">No items found.</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </main>
+                ) : (
+                  (isFiltering ? filteredItems : items).map((item) => (
+                    <tr key={item._id}>
+                      <td>{item.itemId}</td>
+                      <td>{item.name}</td>
+                      <td>{item.stock}</td>
+                      <td>{item.category || "—"}</td>
+                      <td>₱{item.purchasePrice}</td>
+                      <td>₱{item.unitPrice}</td>
+                      <td>
+                        {item.amount
+                          ? `${item.amount} ${item.unit?.name || ""}`
+                          : "—"}
+                      </td>
+                      <td>
+                        {suppliers.find((s) => s._id === item.supplier)?.name ||
+                          "—"}
+                      </td>
+                      <td>
+                        {item.expirationDate
+                          ? new Date(item.expirationDate).toLocaleDateString(
+                              "en-PH",
+                              {
+                                timeZone: "Asia/Manila",
+                              }
+                            )
+                          : "N/A"}
+                      </td>
+                      <td>{item.status}</td>
+                      <td>
+                        <button
+                          className="module-action-btn module-edit-btn"
+                          onClick={() => {
+                            setSelectedItem(item);
+                            setModalMode("edit");
+                          }}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          className="module-action-btn module-view-btn"
+                          onClick={() => {
+                            setViewedItem(item);
+                            setIsViewOpen(true);
+                          }}
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </main>
       </DashboardLayout>
     </>
   );

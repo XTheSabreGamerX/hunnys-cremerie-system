@@ -1,6 +1,7 @@
 +COMPLETED
 - Login
 - Activity Log
+- User Management
 - Supplier Management
 - Customer Management
 
@@ -12,7 +13,6 @@
 
 --NEEDS IMPROVEMENTS
 - Dashboard (Still needs additional information, but functional)
-- User Management (Needs to handle action requests sent by staff)
 - Inventory (Needs Cake mode)
 - Sales Management (I might need to include a "to be picked up" for online orders)
 - Sales Report (Needs additional filters and to handle the tbpu thing above)
