@@ -15,7 +15,7 @@ const Inventory = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [uoms, setUoms] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchField, setSearchField] = useState("itemId");
+  const [columnFilter, setColumnFilter] = useState({ field: "", query: "" });
   const [selectedItem, setSelectedItem] = useState(null);
   const [modalMode, setModalMode] = useState("view");
   const [formData, setFormData] = useState({});
@@ -51,15 +51,27 @@ const Inventory = () => {
       placeholder: "e.g. BOX-001, CAKE-025, etc... Leave empty for default ID",
     },
     { label: "Item Name", name: "name", required: true },
-    { label: "Stock", name: "stock", type: "number" },
+    {
+      label: "Stock",
+      name: "stock",
+      type: "number",
+      placeholder: "Leave blank if none...",
+    },
     { label: "Category", name: "category", required: true },
     {
       label: "Purchase Price",
       name: "purchasePrice",
       type: "number",
+      placeholder: "How much the product was bought for.",
       required: true,
     },
-    { label: "Unit Price", name: "unitPrice", type: "number", required: true },
+    {
+      label: "Unit Price",
+      name: "unitPrice",
+      type: "number",
+      required: true,
+      placeholder: "How much to sell the product each.",
+    },
     { label: "Amount", name: "amount", type: "number", required: true },
     {
       label: "Unit of Measurement",
@@ -77,7 +89,12 @@ const Inventory = () => {
         label: s.name,
       })),
     },
-    { label: "Restock Threshold", name: "restockThreshold", type: "number" },
+    {
+      label: "Restock Threshold",
+      name: "restockThreshold",
+      type: "number",
+      placeholder: "You will be notified once it reaches this amount.",
+    },
     { label: "Expiration Date", name: "expirationDate", type: "date" },
   ];
 
@@ -96,7 +113,9 @@ const Inventory = () => {
       const res = await fetch(
         `${API_BASE}/api/inventory?page=${page}&limit=10&search=${encodeURIComponent(
           searchQuery
-        )}`,
+        )}&field=${columnFilter.field || ""}&order=${
+          columnFilter.order || "asc"
+        }`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -115,17 +134,16 @@ const Inventory = () => {
           }
         : data;
 
-      if (page === 1) {
-        setItems(wrappedData.items || []);
-      } else {
-        setItems((prev) => [...prev, ...(wrappedData.items || [])]);
-      }
-
+      setItems((prev) =>
+        page === 1
+          ? wrappedData.items || []
+          : [...prev, ...(wrappedData.items || [])]
+      );
       setHasMore(page < wrappedData.totalPages);
     } catch (err) {
       console.error("Error fetching inventory:", err);
     }
-  }, [API_BASE, searchQuery, page, token]);
+  }, [API_BASE, page, searchQuery, columnFilter, token]);
 
   // Fetch Suppliers
   const fetchSuppliers = useCallback(async () => {
@@ -180,9 +198,9 @@ const Inventory = () => {
   }, [API_BASE, page, token]);
 
   useEffect(() => {
-    fetchItems(page, searchQuery);
+    fetchItems();
     fetchSuppliers();
-  }, [page, searchQuery, fetchItems, fetchSuppliers]);
+  }, [page, searchQuery, columnFilter, fetchItems, fetchSuppliers]);
 
   // Infinite Scroll for pagination
   useEffect(() => {
@@ -267,6 +285,20 @@ const Inventory = () => {
     }
 
     return true;
+  };
+
+  // Column click filter function
+  const handleColumnClick = (field) => {
+    if (columnFilter.field === field) {
+      if (columnFilter.order === "asc") {
+        setColumnFilter({ field, order: "desc", query: searchQuery });
+      } else {
+        setColumnFilter({ field: "", order: "", query: searchQuery });
+      }
+    } else {
+      setColumnFilter({ field, order: "asc", query: searchQuery });
+    }
+    setPage(1);
   };
 
   // Saves item changes
@@ -403,8 +435,6 @@ const Inventory = () => {
       setItemToDelete(null);
     }
   };
-
-  const isFiltering = searchQuery.trim() !== "";
 
   return (
     <>
@@ -551,17 +581,30 @@ const Inventory = () => {
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Item Name</th>
-                  <th>Stock</th>
-                  <th>Category</th>
-                  <th>Purchase Price</th>
-                  <th>Unit Price</th>
-                  <th>Unit</th>
-                  <th>Supplier</th>
-                  <th>Expiration Date</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  {[
+                    { label: "ID", field: "itemId" },
+                    { label: "Item Name", field: "name" },
+                    { label: "Stock", field: "stock" },
+                    { label: "Category", field: "category" },
+                    { label: "Purchase Price", field: "purchasePrice" },
+                    { label: "Unit Price", field: "unitPrice" },
+                    { label: "Unit", field: "amount" },
+                    { label: "Supplier", field: "supplier" },
+                    { label: "Expiration Date", field: "expirationDate" },
+                    { label: "Status", field: "status" },
+                    { label: "Actions", field: null },
+                  ].map((col) => (
+                    <th
+                      key={col.label}
+                      onClick={() => col.field && handleColumnClick(col.field)}
+                      style={{ cursor: col.field ? "pointer" : "default" }}
+                    >
+                      {col.label}{" "}
+                      {col.field && columnFilter.field === col.field && (
+                        <span>{columnFilter.order === "asc" ? "▲" : "▼"}</span>
+                      )}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>

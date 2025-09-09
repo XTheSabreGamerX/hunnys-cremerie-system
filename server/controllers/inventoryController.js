@@ -23,7 +23,7 @@ function computeStatus(item) {
   return "Well-stocked";
 }
 
-// GET all inventory items (with search + pagination)
+// GET all inventory items (with search + pagination + column filter)
 const getAllInventoryItems = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -31,45 +31,58 @@ const getAllInventoryItems = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const search = req.query.search?.trim() || "";
+    const field = req.query.field;
+    const order = req.query.order === "desc" ? -1 : 1;
 
     let searchFilter = {};
+
     if (search) {
       const isNumber = !isNaN(search);
       const isDate = !isNaN(Date.parse(search));
 
-      searchFilter = {
-        $or: [
-          // String fields
-          { itemId: { $regex: search, $options: "i" } },
-          { name: { $regex: search, $options: "i" } },
-          { category: { $regex: search, $options: "i" } },
-          { supplier: { $regex: search, $options: "i" } },
-          { status: { $regex: search, $options: "i" } },
-
-          // Number fields
-          ...(isNumber
-            ? [
-                { purchasePrice: Number(search) },
-                { unitPrice: Number(search) },
-                { amount: Number(search) },
-                { restockThreshold: Number(search) },
-              ]
-            : []),
-
-          // Date fields
-          ...(isDate ? [{ expirationDate: new Date(search) }] : []),
-        ],
-      };
+      if (field) {
+        // Filter only on the specified column
+        if (
+          ["purchasePrice", "unitPrice", "amount", "restockThreshold"].includes(
+            field
+          ) &&
+          isNumber
+        ) {
+          searchFilter[field] = Number(search);
+        } else if (field === "expirationDate" && isDate) {
+          searchFilter[field] = new Date(search);
+        } else {
+          searchFilter[field] = { $regex: search, $options: "i" };
+        }
+      } else {
+        searchFilter = {
+          $or: [
+            { itemId: { $regex: search, $options: "i" } },
+            { name: { $regex: search, $options: "i" } },
+            { category: { $regex: search, $options: "i" } },
+            { supplier: { $regex: search, $options: "i" } },
+            { status: { $regex: search, $options: "i" } },
+            ...(isNumber
+              ? [
+                  { purchasePrice: Number(search) },
+                  { unitPrice: Number(search) },
+                  { amount: Number(search) },
+                  { restockThreshold: Number(search) },
+                ]
+              : []),
+            ...(isDate ? [{ expirationDate: new Date(search) }] : []),
+          ],
+        };
+      }
     }
 
     const totalItems = await InventoryItem.countDocuments(searchFilter);
     const totalPages = Math.ceil(totalItems / limit);
 
-    // Fetch filtered items
     const items = await InventoryItem.find(searchFilter)
       .skip(skip)
       .limit(limit)
-      .sort({ itemId: 1 })
+      .sort(field ? { [field]: order } : { itemId: 1 })
       .populate("unit", "name amount")
       .populate("createdBy", "username");
 
