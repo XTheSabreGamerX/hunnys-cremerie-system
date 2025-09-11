@@ -36,6 +36,29 @@ html, body, #root {
   margin-left: 70px;
 }
 
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .module-main-content {
+    margin-left: 0;
+    padding: 0.5rem;
+    width: 100%;
+  }
+  
+  .sidebar.collapsed + .module-main-content {
+    margin-left: 0;
+  }
+  
+  /* Ensure no white space on mobile */
+  body {
+    overflow-x: hidden;
+  }
+  
+  #root {
+    width: 100%;
+    overflow-x: hidden;
+  }
+}
+
 .module-main-content h1 {
   font-size: 2rem;
   margin-bottom: 1.5rem;

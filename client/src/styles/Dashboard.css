@@ -13,6 +13,30 @@
   margin-left: 70px;
 }
 
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .dashboard-main-content {
+    margin-left: 0;
+    padding: 1rem;
+    height: calc(100vh - 60px);
+    width: 100%;
+  }
+  
+  .sidebar.collapsed + .dashboard-main-content {
+    margin-left: 0;
+  }
+  
+  /* Ensure no white space on mobile */
+  body {
+    overflow-x: hidden;
+  }
+  
+  #root {
+    width: 100%;
+    overflow-x: hidden;
+  }
+}
+
 .dashboard-title {
   margin-bottom: 20px;
   font-size: 1.8rem;
