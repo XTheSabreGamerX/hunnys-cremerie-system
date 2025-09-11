@@ -7,13 +7,16 @@ import ViewModal from "../components/ViewModal";
 import PopupMessage from "../components/PopupMessage";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { showToast } from "../components/ToastContainer";
+import DateRangeFilter from "../components/DateRangeFilter";
 import "../styles/App.css";
 import "../styles/Inventory.css";
 
 const Inventory = () => {
   const [items, setItems] = useState([]);
+  const [cakeItems, setCakeItems] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [uoms, setUoms] = useState([]);
+  const [cakeSize, setCakeSizes] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [columnFilter, setColumnFilter] = useState({ field: "", query: "" });
   const [selectedItem, setSelectedItem] = useState(null);
@@ -29,6 +32,7 @@ const Inventory = () => {
   const [popupType, setPopupType] = useState("success");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [inventoryType, setInventoryType] = useState("Inventory");
 
   const nanoid = customAlphabet("0123456789", 6);
   const containerRef = useRef(null);
@@ -98,6 +102,62 @@ const Inventory = () => {
     { label: "Expiration Date", name: "expirationDate", type: "date" },
   ];
 
+  const cakeFields = [
+    {
+      label: "Cake Name",
+      name: "name",
+      type: "text",
+      required: true,
+      placeholder: "e.g. Chocolate Fudge, Red Velvet, etc.",
+    },
+    {
+      label: "Category",
+      name: "category",
+      type: "text",
+      required: true,
+      placeholder: "e.g. Birthday, Wedding, etc.",
+    },
+    {
+      label: "Size",
+      name: "size",
+      type: "select",
+      options: cakeSize.map((s) => ({ value: s._id, label: s.name })),
+      required: true,
+    },
+    {
+      label: "Stock",
+      name: "stock",
+      type: "number",
+      placeholder: "Enter current stock...",
+    },
+    {
+      label: "Unit Price",
+      name: "unitPrice",
+      type: "number",
+      placeholder: "Selling price per cake",
+      required: true,
+    },
+    {
+      label: "Amount",
+      name: "amount",
+      type: "number",
+      placeholder: "Number of units per cake",
+      required: true,
+    },
+    {
+      label: "Expiration Date",
+      name: "expirationDate",
+      type: "date",
+    },
+    {
+      label: "Ingredients",
+      name: "ingredients",
+      type: "multiselect",
+      options: items.map((i) => ({ value: i._id, label: i.name })),
+      required: true,
+    },
+  ];
+
   const showPopup = (message, type = "success") => {
     setPopupMessage(message);
     setPopupType(type);
@@ -107,7 +167,7 @@ const Inventory = () => {
     }, 2000);
   };
 
-  // Fetches all inventory items
+  /* // Fetches all inventory items
   const fetchItems = useCallback(async () => {
     try {
       const res = await fetch(
@@ -143,7 +203,66 @@ const Inventory = () => {
     } catch (err) {
       console.error("Error fetching inventory:", err);
     }
-  }, [API_BASE, page, searchQuery, columnFilter, token]);
+  }, [API_BASE, page, searchQuery, columnFilter, token]); */
+
+  // Fetches all inventory items or cakes based on inventoryType
+  const fetchItems = useCallback(async () => {
+    try {
+      let url = "";
+      if (inventoryType === "Inventory") {
+        url = `${API_BASE}/api/inventory?page=${page}&limit=10&search=${encodeURIComponent(
+          searchQuery
+        )}&field=${columnFilter.field || ""}&order=${
+          columnFilter.order || "asc"
+        }`;
+      } else if (inventoryType === "Cake Inventory") {
+        url = `${API_BASE}/api/cakes?page=${page}&limit=10&search=${encodeURIComponent(
+          searchQuery
+        )}`;
+      }
+
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+
+      // Wrap array responses into a standard object
+      const wrappedData = Array.isArray(data)
+        ? inventoryType === "All Inventory"
+          ? {
+              items: data,
+              currentPage: 1,
+              totalPages: 1,
+              totalItems: data.length,
+            }
+          : {
+              cakes: data,
+              currentPage: 1,
+              totalPages: 1,
+              totalItems: data.length,
+            }
+        : data;
+
+      if (inventoryType === "Inventory") {
+        setItems((prev) =>
+          page === 1
+            ? wrappedData.items || []
+            : [...prev, ...(wrappedData.items || [])]
+        );
+        setHasMore(page < (wrappedData.totalPages || 1));
+      } else {
+        setCakeItems((prev) =>
+          page === 1
+            ? wrappedData.cakes || []
+            : [...prev, ...(wrappedData.cakes || [])]
+        );
+        setHasMore(page < (wrappedData.totalPages || 1));
+      }
+    } catch (err) {
+      console.error("Error fetching inventory:", err);
+    }
+  }, [API_BASE, page, searchQuery, columnFilter, inventoryType, token]);
 
   // Fetch Suppliers
   const fetchSuppliers = useCallback(async () => {
@@ -197,6 +316,26 @@ const Inventory = () => {
     if (token) fetchUoms();
   }, [API_BASE, page, token]);
 
+  // Fetch Cake Sizes
+  useEffect(() => {
+    const fetchCakeSizes = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/cakes/sizes`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) throw new Error("Failed to fetch cake sizes");
+        const data = await res.json();
+        setCakeSizes(data);
+      } catch (err) {
+        console.error("Failed to fetch cake sizes:", err);
+      }
+    };
+
+    if (token) fetchCakeSizes();
+  }, [API_BASE, token]);
+
   useEffect(() => {
     fetchItems();
     fetchSuppliers();
@@ -227,20 +366,10 @@ const Inventory = () => {
     };
   }, [hasMore]);
 
-  /* useEffect(() => {
-    const query = searchQuery.toLowerCase().trim();
-
-    if (!query) {
-      setFilteredItems([]);
-      return;
-    }
-
-    const filtered = items.filter((item) =>
-      (item[searchField] || "").toString().toLowerCase().includes(query)
-    );
-
-    setFilteredItems(filtered);
-  }, [searchQuery, searchField, items]); */
+  const handleInventoryToggle = (type) => {
+    setInventoryType(type);
+    setPage(1);
+  };
 
   const validateFormData = (data) => {
     const { itemId, name, stock, unitPrice, expirationDate } = data;
@@ -508,22 +637,42 @@ const Inventory = () => {
         />
       )}
 
-      {(modalMode === "edit" || modalMode === "add") && (
-        <EditModal
-          item={modalMode === "edit" ? selectedItem : null}
-          fields={inventoryFields}
-          onSave={handleAddOrEdit}
-          modalType="inventory"
-          onClose={() => {
-            setSelectedItem(null);
-            setModalMode("view");
-          }}
-          mode={modalMode}
-          formData={formData}
-          setFormData={setFormData}
-          uoms={uoms}
-        />
-      )}
+      {(modalMode === "edit" || modalMode === "add") &&
+        inventoryType === "Inventory" && (
+          <EditModal
+            item={modalMode === "edit" ? selectedItem : null}
+            fields={inventoryFields}
+            onSave={handleAddOrEdit}
+            modalType="inventory"
+            onClose={() => {
+              setSelectedItem(null);
+              setModalMode("view");
+            }}
+            mode={modalMode}
+            formData={formData}
+            setFormData={setFormData}
+            uoms={uoms}
+          />
+        )}
+
+      {(modalMode === "edit" || modalMode === "add") &&
+        inventoryType === "Cake Inventory" && (
+          <EditModal
+            item={modalMode === "edit" ? selectedItem : null}
+            fields={cakeFields}
+            onSave={handleAddOrEdit}
+            modalType="cake"
+            onClose={() => {
+              setSelectedItem(null);
+              setModalMode("view");
+            }}
+            mode={modalMode}
+            formData={formData}
+            setFormData={setFormData}
+            cakeSizes={cakeSize} // pass the sizes for the dropdown
+            items={items} // pass inventory items as ingredients
+          />
+        )}
 
       {showConfirmation && (
         <ConfirmationModal
@@ -553,6 +702,11 @@ const Inventory = () => {
               <option value="category">Category</option>
               <option value="supplier">Supplier</option>
             </select> */}
+
+            <DateRangeFilter
+              options={["Inventory", "Cake Inventory"]}
+              onChange={handleInventoryToggle}
+            />
 
             <input
               type="text"
@@ -608,63 +762,110 @@ const Inventory = () => {
                 </tr>
               </thead>
               <tbody>
-                {items.length === 0 ? (
-                  <tr>
-                    <td colSpan="11">No items found.</td>
-                  </tr>
-                ) : (
-                  items.map((item) => (
-                    <tr key={item._id}>
-                      <td>{item.itemId}</td>
-                      <td>{item.name}</td>
-                      <td>{item.stock}</td>
-                      <td>{item.category || "—"}</td>
-                      <td>₱{item.purchasePrice}</td>
-                      <td>₱{item.unitPrice}</td>
-                      <td>
-                        {item.amount
-                          ? `${item.amount} ${item.unit?.name || ""}`
-                          : "—"}
-                      </td>
-                      <td>
-                        {suppliers.find((s) => s._id === item.supplier)?.name ||
-                          "—"}
-                      </td>
-                      <td>
-                        {item.expirationDate
-                          ? new Date(item.expirationDate).toLocaleDateString(
-                              "en-PH",
-                              {
-                                timeZone: "Asia/Manila",
-                              }
-                            )
-                          : "N/A"}
-                      </td>
-                      <td>{item.status}</td>
-                      <td>
-                        <button
-                          className="module-action-btn module-edit-btn"
-                          onClick={() => {
-                            setSelectedItem(item);
-                            setModalMode("edit");
-                          }}
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          className="module-action-btn module-view-btn"
-                          onClick={() => {
-                            setViewedItem(item);
-                            setIsViewOpen(true);
-                          }}
-                        >
-                          View
-                        </button>
-                      </td>
+                {inventoryType === "Inventory" ? (
+                  items.length === 0 ? (
+                    <tr>
+                      <td colSpan="11">No items found.</td>
                     </tr>
-                  ))
-                )}
+                  ) : (
+                    items.map((item) => (
+                      <tr key={item._id}>
+                        <td>{item.itemId}</td>
+                        <td>{item.name}</td>
+                        <td>{item.stock}</td>
+                        <td>{item.category || "—"}</td>
+                        <td>₱{item.purchasePrice}</td>
+                        <td>₱{item.unitPrice}</td>
+                        <td>
+                          {item.amount
+                            ? `${item.amount} ${item.unit?.name || ""}`
+                            : "—"}
+                        </td>
+                        <td>
+                          {suppliers.find((s) => s._id === item.supplier)
+                            ?.name || "—"}
+                        </td>
+                        <td>
+                          {item.expirationDate
+                            ? new Date(item.expirationDate).toLocaleDateString(
+                                "en-PH",
+                                { timeZone: "Asia/Manila" }
+                              )
+                            : "N/A"}
+                        </td>
+                        <td>{item.status}</td>
+                        <td>
+                          <button
+                            className="module-action-btn module-edit-btn"
+                            onClick={() => {
+                              setSelectedItem(item);
+                              setModalMode("edit");
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="module-action-btn module-view-btn"
+                            onClick={() => {
+                              setViewedItem(item);
+                              setIsViewOpen(true);
+                            }}
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )
+                ) : inventoryType === "Cake Inventory" ? (
+                  cakeItems.length === 0 ? (
+                    <tr>
+                      <td colSpan="11">No cakes found.</td>
+                    </tr>
+                  ) : (
+                    cakeItems.map((cake) => (
+                      <tr key={cake._id}>
+                        <td>{cake._id}</td> {/* Cake ID */}
+                        <td>{cake.name}</td> {/* Cake Name */}
+                        <td>{cake.category || "—"}</td> {/* Category */}
+                        <td>{cake.size?.name || "—"}</td> {/* Size */}
+                        <td>{cake.stock || 0}</td> {/* Stock */}
+                        <td>₱{cake.unitPrice || 0}</td> {/* Unit Price */}
+                        <td>{cake.amount || 0}</td> {/* Amount */}
+                        <td>
+                          {cake.ingredients?.length
+                            ? cake.ingredients.map((i) => i.name).join(", ")
+                            : "—"}
+                        </td>{" "}
+                        {/* Ingredients */}
+                        <td>
+                          {cake.expirationDate
+                            ? new Date(cake.expirationDate).toLocaleDateString(
+                                "en-PH",
+                                {
+                                  timeZone: "Asia/Manila",
+                                }
+                              )
+                            : "N/A"}
+                        </td>{" "}
+                        {/* Expiration Date */}
+                        <td>{cake.status || "—"}</td> {/* Status */}
+                        <td>
+                          <button
+                            className="module-action-btn module-view-btn"
+                            onClick={() => {
+                              setViewedItem(cake);
+                              setIsViewOpen(true);
+                            }}
+                          >
+                            View
+                          </button>
+                        </td>{" "}
+                        {/* Actions */}
+                      </tr>
+                    ))
+                  )
+                ) : null }
               </tbody>
             </table>
           </div>

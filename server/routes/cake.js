@@ -11,7 +11,7 @@ const {
   deleteCake,
   processCakeSale,
 } = require("../controllers/cakeController");
-const { authenticateToken } = require("../middleware/auth");
+const authenticateToken = require("../middleware/auth");
 
 // CAKE SIZE ROUTES
 router.get("/size", authenticateToken, getAllCakeSizes);

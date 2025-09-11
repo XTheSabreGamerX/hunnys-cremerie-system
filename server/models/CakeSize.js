@@ -1,4 +1,4 @@
-const mongoose = require('require');
+const mongoose = require('mongoose');
 
 const cakeSizeSchema = new mongoose.Schema({
     name: {
