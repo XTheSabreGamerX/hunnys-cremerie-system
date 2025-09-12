@@ -4,6 +4,7 @@ import { customAlphabet } from "nanoid/non-secure";
 import DashboardLayout from "../scripts/DashboardLayout";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
+import CakeEditModal from "../components/CakeEditModal";
 import PopupMessage from "../components/PopupMessage";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { showToast } from "../components/ToastContainer";
@@ -20,6 +21,7 @@ const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [columnFilter, setColumnFilter] = useState({ field: "", query: "" });
   const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedCake, setSelectedCake] = useState(null);
   const [modalMode, setModalMode] = useState("view");
   const [formData, setFormData] = useState({});
   const [pendingEditData, setPendingEditData] = useState(null);
@@ -167,44 +169,6 @@ const Inventory = () => {
     }, 2000);
   };
 
-  /* // Fetches all inventory items
-  const fetchItems = useCallback(async () => {
-    try {
-      const res = await fetch(
-        `${API_BASE}/api/inventory?page=${page}&limit=10&search=${encodeURIComponent(
-          searchQuery
-        )}&field=${columnFilter.field || ""}&order=${
-          columnFilter.order || "asc"
-        }`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const data = await res.json();
-
-      const wrappedData = Array.isArray(data)
-        ? {
-            items: data,
-            currentPage: 1,
-            totalPages: 1,
-            totalItems: data.length,
-          }
-        : data;
-
-      setItems((prev) =>
-        page === 1
-          ? wrappedData.items || []
-          : [...prev, ...(wrappedData.items || [])]
-      );
-      setHasMore(page < wrappedData.totalPages);
-    } catch (err) {
-      console.error("Error fetching inventory:", err);
-    }
-  }, [API_BASE, page, searchQuery, columnFilter, token]); */
-
   // Fetches all inventory items or cakes based on inventoryType
   const fetchItems = useCallback(async () => {
     try {
@@ -320,13 +284,14 @@ const Inventory = () => {
   useEffect(() => {
     const fetchCakeSizes = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/cakes/sizes`, {
+        const res = await fetch(`${API_BASE}/api/cake/size`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
         if (!res.ok) throw new Error("Failed to fetch cake sizes");
         const data = await res.json();
+        console.log("Cake size response:", data);
         setCakeSizes(data);
       } catch (err) {
         console.error("Failed to fetch cake sizes:", err);
@@ -574,7 +539,6 @@ const Inventory = () => {
           onClose={() => setPopupMessage("")}
         />
       )}
-
       {isViewOpen && viewedItem && (
         <ViewModal
           item={viewedItem}
@@ -623,7 +587,6 @@ const Inventory = () => {
           onDelete={() => handleDelete(viewedItem._id)}
         />
       )}
-
       {isConfirmOpen && (
         <ConfirmationModal
           message={`Are you sure you want to delete "${
@@ -637,6 +600,7 @@ const Inventory = () => {
         />
       )}
 
+      {/* INVENTORY MODAL */}
       {(modalMode === "edit" || modalMode === "add") &&
         inventoryType === "Inventory" && (
           <EditModal
@@ -655,24 +619,23 @@ const Inventory = () => {
           />
         )}
 
-      {(modalMode === "edit" || modalMode === "add") &&
-        inventoryType === "Cake Inventory" && (
-          <EditModal
-            item={modalMode === "edit" ? selectedItem : null}
-            fields={cakeFields}
-            onSave={handleAddOrEdit}
-            modalType="cake"
-            onClose={() => {
-              setSelectedItem(null);
-              setModalMode("view");
-            }}
-            mode={modalMode}
-            formData={formData}
-            setFormData={setFormData}
-            cakeSizes={cakeSize} // pass the sizes for the dropdown
-            items={items} // pass inventory items as ingredients
-          />
-        )}
+      {/* CAKE MODAL */}
+      {(modalMode === "cake-add" || modalMode === "cake-edit") && (
+        <CakeEditModal
+          item={selectedCake}
+          onSave={(formData) => {
+            // Hook into your Cake API (POST for add, PUT for edit)
+            console.log("Cake saved:", formData);
+
+            setModalMode(null);
+          }}
+          onClose={() => setModalMode(null)}
+          mode={modalMode === "cake-edit" ? "edit" : "add"}
+          cakeSizes={cakeSize}
+          allItems={items}
+          fields={cakeFields}
+        />
+      )}
 
       {showConfirmation && (
         <ConfirmationModal
@@ -684,7 +647,6 @@ const Inventory = () => {
           }}
         />
       )}
-
       <DashboardLayout>
         <main className="module-main-content inventory-main">
           <div className="module-header">
@@ -719,15 +681,26 @@ const Inventory = () => {
               }}
             />
 
+            {/* Add Inventory Item */}
             <button
               className="module-action-btn module-add-btn"
               onClick={() => {
-                setModalMode("add");
                 setSelectedItem(null);
-                setFormData({});
+                setModalMode("add");
               }}
             >
-              Add Item
+              + Add Item
+            </button>
+
+            {/* Add Cake */}
+            <button
+              className="module-action-btn module-add-btn"
+              onClick={() => {
+                setSelectedCake(null);
+                setModalMode("cake-add");
+              }}
+            >
+              + Add Cake
             </button>
           </div>
 
@@ -865,7 +838,7 @@ const Inventory = () => {
                       </tr>
                     ))
                   )
-                ) : null }
+                ) : null}
               </tbody>
             </table>
           </div>
