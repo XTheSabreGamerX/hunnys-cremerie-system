@@ -21,7 +21,7 @@ router.delete("/size/delete/:id", authenticateToken, deleteCakeSize);
 
 // CAKE ROUTES
 router.get('/', authenticateToken, getAllCakes);
-router.post('/', authenticateToken, addCake);
+router.post('/add', authenticateToken, addCake);
 router.put('/:id', authenticateToken, updateCake);
 router.delete('/:id', authenticateToken, deleteCake);
 router.post('/:id/sell', authenticateToken, processCakeSale);

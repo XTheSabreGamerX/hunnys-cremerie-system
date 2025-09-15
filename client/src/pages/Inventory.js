@@ -21,10 +21,13 @@ const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [columnFilter, setColumnFilter] = useState({ field: "", query: "" });
   const [selectedItem, setSelectedItem] = useState(null);
-  const [selectedCake, setSelectedCake] = useState(null);
+  const [, setSelectedCake] = useState(null);
+  /* selectedCake */
   const [modalMode, setModalMode] = useState("view");
   const [formData, setFormData] = useState({});
   const [pendingEditData, setPendingEditData] = useState(null);
+  const [, setPendingCakeData] = useState(null);
+  /* pendingCakeData */
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewedItem, setViewedItem] = useState(null);
@@ -35,6 +38,9 @@ const Inventory = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [inventoryType, setInventoryType] = useState("Inventory");
+  const [selectedIngredientOption, setSelectedIngredientOption] =
+    useState(null);
+  const [ingredientForm, setIngredientForm] = useState({ quantity: 1 });
 
   const nanoid = customAlphabet("0123456789", 6);
   const containerRef = useRef(null);
@@ -530,6 +536,74 @@ const Inventory = () => {
     }
   };
 
+  const handleAddIngredient = () => {
+    if (!selectedIngredientOption) return;
+
+    const newIngredient = {
+      _id: selectedIngredientOption.value,
+      name: selectedIngredientOption.label,
+      quantity: ingredientForm.quantity || 1,
+    };
+
+    setFormData((prev) => ({
+      ...prev,
+      ingredients: [...(prev.ingredients || []), newIngredient],
+    }));
+
+    setSelectedIngredientOption(null);
+    setIngredientForm({ quantity: 1 });
+  };
+
+  const handleChange = (name, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSeasonalChange = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      seasonalPeriod: {
+        ...prev.seasonalPeriod,
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData) return;
+
+    if (modalMode === "cake-edit") {
+      // Save for confirmation first
+      setPendingCakeData(formData);
+      setShowConfirmation(true); // same confirmation modal as Inventory
+    } else {
+      // Add mode → save immediately
+      saveItem(formData); // this function actually calls your backend
+      closeModal();
+      showPopup("Cake saved successfully!");
+    }
+  };
+
+  /* const handleConfirmEditCake = async () => {
+    if (pendingCakeData) {
+      await saveItem(pendingCakeData);
+      showPopup("Cake updated successfully!");
+    }
+    setPendingCakeData(null);
+    setShowConfirmation(false);
+    closeModal();
+  }; */
+
+  const closeModal = () => {
+    setModalMode(null);
+    setFormData({});
+    setSelectedIngredientOption(null);
+    setIngredientForm({ quantity: 1 });
+  };
+
   return (
     <>
       {popupMessage && (
@@ -622,18 +696,19 @@ const Inventory = () => {
       {/* CAKE MODAL */}
       {(modalMode === "cake-add" || modalMode === "cake-edit") && (
         <CakeEditModal
-          item={selectedCake}
-          onSave={(formData) => {
-            // Hook into your Cake API (POST for add, PUT for edit)
-            console.log("Cake saved:", formData);
-
-            setModalMode(null);
-          }}
-          onClose={() => setModalMode(null)}
-          mode={modalMode === "cake-edit" ? "edit" : "add"}
-          cakeSizes={cakeSize}
-          allItems={items}
-          fields={cakeFields}
+          mode={modalMode}
+          cakeFields={cakeFields}
+          formData={formData}
+          setFormData={setFormData}
+          selectedIngredientOption={selectedIngredientOption}
+          setSelectedIngredientOption={setSelectedIngredientOption}
+          ingredientForm={ingredientForm}
+          setIngredientForm={setIngredientForm}
+          handleAddIngredient={handleAddIngredient}
+          handleSubmit={handleSubmit}
+          handleChange={handleChange}
+          handleSeasonalChange={handleSeasonalChange}
+          onClose={closeModal}
         />
       )}
 
@@ -654,17 +729,6 @@ const Inventory = () => {
           </div>
 
           <div className="module-actions-container">
-            {/* <select
-              className="module-filter-dropdown"
-              value={searchField}
-              onChange={(e) => setSearchField(e.target.value)}
-            >
-              <option value="itemId">Item ID</option>
-              <option value="name">Name</option>
-              <option value="category">Category</option>
-              <option value="supplier">Supplier</option>
-            </select> */}
-
             <DateRangeFilter
               options={["Inventory", "Cake Inventory"]}
               onChange={handleInventoryToggle}
