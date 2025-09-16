@@ -414,6 +414,18 @@ const Inventory = () => {
         showPopup("Please select availability.", "error");
         return false;
       }
+      if (!data.layers || data.layers.length === 0) {
+        showPopup("Please add at least one layer.", "error");
+        return false;
+      }
+      if (
+        data.price === undefined ||
+        data.price === null ||
+        data.price === ""
+      ) {
+        showPopup("Please enter the cake price.", "error");
+        return false;
+      }
       if (!data.ingredients || data.ingredients.length === 0) {
         showPopup("Please add at least one ingredient.", "error");
         return false;
@@ -423,6 +435,7 @@ const Inventory = () => {
       data.stock = Number(data.stock) || 0;
       data.unitPrice = Number(data.unitPrice) || 0;
       data.amount = Number(data.amount) || 0;
+      data.price = Number(data.price) || 0;
     } else {
       // Existing Inventory validation
       const { itemId, name, stock, unitPrice, expirationDate } = data;
@@ -687,33 +700,48 @@ const Inventory = () => {
     e.preventDefault();
     if (!formData) return;
 
-    if (
-      !formData.name?.trim() ||
-      !formData.price ||
-      !formData.layers ||
-      !formData.size
-    ) {
-      showToast({
-        message: "Please fill in all required cake fields!",
-        type: "error",
-        duration: 3000,
-      });
-      return;
-    }
+    // Normalize ingredients for Cake Schema
+    const normalizedIngredients = Array.isArray(formData.ingredients)
+      ? formData.ingredients.map((ing) => ({
+          inventoryItem: ing._id || ing.value || null, // Ensure ObjectId is sent
+          quantity: Number(ing.quantity) || 1,
+        }))
+      : [];
 
     const normalizedData = {
       ...formData,
-      ingredients: formData.ingredients || [],
-      seasonalPeriod: formData.seasonalPeriod || { startDate: "", endDate: "" },
+      unitPrice: Number(formData.unitPrice) || 0,
+      amount: Number(formData.amount) || 0,
+      price: Number(formData.price) || 0,
+      layers: Number(formData.layers) || 1,
+      availability:
+        formData.availability === "Regular" ? "Always" : formData.availability,
+      seasonalPeriod:
+        formData.availability === "Seasonal"
+          ? {
+              startDate: formData.seasonalPeriod?.startDate || "",
+              endDate: formData.seasonalPeriod?.endDate || "",
+            }
+          : undefined,
+      ingredients: normalizedIngredients,
     };
+
+    if (!validateFormData(normalizedData)) return;
 
     if (modalMode === "cake-edit") {
       setPendingCakeData(normalizedData);
       setShowConfirmation(true);
     } else {
-      saveItem(normalizedData, { mode: "add" });
+      saveItem(normalizedData);
       closeModal();
-      showPopup("Cake saved successfully!");
+      showToast({
+        message: `Cake ${
+          modalMode.includes("add") ? "added" : "updated"
+        } successfully!`,
+        type: "success",
+        duration: 3000,
+      });
+      /* showPopup("Cake saved successfully!"); */
     }
   };
 
@@ -902,19 +930,36 @@ const Inventory = () => {
             <table>
               <thead>
                 <tr>
-                  {[
-                    { label: "ID", field: "itemId" },
-                    { label: "Item Name", field: "name" },
-                    { label: "Stock", field: "stock" },
-                    { label: "Category", field: "category" },
-                    { label: "Purchase Price", field: "purchasePrice" },
-                    { label: "Unit Price", field: "unitPrice" },
-                    { label: "Unit", field: "amount" },
-                    { label: "Supplier", field: "supplier" },
-                    { label: "Expiration Date", field: "expirationDate" },
-                    { label: "Status", field: "status" },
-                    { label: "Actions", field: null },
-                  ].map((col) => (
+                  {(inventoryType === "Inventory"
+                    ? [
+                        { label: "ID", field: "itemId" },
+                        { label: "Item Name", field: "name" },
+                        { label: "Stock", field: "stock" },
+                        { label: "Category", field: "category" },
+                        { label: "Purchase Price", field: "purchasePrice" },
+                        { label: "Unit Price", field: "unitPrice" },
+                        { label: "Unit", field: "amount" },
+                        { label: "Supplier", field: "supplier" },
+                        { label: "Expiration Date", field: "expirationDate" },
+                        { label: "Status", field: "status" },
+                        { label: "Actions", field: null },
+                      ]
+                    : inventoryType === "Cake Inventory"
+                    ? [
+                        { label: "ID", field: "_id" },
+                        { label: "Cake Name", field: "name" },
+                        { label: "Category", field: "category" },
+                        { label: "Size", field: "size" },
+                        { label: "Stock", field: "stock" },
+                        { label: "Unit Price", field: "unitPrice" },
+                        { label: "Amount", field: "amount" },
+                        { label: "Ingredients", field: null },
+                        { label: "Expiration Date", field: "expirationDate" },
+                        { label: "Status", field: "status" },
+                        { label: "Actions", field: null },
+                      ]
+                    : []
+                  ).map((col) => (
                     <th
                       key={col.label}
                       onClick={() => col.field && handleColumnClick(col.field)}
