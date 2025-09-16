@@ -108,6 +108,17 @@ const CakeEditModal = ({
     return null;
   };
 
+  const handleQuantityChange = (index, change) => {
+    setFormData((prevData) => {
+      const updatedIngredients = [...prevData.ingredients];
+      updatedIngredients[index] = {
+        ...updatedIngredients[index],
+        quantity: Math.max(1, updatedIngredients[index].quantity + change),
+      };
+      return { ...prevData, ingredients: updatedIngredients };
+    });
+  };
+
   return (
     <div className="cake-modal-overlay">
       <div className="cake-modal-content">
@@ -124,49 +135,107 @@ const CakeEditModal = ({
                   )}
                 </label>
                 {renderInput(field)}
+
+                {/* Render Seasonal Period right after Availability */}
+                {field.name === "availability" &&
+                  formData.availability === "Seasonal" && (
+                    <div className="cake-form-group">
+                      <label>Seasonal Period</label>
+                      <div className="cake-seasonal-period">
+                        <input
+                          type="date"
+                          className="cake-input"
+                          value={formData.seasonalPeriod?.startDate || ""}
+                          onChange={(e) =>
+                            handleSeasonalChange("startDate", e.target.value)
+                          }
+                        />
+                        <input
+                          type="date"
+                          className="cake-input"
+                          value={formData.seasonalPeriod?.endDate || ""}
+                          onChange={(e) =>
+                            handleSeasonalChange("endDate", e.target.value)
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
               </div>
             ))}
-
-            {/* Seasonal Period (conditional) */}
-            {formData.availability === "Seasonal" && (
-              <div className="cake-form-group">
-                <label>Seasonal Period</label>
-                <div className="cake-seasonal-period">
-                  <input
-                    type="date"
-                    className="cake-input"
-                    value={formData.seasonalPeriod?.startDate || ""}
-                    onChange={(e) =>
-                      handleSeasonalChange("startDate", e.target.value)
-                    }
-                  />
-                  <input
-                    type="date"
-                    className="cake-input"
-                    value={formData.seasonalPeriod?.endDate || ""}
-                    onChange={(e) =>
-                      handleSeasonalChange("endDate", e.target.value)
-                    }
-                  />
-                </div>
-              </div>
-            )}
           </div>
 
           {/* RIGHT COLUMN */}
-          <div className="cake-form-right">
-            <h3>Ingredients</h3>
-            <div className="cake-ingredient-list">
-              {formData.ingredients?.length === 0 && (
-                <p>No ingredients added yet.</p>
-              )}
-              {formData.ingredients?.map((ing, idx) => (
-                <div key={idx} className="cake-ingredient-row">
-                  <span>{ing.name}</span>
-                  <span>{ing.quantity}</span>
-                </div>
-              ))}
-            </div>
+          <div className="cake-ingredient-list">
+            {!formData ||
+            !Array.isArray(formData.ingredients) ||
+            formData.ingredients.length === 0 ? (
+              <p>No ingredients added yet.</p>
+            ) : (
+              <div className="cake-ingredient-board">
+                <table className="cake-ingredient-table">
+                  <thead>
+                    <tr>
+                      <th>Ingredient</th>
+                      <th>Quantity</th>
+                      <th>Stock</th>
+                      <th>Unit Price</th>
+                      <th>Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(formData.ingredients || []).map((ing, index) => (
+                      <tr key={index}>
+                        <td>{ing.name}</td>
+                        <td>{ing.quantity}</td>
+                        <td>{ing.stock ?? "—"}</td>
+                        <td>{ing.unitPrice ?? "—"}</td>
+                        <td>
+                          {ing.quantity && ing.unitPrice
+                            ? (ing.quantity * ing.unitPrice).toFixed(2)
+                            : "—"}
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            onClick={() => handleQuantityChange(index, -1)}
+                          >
+                            −
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleQuantityChange(index, 1)}
+                          >
+                            +
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td
+                        colSpan="4"
+                        style={{ textAlign: "right", fontWeight: "bold" }}
+                      >
+                        Total Ingredient Cost:
+                      </td>
+                      <td style={{ fontWeight: "bold" }}>
+                        ₱
+                        {formData.ingredients
+                          .reduce(
+                            (sum, ing) =>
+                              sum + (ing.quantity || 0) * (ing.unitPrice || 0),
+                            0
+                          )
+                          .toFixed(2)}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
           </div>
         </form>
 

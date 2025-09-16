@@ -24,7 +24,11 @@ const Inventory = () => {
   const [, setSelectedCake] = useState(null);
   /* selectedCake */
   const [modalMode, setModalMode] = useState("view");
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState({
+    name: "",
+    unitPrice: "",
+    ingredients: [],
+  });
   const [pendingEditData, setPendingEditData] = useState(null);
   const [, setPendingCakeData] = useState(null);
   /* pendingCakeData */
@@ -153,6 +157,16 @@ const Inventory = () => {
       required: true,
     },
     {
+      label: "Availability",
+      name: "availability",
+      type: "select",
+      required: true,
+      options: [
+        { value: "Regular", label: "Regular" },
+        { value: "Seasonal", label: "Seasonal" },
+      ],
+    },
+    {
       label: "Expiration Date",
       name: "expirationDate",
       type: "date",
@@ -161,7 +175,47 @@ const Inventory = () => {
       label: "Ingredients",
       name: "ingredients",
       type: "multiselect",
-      options: items.map((i) => ({ value: i._id, label: i.name })),
+      loadOptions: (inputValue) =>
+        fetch(
+          `${API_BASE}/api/inventory?all=true&search=${encodeURIComponent(
+            inputValue
+          )}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+          .then((res) => {
+            if (!res.ok) throw new Error("Failed to fetch inventory options");
+            return res.json();
+          })
+          .then((data) => {
+            const items = Array.isArray(data) ? data : data.items || [];
+            // debug - remove/comment out later
+            // console.log('inventory loadOptions items sample:', items[0]);
+
+            return items.map((i) => {
+              const stock = i.stock ?? i.amount ?? null;
+              const unitPrice =
+                Number(i.purchasePrice ?? i.unitPrice ?? i.price ?? 0) || 0;
+              const unitName = i.unit?.name ?? i.unit ?? null;
+
+              return {
+                value: i._id,
+                label: `${i.name} (Stock: ${stock ?? "—"})`,
+                name: i.name,
+                stock,
+                unitPrice,
+                unit: unitName,
+                raw: i,
+              };
+            });
+          })
+          .catch((err) => {
+            console.error("Async select load failed:", err);
+            return [];
+          }),
       required: true,
     },
   ];
@@ -186,7 +240,7 @@ const Inventory = () => {
           columnFilter.order || "asc"
         }`;
       } else if (inventoryType === "Cake Inventory") {
-        url = `${API_BASE}/api/cakes?page=${page}&limit=10&search=${encodeURIComponent(
+        url = `${API_BASE}/api/cake?page=${page}&limit=10&search=${encodeURIComponent(
           searchQuery
         )}`;
       }
@@ -343,45 +397,79 @@ const Inventory = () => {
   };
 
   const validateFormData = (data) => {
-    const { itemId, name, stock, unitPrice, expirationDate } = data;
-
-    if (!name?.trim()) {
-      showPopup("Please fill up the required fields!", "error");
-      return false;
-    }
-
-    data.stock = stock === "" || stock === undefined ? 0 : Number(stock);
-    data.unitPrice =
-      unitPrice === "" || unitPrice === undefined ? 0 : Number(unitPrice);
-
-    if (isNaN(data.stock) || data.stock < 0) {
-      showPopup("Stock must be a non-negative number.", "error");
-      return false;
-    }
-
-    if (isNaN(data.unitPrice) || data.unitPrice < 0) {
-      showPopup("Unit price must be a non-negative number.", "error");
-      return false;
-    }
-
-    if (expirationDate) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const expDate = new Date(expirationDate);
-      expDate.setHours(0, 0, 0, 0);
-      if (expDate < today) {
-        showPopup("Expiration date cannot be in the past.", "error");
+    if (modalMode === "cake-add" || modalMode === "cake-edit") {
+      if (!data.name?.trim()) {
+        showPopup("Please enter the cake name.", "error");
         return false;
       }
-    }
+      if (!data.category?.trim()) {
+        showPopup("Please enter the cake category.", "error");
+        return false;
+      }
+      if (!data.size) {
+        showPopup("Please select a cake size.", "error");
+        return false;
+      }
+      if (!data.availability) {
+        showPopup("Please select availability.", "error");
+        return false;
+      }
+      if (!data.ingredients || data.ingredients.length === 0) {
+        showPopup("Please add at least one ingredient.", "error");
+        return false;
+      }
 
-    if (
-      modalMode === "add" &&
-      itemId?.trim() &&
-      items.some((i) => i.itemId.toLowerCase() === itemId.trim().toLowerCase())
-    ) {
-      showPopup("Item ID already exists. Please choose a unique ID.", "error");
-      return false;
+      // Optional numeric checks
+      data.stock = Number(data.stock) || 0;
+      data.unitPrice = Number(data.unitPrice) || 0;
+      data.amount = Number(data.amount) || 0;
+    } else {
+      // Existing Inventory validation
+      const { itemId, name, stock, unitPrice, expirationDate } = data;
+
+      if (!name?.trim()) {
+        showPopup("Please fill up the required fields!", "error");
+        return false;
+      }
+
+      data.stock = stock === "" || stock === undefined ? 0 : Number(stock);
+      data.unitPrice =
+        unitPrice === "" || unitPrice === undefined ? 0 : Number(unitPrice);
+
+      if (isNaN(data.stock) || data.stock < 0) {
+        showPopup("Stock must be a non-negative number.", "error");
+        return false;
+      }
+
+      if (isNaN(data.unitPrice) || data.unitPrice < 0) {
+        showPopup("Unit price must be a non-negative number.", "error");
+        return false;
+      }
+
+      if (expirationDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const expDate = new Date(expirationDate);
+        expDate.setHours(0, 0, 0, 0);
+        if (expDate < today) {
+          showPopup("Expiration date cannot be in the past.", "error");
+          return false;
+        }
+      }
+
+      if (
+        modalMode === "add" &&
+        itemId?.trim() &&
+        items.some(
+          (i) => i.itemId.toLowerCase() === itemId.trim().toLowerCase()
+        )
+      ) {
+        showPopup(
+          "Item ID already exists. Please choose a unique ID.",
+          "error"
+        );
+        return false;
+      }
     }
 
     return true;
@@ -404,25 +492,48 @@ const Inventory = () => {
   // Saves item changes
   const saveItem = async (data) => {
     try {
-      let itemId = data.itemId?.trim();
+      // Ensure ingredients array exists for Cake Mode
+      const normalizedData = {
+        ...data,
+        ingredients: data.ingredients || [],
+        seasonalPeriod: data.seasonalPeriod || { startDate: "", endDate: "" },
+      };
 
+      // Generate itemId for inventory add
+      let itemId = normalizedData.itemId?.trim();
       if (modalMode === "add" && !itemId) {
         itemId = `INV-${nanoid(6)}`;
       }
 
       const payload = {
-        ...data,
+        ...normalizedData,
         itemId,
-        stock: isNaN(Number(data.stock)) ? 0 : Number(data.stock),
-        unitPrice: isNaN(Number(data.unitPrice)) ? 0 : Number(data.unitPrice),
-        amount: isNaN(Number(data.amount)) ? 0 : Number(data.amount),
+        stock: isNaN(Number(normalizedData.stock))
+          ? 0
+          : Number(normalizedData.stock),
+        unitPrice: isNaN(Number(normalizedData.unitPrice))
+          ? 0
+          : Number(normalizedData.unitPrice),
+        amount: isNaN(Number(normalizedData.amount))
+          ? 0
+          : Number(normalizedData.amount),
       };
 
-      const method = modalMode === "add" ? "POST" : "PUT";
-      const url =
-        modalMode === "add"
-          ? `${API_BASE}/api/inventory`
-          : `${API_BASE}/api/inventory/${data._id}`;
+      // Determine method and URL
+      let method, url;
+      if (modalMode === "cake-add") {
+        method = "POST";
+        url = `${API_BASE}/api/cake/add`;
+      } else if (modalMode === "cake-edit") {
+        method = "PUT";
+        url = `${API_BASE}/api/cake/${normalizedData._id}`;
+      } else if (modalMode === "add") {
+        method = "POST";
+        url = `${API_BASE}/api/inventory`;
+      } else {
+        method = "PUT";
+        url = `${API_BASE}/api/inventory/${normalizedData._id}`;
+      }
 
       const res = await fetch(url, {
         method,
@@ -434,19 +545,22 @@ const Inventory = () => {
       });
 
       if (!res.ok) {
-        let errorMsg = "Something went wrong.";
+        let errorMsg = "Something went wrong";
         try {
-          const errorData = await res.json();
-          if (errorData.message) {
-            errorMsg = errorData.message;
+          const contentType = res.headers.get("content-type");
+          if (contentType?.includes("application/json")) {
+            const errorData = await res.json();
+            errorMsg = errorData.message || JSON.stringify(errorData);
+          } else {
+            errorMsg = await res.text();
           }
-        } catch {
-          const errorText = await res.text();
-          errorMsg = errorText;
+        } catch (err) {
+          console.error("Error reading response:", err);
         }
         throw new Error(errorMsg);
       }
 
+      // Refresh list and reset modal
       setPage(1);
       setHasMore(true);
       await fetchItems();
@@ -455,16 +569,11 @@ const Inventory = () => {
 
       showToast({
         message: `Item ${
-          modalMode === "add" ? "added" : "updated"
+          modalMode.includes("add") ? "added" : "updated"
         } successfully!`,
         type: "success",
         duration: 3000,
       });
-
-      /*showPopup(
-        `Item ${modalMode === "add" ? "added" : "updated"} successfully!`,
-        "success"
-      );*/
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       console.error("Save failed:", errorMessage);
@@ -473,7 +582,6 @@ const Inventory = () => {
         type: "error",
         duration: 3000,
       });
-      //showPopup(`Save failed: ${errorMessage}`, "error");
     }
   };
 
@@ -541,8 +649,12 @@ const Inventory = () => {
 
     const newIngredient = {
       _id: selectedIngredientOption.value,
-      name: selectedIngredientOption.label,
-      quantity: ingredientForm.quantity || 1,
+      name: selectedIngredientOption.name ?? selectedIngredientOption.label,
+      stock: selectedIngredientOption.stock ?? null,
+      unitPrice: Number(selectedIngredientOption.unitPrice ?? 0),
+      unit: selectedIngredientOption.unit ?? null,
+      quantity: Number(ingredientForm.quantity) || 1,
+      raw: selectedIngredientOption.raw || null,
     };
 
     setFormData((prev) => ({
@@ -575,13 +687,31 @@ const Inventory = () => {
     e.preventDefault();
     if (!formData) return;
 
+    if (
+      !formData.name?.trim() ||
+      !formData.price ||
+      !formData.layers ||
+      !formData.size
+    ) {
+      showToast({
+        message: "Please fill in all required cake fields!",
+        type: "error",
+        duration: 3000,
+      });
+      return;
+    }
+
+    const normalizedData = {
+      ...formData,
+      ingredients: formData.ingredients || [],
+      seasonalPeriod: formData.seasonalPeriod || { startDate: "", endDate: "" },
+    };
+
     if (modalMode === "cake-edit") {
-      // Save for confirmation first
-      setPendingCakeData(formData);
-      setShowConfirmation(true); // same confirmation modal as Inventory
+      setPendingCakeData(normalizedData);
+      setShowConfirmation(true);
     } else {
-      // Add mode → save immediately
-      saveItem(formData); // this function actually calls your backend
+      saveItem(normalizedData, { mode: "add" });
       closeModal();
       showPopup("Cake saved successfully!");
     }

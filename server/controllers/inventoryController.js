@@ -34,6 +34,8 @@ const getAllInventoryItems = async (req, res) => {
     const field = req.query.field;
     const order = req.query.order === "desc" ? -1 : 1;
 
+    const fetchAll = req.query.all === "true";
+
     let searchFilter = {};
 
     if (search) {
@@ -41,7 +43,6 @@ const getAllInventoryItems = async (req, res) => {
       const isDate = !isNaN(Date.parse(search));
 
       if (field) {
-        // Filter only on the specified column
         if (
           ["purchasePrice", "unitPrice", "amount", "restockThreshold"].includes(
             field
@@ -79,13 +80,23 @@ const getAllInventoryItems = async (req, res) => {
     const totalItems = await InventoryItem.countDocuments(searchFilter);
     const totalPages = Math.ceil(totalItems / limit);
 
-    const items = await InventoryItem.find(searchFilter)
-      .skip(skip)
-      .limit(limit)
+    let query = InventoryItem.find(searchFilter)
       .sort(field ? { [field]: order } : { itemId: 1 })
       .populate("unit", "name amount")
       .populate("createdBy", "username");
 
+    if (!fetchAll) {
+      query = query.skip(skip).limit(limit);
+    }
+
+    const items = await query;
+
+    // If ?all=true → return raw items
+    if (fetchAll) {
+      return res.json(items);
+    }
+
+    // Otherwise return paginated format
     res.json({
       items: items || [],
       currentPage: page,

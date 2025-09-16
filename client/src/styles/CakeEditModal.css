@@ -45,24 +45,6 @@
     gap: 18px;
 }
 
-/* Right side (ingredient list) */
-.cake-form-right {
-    flex: 1;
-    background: #ecc7e1;
-    border: 5px solid #000000;
-    border-radius: 20px;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.cake-form-right h3 {
-    margin: 0 0 8px 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-}
-
 /* Ingredient list */
 .cake-ingredient-select__control {
     border: 1px solid #ccc;
@@ -187,4 +169,37 @@
     justify-content: flex-end;
     gap: 12px;
     margin-top: 8px;
+}
+
+/* Right side (ingredient list) */
+.cake-ingredient-board {
+  background: #ecc7e1;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  padding: 12px;
+  margin-top: 10px;
+  overflow-x: auto;
+}
+
+.cake-ingredient-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+.cake-ingredient-table th,
+.cake-ingredient-table td {
+  border: 1px solid #000000;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.cake-ingredient-table td {
+    background-color: #ffd3d3;
+}
+
+.cake-ingredient-table th {
+  background-color: #ffffff;
+  font-weight: bold;
 }
