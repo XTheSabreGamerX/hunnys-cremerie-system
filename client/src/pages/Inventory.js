@@ -150,13 +150,6 @@ const Inventory = () => {
       required: true,
     },
     {
-      label: "Amount",
-      name: "amount",
-      type: "number",
-      placeholder: "Number of units per cake",
-      required: true,
-    },
-    {
       label: "Availability",
       name: "availability",
       type: "select",
@@ -948,13 +941,11 @@ const Inventory = () => {
                     ? [
                         { label: "ID", field: "_id" },
                         { label: "Cake Name", field: "name" },
-                        { label: "Category", field: "category" },
-                        { label: "Size", field: "size" },
-                        { label: "Stock", field: "stock" },
-                        { label: "Unit Price", field: "unitPrice" },
-                        { label: "Amount", field: "amount" },
+                        { label: "Layers", field: "layers" },
+                        { label: "Base Cost", field: "baseCost" },
+                        { label: "Price", field: "price" },
+                        { label: "Availability", field: "availability" },
                         { label: "Ingredients", field: null },
-                        { label: "Expiration Date", field: "expirationDate" },
                         { label: "Status", field: "status" },
                         { label: "Actions", field: null },
                       ]
@@ -1032,36 +1023,19 @@ const Inventory = () => {
                 ) : inventoryType === "Cake Inventory" ? (
                   cakeItems.length === 0 ? (
                     <tr>
-                      <td colSpan="11">No cakes found.</td>
+                      <td colSpan="9">No cakes found.</td>
                     </tr>
                   ) : (
                     cakeItems.map((cake) => (
                       <tr key={cake._id}>
-                        <td>{cake._id}</td> {/* Cake ID */}
-                        <td>{cake.name}</td> {/* Cake Name */}
-                        <td>{cake.category || "—"}</td> {/* Category */}
-                        <td>{cake.size?.name || "—"}</td> {/* Size */}
-                        <td>{cake.stock || 0}</td> {/* Stock */}
-                        <td>₱{cake.unitPrice || 0}</td> {/* Unit Price */}
-                        <td>{cake.amount || 0}</td> {/* Amount */}
-                        <td>
-                          {cake.ingredients?.length
-                            ? cake.ingredients.map((i) => i.name).join(", ")
-                            : "—"}
-                        </td>{" "}
-                        {/* Ingredients */}
-                        <td>
-                          {cake.expirationDate
-                            ? new Date(cake.expirationDate).toLocaleDateString(
-                                "en-PH",
-                                {
-                                  timeZone: "Asia/Manila",
-                                }
-                              )
-                            : "N/A"}
-                        </td>{" "}
-                        {/* Expiration Date */}
-                        <td>{cake.status || "—"}</td> {/* Status */}
+                        <td>{cake._id}</td>
+                        <td>{cake.name}</td>
+                        <td>{cake.layers || "—"}</td>
+                        <td>₱{cake.baseCost || 0}</td>
+                        <td>₱{cake.price || 0}</td>
+                        <td>{cake.availability || "—"}</td>
+                        <td>{cake.ingredients?.length || 0}</td>
+                        <td>{cake.status || "—"}</td>
                         <td>
                           <button
                             className="module-action-btn module-view-btn"
@@ -1072,8 +1046,7 @@ const Inventory = () => {
                           >
                             View
                           </button>
-                        </td>{" "}
-                        {/* Actions */}
+                        </td>
                       </tr>
                     ))
                   )
