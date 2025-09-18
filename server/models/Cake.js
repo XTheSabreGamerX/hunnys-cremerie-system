@@ -28,6 +28,11 @@ const cakeSchema = new mongoose.Schema(
       default: "Always",
     },
     seasonalPeriod: { startDate: { type: Date }, endDate: { type: Date } },
+    status: {
+      type: String,
+      enum: ["Available", "Unavailable"],
+      default: "Available",
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -48,6 +53,11 @@ cakeSchema.pre("save", async function (next) {
   }
 
   this.baseCost = totalCost;
+
+  // If no price was provided, fallback to baseCost
+  if (this.price == null || this.price === 0) {
+    this.price = this.baseCost;
+  }
   next();
 });
 

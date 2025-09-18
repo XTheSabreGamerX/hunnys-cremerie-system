@@ -146,8 +146,7 @@ const Inventory = () => {
       label: "Unit Price",
       name: "unitPrice",
       type: "number",
-      placeholder: "Selling price per cake",
-      required: true,
+      placeholder: "Selling price per cake. Leave Empty to follow Base Price.",
     },
     {
       label: "Availability",
@@ -517,12 +516,22 @@ const Inventory = () => {
         stock: isNaN(Number(normalizedData.stock))
           ? 0
           : Number(normalizedData.stock),
-        unitPrice: isNaN(Number(normalizedData.unitPrice))
-          ? 0
-          : Number(normalizedData.unitPrice),
         amount: isNaN(Number(normalizedData.amount))
           ? 0
           : Number(normalizedData.amount),
+        ...(modalMode.startsWith("cake-")
+          ? {
+              // For cakes, map "unitPrice" input into "price"
+              price: isNaN(Number(normalizedData.unitPrice))
+                ? 0
+                : Number(normalizedData.unitPrice),
+            }
+          : {
+              // For inventory, keep using unitPrice
+              unitPrice: isNaN(Number(normalizedData.unitPrice))
+                ? 0
+                : Number(normalizedData.unitPrice),
+            }),
       };
 
       // Determine method and URL
