@@ -1,114 +1,7 @@
 const Cake = require("../models/Cake");
-const CakeSize = require("../models/CakeSize");
-const InventoryItem = require("../models/InventoryItem");
 const { createNotification } = require("./notificationController");
 const { createLog } = require("./activityLogController");
 const ActionRequest = require("../models/ActionRequest");
-
-// CAKE SIZE CONTROLLERS
-
-// Get all Cake Sizes
-const getAllCakeSizes = async (req, res) => {
-  try {
-    const sizes = await CakeSize.find().sort({ name: 1 });
-    res.json(sizes);
-  } catch (err) {
-    console.error("Error fetching Cake Sizes:", err.message);
-    res.status(500).json({ message: "Server error fetching Cake Sizes" });
-  }
-};
-
-// Add new Cake Size
-const addCakeSize = async (req, res) => {
-  try {
-    const { name, description } = req.body;
-
-    if (!name) return res.status(400).json({ message: "Size name is required" });
-
-    const existing = await CakeSize.findOne({ name });
-    if (existing) return res.status(409).json({ message: "Cake Size already exists" });
-
-    const size = new CakeSize({ name, description });
-    await size.save();
-
-    await createLog({
-      action: "Added Cake Size",
-      module: "Cake",
-      description: `A cake size "${name}" was created.`,
-      userId: req.user.id,
-    });
-
-    await createNotification({
-      message: `A new Cake Size "${name}" was added.`,
-      type: "success",
-      roles: ["admin", "owner", "manager"],
-    });
-
-    res.status(201).json(size);
-  } catch (err) {
-    console.error("Add Cake Size failed:", err.message);
-    res.status(500).json({ message: "Server error adding Cake Size" });
-  }
-};
-
-// Update Cake Size
-const updateCakeSize = async (req, res) => {
-  try {
-    const size = await CakeSize.findById(req.params.id);
-    if (!size) return res.status(404).json({ message: "Cake Size not found" });
-
-    Object.assign(size, req.body);
-    await size.save();
-
-    await createLog({
-      action: "Updated Cake Size",
-      module: "Cake",
-      description: `Cake Size "${size.name}" updated.`,
-      userId: req.user.id,
-    });
-
-    await createNotification({
-      message: `Cake Size "${size.name}" was updated.`,
-      type: "info",
-      roles: ["admin", "owner", "manager"],
-    });
-
-    res.json(size);
-  } catch (err) {
-    console.error("Update Cake Size failed:", err.message);
-    res.status(500).json({ message: "Server error updating Cake Size" });
-  }
-};
-
-// Delete Cake Size
-const deleteCakeSize = async (req, res) => {
-  try {
-    const size = await CakeSize.findById(req.params.id);
-    if (!size) return res.status(404).json({ message: "Cake Size not found" });
-
-    await CakeSize.findByIdAndDelete(req.params.id);
-
-    await createLog({
-      action: "Deleted Cake Size",
-      module: "Cake",
-      description: `Cake Size "${size.name}" deleted.`,
-      userId: req.user.id,
-    });
-
-    await createNotification({
-      message: `Cake Size "${size.name}" was deleted.`,
-      type: "success",
-      roles: ["admin", "owner", "manager"],
-    });
-
-    res.json({ message: "Cake Size deleted successfully" });
-  } catch (err) {
-    console.error("Delete Cake Size failed:", err.message);
-    res.status(500).json({ message: "Server error deleting Cake Size" });
-  }
-};
-
-// CAKE CONTROLLERS
 
 // Get all cakes (with search, pagination)
 const getAllCakes = async (req, res) => {
@@ -312,10 +205,6 @@ const processCakeSale = async (req, res) => {
 };
 
 module.exports = {
-  getAllCakeSizes,
-  addCakeSize,
-  updateCakeSize,
-  deleteCakeSize,
   getAllCakes,
   addCake,
   updateCake,

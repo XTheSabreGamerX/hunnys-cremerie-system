@@ -316,7 +316,7 @@ const Inventory = () => {
   useEffect(() => {
     const fetchUoms = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/inventory/uom`, {
+        const res = await fetch(`${API_BASE}/api/settings/uom`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -336,7 +336,7 @@ const Inventory = () => {
   useEffect(() => {
     const fetchCakeSizes = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/cake/size`, {
+        const res = await fetch(`${API_BASE}/api/settings/size`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -835,8 +835,7 @@ const Inventory = () => {
       )}
 
       {/* INVENTORY MODAL */}
-      {(modalMode === "edit" || modalMode === "add") &&
-        inventoryType === "Inventory" && (
+      {(modalMode === "edit" || modalMode === "add") && (
           <EditModal
             item={modalMode === "edit" ? selectedItem : null}
             fields={inventoryFields}

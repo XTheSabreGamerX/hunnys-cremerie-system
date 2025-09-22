@@ -1,5 +1,4 @@
 const InventoryItem = require("../models/InventoryItem");
-const UnitOfMeasurement = require("../models/UnitOfMeasurement");
 const { createNotification } = require("../controllers/notificationController");
 const { createLog } = require("../controllers/activityLogController");
 const ActionRequest = require("../models/ActionRequest");
@@ -400,79 +399,10 @@ const batchUpdateStatuses = async () => {
   }
 };
 
-// Get all Units of Measurement
-const getAllUoms = async (req, res) => {
-  try {
-    const uoms = await UnitOfMeasurement.find().sort({ name: 1 });
-    res.json(uoms);
-  } catch (err) {
-    console.error("Error fetching UoMs:", err.message);
-    res.status(500).json({ message: "Server error fetching UoMs" });
-  }
-};
-
-// Create new Unit of Measurement
-const createUom = async (req, res) => {
-  try {
-    const { name } = req.body;
-
-    if (!name) {
-      return res.status(400).json({ message: "Unit name is required" });
-    }
-
-    const existing = await UnitOfMeasurement.findOne({ name });
-    if (existing) {
-      return res.status(409).json({ message: "Unit already exists" });
-    }
-
-    const uom = new UnitOfMeasurement({
-      name,
-    });
-
-    await uom.save();
-    res.status(201).json(uom);
-  } catch (err) {
-    console.error("Error creating UoM:", err.message);
-    res.status(500).json({ message: "Server error creating UoM" });
-  }
-};
-
-// Update Unit of Measurement
-const updateUom = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name } = req.body;
-
-    const uom = await UnitOfMeasurement.findById(id);
-    if (!uom) {
-      return res.status(404).json({ message: "Unit not found" });
-    }
-
-    if (name && name !== uom.name) {
-      const exists = await UnitOfMeasurement.findOne({ name });
-      if (exists) {
-        return res
-          .status(409)
-          .json({ message: "Another unit with this name already exists" });
-      }
-      uom.name = name;
-    }
-
-    await uom.save();
-    res.json(uom);
-  } catch (err) {
-    console.error("Error updating UoM:", err.message);
-    res.status(500).json({ message: "Server error updating UoM" });
-  }
-};
-
 module.exports = {
   getAllInventoryItems,
   addInventoryItem,
   updateInventoryItem,
   deleteInventoryItem,
   batchUpdateStatuses,
-  getAllUoms,
-  createUom,
-  updateUom,
 };
