@@ -343,7 +343,6 @@ const Inventory = () => {
         });
         if (!res.ok) throw new Error("Failed to fetch cake sizes");
         const data = await res.json();
-        console.log("Cake size response:", data);
         setCakeSizes(data);
       } catch (err) {
         console.error("Failed to fetch cake sizes:", err);

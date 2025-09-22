@@ -19,6 +19,7 @@ import CustomerManagement from "../pages/CustomerManagement";
 import SalesManagement from "../pages/SalesManagement";
 import SalesReport from "../pages/SalesReport";
 import Notifications from "../pages/Notifications";
+import Settings from "../pages/Settings";
 
 function App() {
   return (
@@ -140,6 +141,18 @@ function App() {
               <ProtectedRoute>
                 <DashboardHeader />
                 <Notifications />
+              </ProtectedRoute>
+            </>
+          }
+        />
+
+        <Route //Settings route
+          path="/settings"
+          element={
+            <>
+              <ProtectedRoute>
+                <DashboardHeader />
+                <Settings />
               </ProtectedRoute>
             </>
           }

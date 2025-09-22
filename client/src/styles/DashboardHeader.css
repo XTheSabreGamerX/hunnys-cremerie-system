@@ -52,6 +52,10 @@
   margin-left: 30px;
 }
 
+.dashboard-container.collapsed .settings-main {
+  margin-left: 50px;
+}
+
 .dashboard-header.sidebar-collapsed .dashboard-header-left {
   margin-left: 60px;
 }

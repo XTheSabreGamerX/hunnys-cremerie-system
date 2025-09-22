@@ -103,9 +103,9 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
       roles: ["admin", "owner", "manager", "staff"],
     },
     {
-      label: "Options",
+      label: "Settings",
       icon: <FaCog />,
-      path: "/dashboard",
+      path: "/settings",
       roles: ["admin", "owner"],
     },
   ];
