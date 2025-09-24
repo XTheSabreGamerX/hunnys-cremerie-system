@@ -221,16 +221,19 @@ const Inventory = () => {
     }, 2000);
   };
 
-  // Fetches all inventory items or cakes based on inventoryType
+  // Fetch items
   const fetchItems = useCallback(async () => {
     try {
       let url = "";
       if (inventoryType === "Inventory") {
         url = `${API_BASE}/api/inventory?page=${page}&limit=10&search=${encodeURIComponent(
           searchQuery
-        )}&field=${columnFilter.field || ""}&order=${
-          columnFilter.order || "asc"
-        }`;
+        )}`;
+
+        // Only add field/order if sorting is active
+        if (columnFilter.field) {
+          url += `&field=${columnFilter.field}&order=${columnFilter.order}`;
+        }
       } else if (inventoryType === "Cake Inventory") {
         url = `${API_BASE}/api/cake?page=${page}&limit=10&search=${encodeURIComponent(
           searchQuery
@@ -261,18 +264,32 @@ const Inventory = () => {
         : data;
 
       if (inventoryType === "Inventory") {
-        setItems((prev) =>
-          page === 1
-            ? wrappedData.items || []
-            : [...prev, ...(wrappedData.items || [])]
-        );
+        setItems((prev) => {
+          const combined =
+            page === 1
+              ? wrappedData.items || []
+              : [...prev, ...(wrappedData.items || [])];
+
+          const uniqueItems = Array.from(
+            new Map(combined.map((item) => [item._id, item])).values()
+          );
+
+          return uniqueItems;
+        });
         setHasMore(page < (wrappedData.totalPages || 1));
       } else {
-        setCakeItems((prev) =>
-          page === 1
-            ? wrappedData.cakes || []
-            : [...prev, ...(wrappedData.cakes || [])]
-        );
+        setCakeItems((prev) => {
+          const combined =
+            page === 1
+              ? wrappedData.cakes || []
+              : [...prev, ...(wrappedData.cakes || [])];
+
+          const uniqueCakes = Array.from(
+            new Map(combined.map((cake) => [cake._id, cake])).values()
+          );
+
+          return uniqueCakes;
+        });
         setHasMore(page < (wrappedData.totalPages || 1));
       }
     } catch (err) {
@@ -483,14 +500,14 @@ const Inventory = () => {
   const handleColumnClick = (field) => {
     if (columnFilter.field === field) {
       if (columnFilter.order === "asc") {
-        setColumnFilter({ field, order: "desc", query: searchQuery });
+        setColumnFilter({ field, order: "desc" });
       } else {
-        setColumnFilter({ field: "", order: "", query: searchQuery });
+        setColumnFilter({ field: "", order: "" }); // Reset to default sort
       }
     } else {
-      setColumnFilter({ field, order: "asc", query: searchQuery });
+      setColumnFilter({ field, order: "asc" });
     }
-    setPage(1);
+    setPage(1); // Always reset to first page
   };
 
   // Saves item changes
@@ -835,21 +852,21 @@ const Inventory = () => {
 
       {/* INVENTORY MODAL */}
       {(modalMode === "edit" || modalMode === "add") && (
-          <EditModal
-            item={modalMode === "edit" ? selectedItem : null}
-            fields={inventoryFields}
-            onSave={handleAddOrEdit}
-            modalType="inventory"
-            onClose={() => {
-              setSelectedItem(null);
-              setModalMode("view");
-            }}
-            mode={modalMode}
-            formData={formData}
-            setFormData={setFormData}
-            uoms={uoms}
-          />
-        )}
+        <EditModal
+          item={modalMode === "edit" ? selectedItem : null}
+          fields={inventoryFields}
+          onSave={handleAddOrEdit}
+          modalType="inventory"
+          onClose={() => {
+            setSelectedItem(null);
+            setModalMode("view");
+          }}
+          mode={modalMode}
+          formData={formData}
+          setFormData={setFormData}
+          uoms={uoms}
+        />
+      )}
 
       {/* CAKE MODAL */}
       {(modalMode === "cake-add" || modalMode === "cake-edit") && (
