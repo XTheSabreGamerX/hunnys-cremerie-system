@@ -36,6 +36,20 @@ const createUom = async (req, res) => {
     });
 
     await uom.save();
+
+    await createLog({
+      action: "Deleted Unit of Measurement",
+      module: "Settings",
+      description: `Unit of Measurement "${uom.name}" was created.`,
+      userId: req.user.id,
+    });
+
+    await createNotification({
+      message: `Unit of Measurement "${uom.name}" was created.`,
+      type: "success",
+      roles: ["admin", "owner", "manager"],
+    });
+
     res.status(201).json(uom);
   } catch (err) {
     console.error("Error creating UoM:", err.message);
@@ -65,6 +79,20 @@ const updateUom = async (req, res) => {
     }
 
     await uom.save();
+
+    await createLog({
+      action: "Deleted Unit of Measurement",
+      module: "Settings",
+      description: `Unit of Measurement "${uom.name}" was updated.`,
+      userId: req.user.id,
+    });
+
+    await createNotification({
+      message: `Unit of Measurement "${uom.name}" was updated.`,
+      type: "success",
+      roles: ["admin", "owner", "manager"],
+    });
+
     res.json(uom);
   } catch (err) {
     console.error("Error updating UoM:", err.message);
@@ -134,7 +162,7 @@ const addCakeSize = async (req, res) => {
 
     await createLog({
       action: "Added Cake Size",
-      module: "Cake",
+      module: "Settings",
       description: `A cake size "${name}" was created.`,
       userId: req.user.id,
     });
@@ -163,7 +191,7 @@ const updateCakeSize = async (req, res) => {
 
     await createLog({
       action: "Updated Cake Size",
-      module: "Cake",
+      module: "Settings",
       description: `Cake Size "${size.name}" updated.`,
       userId: req.user.id,
     });
@@ -191,7 +219,7 @@ const deleteCakeSize = async (req, res) => {
 
     await createLog({
       action: "Deleted Cake Size",
-      module: "Cake",
+      module: "Settings",
       description: `Cake Size "${size.name}" deleted.`,
       userId: req.user.id,
     });
@@ -239,7 +267,7 @@ const createCategory = async (req, res) => {
 
     await createLog({
       action: "Added Category",
-      module: "Category",
+      module: "Settings",
       description: `Category "${name}" was created.`,
       userId: req.user.id,
     });
@@ -282,7 +310,7 @@ const updateCategory = async (req, res) => {
 
     await createLog({
       action: "Updated Category",
-      module: "Category",
+      module: "Settings",
       description: `Category "${category.name}" updated.`,
       userId: req.user.id,
     });
@@ -314,7 +342,7 @@ const deleteCategory = async (req, res) => {
 
     await createLog({
       action: "Deleted Category",
-      module: "Category",
+      module: "Settings",
       description: `Category "${category.name}" was deleted.`,
       userId: req.user.id,
     });
