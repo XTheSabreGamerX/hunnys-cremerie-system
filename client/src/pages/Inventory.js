@@ -16,6 +16,7 @@ const Inventory = () => {
   const [items, setItems] = useState([]);
   const [cakeItems, setCakeItems] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [uoms, setUoms] = useState([]);
   const [cakeSize, setCakeSizes] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -73,7 +74,16 @@ const Inventory = () => {
       type: "number",
       placeholder: "Leave blank if none...",
     },
-    { label: "Category", name: "category", required: true },
+    {
+      label: "Category",
+      name: "category",
+      type: "select",
+      options: (categories.inventory || []).map((c) => ({
+        value: c._id,
+        label: c.name,
+      })),
+      required: true,
+    },
     {
       label: "Purchase Price",
       name: "purchasePrice",
@@ -125,9 +135,12 @@ const Inventory = () => {
     {
       label: "Category",
       name: "category",
-      type: "text",
+      type: "select",
+      options: (categories.cake || []).map((c) => ({
+        value: c._id,
+        label: c.name,
+      })),
       required: true,
-      placeholder: "e.g. Birthday, Wedding, etc.",
     },
     {
       label: "Size",
@@ -184,8 +197,6 @@ const Inventory = () => {
           })
           .then((data) => {
             const items = Array.isArray(data) ? data : data.items || [];
-            // debug - remove/comment out later
-            // console.log('inventory loadOptions items sample:', items[0]);
 
             return items.map((i) => {
               const stock = i.stock ?? i.amount ?? null;
@@ -367,6 +378,35 @@ const Inventory = () => {
     };
 
     if (token) fetchCakeSizes();
+  }, [API_BASE, token]);
+
+  // Fetch Categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/settings/category`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) throw new Error("Failed to fetch categories");
+        const data = await res.json();
+
+        const inventoryCategories = data.filter(
+          (cat) => cat.type === "inventory"
+        );
+        const cakeCategories = data.filter((cat) => cat.type === "cake");
+
+        setCategories({
+          inventory: inventoryCategories,
+          cake: cakeCategories,
+        });
+      } catch (err) {
+        console.error("Failed to fetch categories:", err);
+      }
+    };
+
+    if (token) fetchCategories();
   }, [API_BASE, token]);
 
   useEffect(() => {

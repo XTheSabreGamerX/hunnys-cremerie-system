@@ -23,25 +23,49 @@ const Settings = () => {
 
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-  const settingsFields = (section) => [
-    {
-      name: "name",
-      label:
-        section === "uom"
-          ? "Unit of Measurement"
-          : section === "size"
-          ? "Cake Size"
-          : "Category",
-      type: "text",
-      required: true,
-      placeholder:
-        section === "uom"
-          ? "Enter unit (e.g., kg, box)"
-          : section === "size"
-          ? "Enter cake size (e.g., 8-inch)"
-          : "Enter category (e.g., Bread, Cake)",
-    },
-  ];
+  const settingsFields = (section) => {
+    if (section === "category") {
+      return [
+        {
+          name: "name",
+          label: "Category",
+          type: "text",
+          required: true,
+          placeholder: "Enter category (e.g., Bread, Cake)",
+        },
+        {
+          name: "type",
+          label: "Category Type",
+          type: "select",
+          required: true,
+          options: [
+            { value: "inventory", label: "Inventory" },
+            { value: "cake", label: "Cake" },
+          ],
+        },
+      ];
+    }
+
+    return [
+      {
+        name: "name",
+        label:
+          section === "uom"
+            ? "Unit of Measurement"
+            : section === "size"
+            ? "Cake Size"
+            : "Category",
+        type: "text",
+        required: true,
+        placeholder:
+          section === "uom"
+            ? "Enter unit (e.g., kg, box)"
+            : section === "size"
+            ? "Enter cake size (e.g., 8-inch)"
+            : "Enter category (e.g., Bread, Cake)",
+      },
+    ];
+  };
 
   useEffect(() => {
     fetchData(`${API_BASE}/api/settings/uom`, setUoms);
@@ -80,7 +104,11 @@ const Settings = () => {
         body: JSON.stringify(newSetting),
       });
 
-      if (!res.ok) throw new Error(`Failed to add to ${activeSection}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to add to ${activeSection}`);
+      }
+
       const savedSetting = await res.json();
 
       if (activeSection === "uom") {
@@ -93,8 +121,8 @@ const Settings = () => {
 
       setShowAddModal(false);
     } catch (err) {
-      console.error(err.message);
-      alert("Error adding setting. Please try again.");
+      console.error("Add error:", err);
+      alert(err.message);
     }
   };
 
@@ -119,6 +147,7 @@ const Settings = () => {
           <div className="settings-sections-container">
             {[
               {
+                key: "uom",
                 title: "Units of Measurement (UoM)",
                 addLabel: "+ Add UoM",
                 data: uoms,
@@ -126,6 +155,7 @@ const Settings = () => {
                 deleteUrl: "/api/settings/uom",
               },
               {
+                key: "size",
                 title: "Cake Sizes",
                 addLabel: "+ Add Cake Size",
                 data: cakeSizes,
@@ -133,6 +163,7 @@ const Settings = () => {
                 deleteUrl: "/api/settings/size",
               },
               {
+                key: "category",
                 title: "Categories",
                 addLabel: "+ Add Category",
                 data: categories,
@@ -163,19 +194,24 @@ const Settings = () => {
                   <thead>
                     <tr>
                       <th>Name</th>
+                      {section.key === "category" && <th>Type</th>}
                       <th>Created At</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {section.data.map((item) => (
-                      <tr key={item.id}>
+                      <tr key={item._id || item.id}>
                         <td>{item.name}</td>
+
+                        {section.key === "category" && <td>{item.type}</td>}
+
                         <td>
                           {new Date(item.createdAt).toLocaleString("en-PH", {
                             timeZone: "Asia/Manila",
                           })}
                         </td>
+
                         <td>
                           <button className="module-action-btn module-edit-btn">
                             Edit
