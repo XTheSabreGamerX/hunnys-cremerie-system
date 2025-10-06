@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../scripts/DashboardLayout";
 import EditModal from "../components/EditModal";
+import ConfirmationModal from "../components/ConfirmationModal";
+import { showToast } from "../components/ToastContainer";
 import { FiTrash2 } from "react-icons/fi";
 import "../styles/Settings.css";
 
@@ -11,6 +13,10 @@ const Settings = () => {
   const [categories, setCategories] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [activeSection, setActiveSection] = useState(null);
+  const [editItem, setEditItem] = useState(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState("");
+  const [pendingDelete, setPendingDelete] = useState(null);
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -88,41 +94,120 @@ const Settings = () => {
     }
   };
 
-  const handleAdd = async (newSetting) => {
+  const handleAdd = async (sectionKey) => {
+    setActiveSection(sectionKey);
+    setEditItem(null);
+    setShowAddModal(true);
+  };
+
+  const handleEdit = (sectionKey, item) => {
+    setActiveSection(sectionKey);
+    setEditItem(item);
+    setShowAddModal(true);
+  };
+
+  const handleSaveSetting = async (settingData) => {
     if (!activeSection) {
-      alert("No active section selected");
+      showToast({ message: "No active section selected!", type: "error" });
       return;
     }
 
+    const isEditing = !!editItem;
+    const url = isEditing
+      ? `${API_BASE}/api/settings/${activeSection}/${editItem._id}`
+      : `${API_BASE}/api/settings/${activeSection}`;
+    const method = isEditing ? "PUT" : "POST";
+
     try {
-      const res = await fetch(`${API_BASE}/api/settings/${activeSection}`, {
-        method: "POST",
+      const res = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify(newSetting),
+        body: JSON.stringify(settingData),
       });
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to add to ${activeSection}`);
+        throw new Error(errorData.error || `Failed to save ${activeSection}`);
       }
 
-      const savedSetting = await res.json();
+      const saved = await res.json();
 
       if (activeSection === "uom") {
-        setUoms((prev) => [...prev, savedSetting]);
+        setUoms((prev) =>
+          isEditing
+            ? prev.map((u) => (u._id === saved._id ? saved : u))
+            : [...prev, saved]
+        );
       } else if (activeSection === "size") {
-        setCakeSizes((prev) => [...prev, savedSetting]);
+        setCakeSizes((prev) =>
+          isEditing
+            ? prev.map((s) => (s._id === saved._id ? saved : s))
+            : [...prev, saved]
+        );
       } else if (activeSection === "category") {
-        setCategories((prev) => [...prev, savedSetting]);
+        setCategories((prev) =>
+          isEditing
+            ? prev.map((c) => (c._id === saved._id ? saved : c))
+            : [...prev, saved]
+        );
       }
 
+      showToast({
+        message: isEditing
+          ? "Item updated successfully!"
+          : "Item added successfully!",
+        type: "success",
+      });
+
       setShowAddModal(false);
+      setEditItem(null);
     } catch (err) {
-      console.error("Add error:", err);
-      alert(err.message);
+      console.error("Save error:", err);
+      showToast({ message: err.message, type: "error" });
+    }
+  };
+
+  const handleDelete = (sectionKey, id) => {
+    setConfirmMessage("Are you sure you want to delete this item?");
+    setPendingDelete({ sectionKey, id });
+    setShowConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    const { sectionKey, id } = pendingDelete;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/settings/${sectionKey}/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to delete item");
+      }
+
+      if (sectionKey === "uom") {
+        setUoms((prev) => prev.filter((u) => u._id !== id));
+      } else if (sectionKey === "size") {
+        setCakeSizes((prev) => prev.filter((s) => s._id !== id));
+      } else if (sectionKey === "category") {
+        setCategories((prev) => prev.filter((c) => c._id !== id));
+      }
+
+      showToast({ message: "Item deleted successfully!", type: "success" });
+    } catch (err) {
+      console.error("Delete error:", err);
+      showToast({ message: err.message, type: "error" });
+    } finally {
+      setShowConfirm(false);
+      setPendingDelete(null);
     }
   };
 
@@ -130,11 +215,21 @@ const Settings = () => {
     <>
       {showAddModal && (
         <EditModal
-          mode="add"
-          modalType={activeSection}
-          fields={settingsFields(activeSection)}
-          onSave={handleAdd}
+          show={showAddModal}
           onClose={() => setShowAddModal(false)}
+          onSave={handleSaveSetting}
+          editItem={editItem}
+          fields={settingsFields(activeSection) || []}
+          item={editItem}
+          mode={editItem ? "edit" : "add"}
+        />
+      )}
+
+      {showConfirm && (
+        <ConfirmationModal
+          message={confirmMessage}
+          onConfirm={confirmDelete}
+          onCancel={() => setShowConfirm(false)}
         />
       )}
 
@@ -176,16 +271,7 @@ const Settings = () => {
                   <h3 className="settings-section-title">{section.title}</h3>
                   <button
                     className="module-action-btn module-add-btn"
-                    onClick={() => {
-                      setActiveSection(
-                        section.title.includes("UoM")
-                          ? "uom"
-                          : section.title.includes("Cake Size")
-                          ? "size"
-                          : "category"
-                      );
-                      setShowAddModal(true);
-                    }}
+                    onClick={() => handleAdd(section.key)}
                   >
                     {section.addLabel}
                   </button>
@@ -213,10 +299,16 @@ const Settings = () => {
                         </td>
 
                         <td>
-                          <button className="module-action-btn module-edit-btn">
+                          <button
+                            className="module-action-btn module-edit-btn"
+                            onClick={() => handleEdit(section.key, item)}
+                          >
                             Edit
                           </button>
-                          <button className="module-action-btn module-delete-btn">
+                          <button
+                            className="module-action-btn module-delete-btn"
+                            onClick={() => handleDelete(section.key, item._id)}
+                          >
                             <FiTrash2 />
                           </button>
                         </td>
