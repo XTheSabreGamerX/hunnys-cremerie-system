@@ -64,8 +64,7 @@ const Inventory = () => {
     {
       label: "Item ID",
       name: "itemId",
-      placeholder:
-        "e.g. BOX-001, CAKE-025, etc... Leave empty for default ID",
+      placeholder: "e.g. BOX-001, CAKE-025, etc... Leave empty for default ID",
     },
     { label: "Item Name", name: "name", required: true },
     {
@@ -159,8 +158,7 @@ const Inventory = () => {
       label: "Unit Price",
       name: "unitPrice",
       type: "number",
-      placeholder:
-        "Selling price per cake. Leave Empty to follow Base Price.",
+      placeholder: "Selling price per cake. Leave Empty to follow Base Price.",
     },
     {
       label: "Availability",
@@ -594,9 +592,16 @@ const Inventory = () => {
         itemId = `INV-${nanoid(6)}`;
       }
 
+      let cakeId = normalizedData.cakeId?.trim();
+      if (modalMode === "cake-add" && !cakeId) {
+        cakeId = `CK-${nanoid(6)}`;
+      }
+
       const payload = {
         ...normalizedData,
-        itemId,
+        ...(modalMode.startsWith("cake-")
+          ? { cakeId, price: Number(normalizedData.unitPrice) || 0 }
+          : { itemId, unitPrice: Number(normalizedData.unitPrice) || 0 }),
         stock: isNaN(Number(normalizedData.stock))
           ? 0
           : Number(normalizedData.stock),
@@ -728,7 +733,8 @@ const Inventory = () => {
     try {
       if (!itemToDelete) return;
 
-      const isCake = itemToDelete.baseCost !== undefined || itemToDelete.price !== undefined;
+      const isCake =
+        itemToDelete.baseCost !== undefined || itemToDelete.price !== undefined;
       const url = isCake
         ? `${API_BASE}/api/cake/${itemToDelete._id}`
         : `${API_BASE}/api/inventory/${itemToDelete._id}`;
@@ -1056,6 +1062,7 @@ const Inventory = () => {
                 <tr>
                   {(inventoryType === "Inventory"
                     ? [
+                        { label: "#", field: null },
                         { label: "ID", field: "itemId" },
                         { label: "Item Name", field: "name" },
                         { label: "Stock", field: "stock" },
@@ -1099,24 +1106,23 @@ const Inventory = () => {
                 {inventoryType === "Inventory" ? (
                   items.length === 0 ? (
                     <tr>
-                      <td colSpan="11">No items found.</td>
+                      <td colSpan="12">No items found.</td>
                     </tr>
                   ) : (
-                    items.map((item) => (
+                    items.map((item, index) => (
                       <tr key={item._id}>
+                        <td>{index + 1}</td>
                         <td>{item.itemId}</td>
                         <td>{item.name}</td>
                         <td>{item.stock}</td>
                         <td>
                           {/* show category name if categories are loaded */}
-                          {(
-                            (Array.isArray(categories.inventory) &&
-                              categories.inventory.find(
-                                (c) => c._id === item.category
-                              )?.name) ||
+                          {(Array.isArray(categories.inventory) &&
+                            categories.inventory.find(
+                              (c) => c._id === item.category
+                            )?.name) ||
                             item.category ||
-                            "—"
-                          )}
+                            "—"}
                         </td>
                         <td>₱{item.purchasePrice}</td>
                         <td>₱{item.unitPrice}</td>
@@ -1173,14 +1179,11 @@ const Inventory = () => {
                         <td>{cake.name}</td>
                         <td>
                           {/* cake category name if available */}
-                          {(
-                            (Array.isArray(categories.cake) &&
-                              categories.cake.find(
-                                (c) => c._id === cake.category
-                              )?.name) ||
+                          {(Array.isArray(categories.cake) &&
+                            categories.cake.find((c) => c._id === cake.category)
+                              ?.name) ||
                             cake.category ||
-                            "—"
-                          )}
+                            "—"}
                         </td>
                         <td>₱{cake.baseCost || 0}</td>
                         <td>₱{cake.price || 0}</td>
