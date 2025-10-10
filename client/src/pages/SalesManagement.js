@@ -233,6 +233,19 @@ const SalesManagement = () => {
                 .filter((item) =>
                   item.name.toLowerCase().includes(searchQuery.toLowerCase())
                 )
+                .sort((a, b) => {
+                  if (
+                    a.status === "Well-stocked" &&
+                    b.status !== "Well-stocked"
+                  )
+                    return -1;
+                  if (
+                    a.status !== "Well-stocked" &&
+                    b.status === "Well-stocked"
+                  )
+                    return 1;
+                  return 0;
+                })
                 .map((item) => (
                   <div
                     key={item._id}
