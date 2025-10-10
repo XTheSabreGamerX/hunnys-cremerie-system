@@ -5,6 +5,7 @@ import DashboardLayout from "../scripts/DashboardLayout";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
 import CakeEditModal from "../components/CakeEditModal";
+import CakeViewModal from "../components/CakeViewModal";
 import PopupMessage from "../components/PopupMessage";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { showToast } from "../components/ToastContainer";
@@ -22,8 +23,7 @@ const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [columnFilter, setColumnFilter] = useState({ field: "", query: "" });
   const [selectedItem, setSelectedItem] = useState(null);
-  const [, setSelectedCake] = useState(null);
-  /* selectedCake */
+  const [selectedCake, setSelectedCake] = useState(null);
   const [modalMode, setModalMode] = useState("view");
   const [formData, setFormData] = useState({
     name: "",
@@ -31,8 +31,7 @@ const Inventory = () => {
     ingredients: [],
   });
   const [pendingEditData, setPendingEditData] = useState(null);
-  const [, setPendingCakeData] = useState(null);
-  /* pendingCakeData */
+  const [pendingCakeData, setPendingCakeData] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewedItem, setViewedItem] = useState(null);
@@ -65,7 +64,8 @@ const Inventory = () => {
     {
       label: "Item ID",
       name: "itemId",
-      placeholder: "e.g. BOX-001, CAKE-025, etc... Leave empty for default ID",
+      placeholder:
+        "e.g. BOX-001, CAKE-025, etc... Leave empty for default ID",
     },
     { label: "Item Name", name: "name", required: true },
     {
@@ -159,7 +159,8 @@ const Inventory = () => {
       label: "Unit Price",
       name: "unitPrice",
       type: "number",
-      placeholder: "Selling price per cake. Leave Empty to follow Base Price.",
+      placeholder:
+        "Selling price per cake. Leave Empty to follow Base Price.",
     },
     {
       label: "Availability",
@@ -232,83 +233,82 @@ const Inventory = () => {
     }, 2000);
   };
 
-  // Fetch items
-  const fetchItems = useCallback(async () => {
-    try {
-      let url = "";
-      if (inventoryType === "Inventory") {
-        url = `${API_BASE}/api/inventory?page=${page}&limit=10&search=${encodeURIComponent(
-          searchQuery
-        )}`;
+  const fetchItems = useCallback(
+    async (reset = false) => {
+      try {
+        let url = "";
+        if (inventoryType === "Inventory") {
+          url = `${API_BASE}/api/inventory?page=${page}&limit=10&search=${encodeURIComponent(
+            searchQuery
+          )}`;
 
-        // Only add field/order if sorting is active
-        if (columnFilter.field) {
-          url += `&field=${columnFilter.field}&order=${columnFilter.order}`;
+          if (columnFilter.field) {
+            url += `&field=${columnFilter.field}&order=${columnFilter.order}`;
+          }
+        } else if (inventoryType === "Cake Inventory") {
+          url = `${API_BASE}/api/cake?page=${page}&limit=10&search=${encodeURIComponent(
+            searchQuery
+          )}`;
         }
-      } else if (inventoryType === "Cake Inventory") {
-        url = `${API_BASE}/api/cake?page=${page}&limit=10&search=${encodeURIComponent(
-          searchQuery
-        )}`;
-      }
 
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = await res.json();
-
-      // Wrap array responses into a standard object
-      const wrappedData = Array.isArray(data)
-        ? inventoryType === "All Inventory"
-          ? {
-              items: data,
-              currentPage: 1,
-              totalPages: 1,
-              totalItems: data.length,
-            }
-          : {
-              cakes: data,
-              currentPage: 1,
-              totalPages: 1,
-              totalItems: data.length,
-            }
-        : data;
-
-      if (inventoryType === "Inventory") {
-        setItems((prev) => {
-          const combined =
-            page === 1
-              ? wrappedData.items || []
-              : [...prev, ...(wrappedData.items || [])];
-
-          const uniqueItems = Array.from(
-            new Map(combined.map((item) => [item._id, item])).values()
-          );
-
-          return uniqueItems;
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        setHasMore(page < (wrappedData.totalPages || 1));
-      } else {
-        setCakeItems((prev) => {
-          const combined =
-            page === 1
-              ? wrappedData.cakes || []
-              : [...prev, ...(wrappedData.cakes || [])];
 
-          const uniqueCakes = Array.from(
-            new Map(combined.map((cake) => [cake._id, cake])).values()
-          );
+        const data = await res.json();
 
-          return uniqueCakes;
-        });
-        setHasMore(page < (wrappedData.totalPages || 1));
+        const wrappedData = Array.isArray(data)
+          ? inventoryType === "All Inventory"
+            ? {
+                items: data,
+                currentPage: 1,
+                totalPages: 1,
+                totalItems: data.length,
+              }
+            : {
+                cakes: data,
+                currentPage: 1,
+                totalPages: 1,
+                totalItems: data.length,
+              }
+          : data;
+
+        if (inventoryType === "Inventory") {
+          setItems((prev) => {
+            const combined =
+              page === 1
+                ? wrappedData.items || []
+                : [...prev, ...(wrappedData.items || [])];
+
+            const uniqueItems = Array.from(
+              new Map(combined.map((item) => [item._id, item])).values()
+            );
+
+            return uniqueItems;
+          });
+          setHasMore(page < (wrappedData.totalPages || 1));
+        } else {
+          setCakeItems((prev) => {
+            const combined =
+              page === 1
+                ? wrappedData.cakes || []
+                : [...prev, ...(wrappedData.cakes || [])];
+
+            const uniqueCakes = Array.from(
+              new Map(combined.map((cake) => [cake._id, cake])).values()
+            );
+
+            return uniqueCakes;
+          });
+          setHasMore(page < (wrappedData.totalPages || 1));
+        }
+      } catch (err) {
+        console.error("Error fetching inventory:", err);
       }
-    } catch (err) {
-      console.error("Error fetching inventory:", err);
-    }
-  }, [API_BASE, page, searchQuery, columnFilter, inventoryType, token]);
+    },
+    [API_BASE, page, searchQuery, columnFilter, inventoryType, token]
+  );
 
-  // Fetch Suppliers
   const fetchSuppliers = useCallback(async () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -340,7 +340,6 @@ const Inventory = () => {
     }
   }, [API_BASE]);
 
-  // Fetch Units of Measurements
   useEffect(() => {
     const fetchUoms = async () => {
       try {
@@ -360,7 +359,6 @@ const Inventory = () => {
     if (token) fetchUoms();
   }, [API_BASE, page, token]);
 
-  // Fetch Cake Sizes
   useEffect(() => {
     const fetchCakeSizes = async () => {
       try {
@@ -380,7 +378,6 @@ const Inventory = () => {
     if (token) fetchCakeSizes();
   }, [API_BASE, token]);
 
-  // Fetch Categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -420,6 +417,7 @@ const Inventory = () => {
 
     const handleScroll = () => {
       if (
+        container &&
         container.scrollTop + container.clientHeight >=
           container.scrollHeight - 50 &&
         hasMore
@@ -442,18 +440,23 @@ const Inventory = () => {
   const handleInventoryToggle = (type) => {
     setInventoryType(type);
     setPage(1);
+    setIsViewOpen(false);
+    setViewedItem(null);
+    setSelectedCake(null);
   };
 
   const validateFormData = (data) => {
     if (modalMode === "cake-add" || modalMode === "cake-edit") {
-      if (!data.name?.trim()) {
+      if (!data.name || !String(data.name).trim()) {
         showPopup("Please enter the cake name.", "error");
         return false;
       }
-      if (!data.category?.trim()) {
-        showPopup("Please enter the cake category.", "error");
+
+      if (!data.category) {
+        showPopup("Please select a category.", "error");
         return false;
       }
+
       if (!data.size) {
         showPopup("Please select a cake size.", "error");
         return false;
@@ -462,10 +465,7 @@ const Inventory = () => {
         showPopup("Please select availability.", "error");
         return false;
       }
-      if (!data.layers || data.layers.length === 0) {
-        showPopup("Please add at least one layer.", "error");
-        return false;
-      }
+
       if (
         data.price === undefined ||
         data.price === null ||
@@ -479,13 +479,13 @@ const Inventory = () => {
         return false;
       }
 
-      // Optional numeric checks
+      // numeric normalizations
       data.stock = Number(data.stock) || 0;
       data.unitPrice = Number(data.unitPrice) || 0;
       data.amount = Number(data.amount) || 0;
       data.price = Number(data.price) || 0;
     } else {
-      // Existing Inventory validation
+      // Inventory validation
       const { itemId, name, stock, unitPrice, expirationDate } = data;
 
       if (!name?.trim()) {
@@ -536,21 +536,19 @@ const Inventory = () => {
     return true;
   };
 
-  // Column click filter function
   const handleColumnClick = (field) => {
     if (columnFilter.field === field) {
       if (columnFilter.order === "asc") {
         setColumnFilter({ field, order: "desc" });
       } else {
-        setColumnFilter({ field: "", order: "" }); // Reset to default sort
+        setColumnFilter({ field: "", order: "" });
       }
     } else {
       setColumnFilter({ field, order: "asc" });
     }
-    setPage(1); // Always reset to first page
+    setPage(1);
   };
 
-  // Saves item changes
   const saveItem = async (data) => {
     try {
       // Ensure ingredients array exists for Cake Mode
@@ -559,6 +557,36 @@ const Inventory = () => {
         ingredients: data.ingredients || [],
         seasonalPeriod: data.seasonalPeriod || { startDate: "", endDate: "" },
       };
+
+      if (
+        normalizedData.category &&
+        typeof normalizedData.category === "object"
+      ) {
+        normalizedData.category =
+          normalizedData.category._id || normalizedData.category.value;
+      }
+      if (normalizedData.size && typeof normalizedData.size === "object") {
+        normalizedData.size =
+          normalizedData.size._id || normalizedData.size.value;
+      }
+
+      if (Array.isArray(normalizedData.ingredients)) {
+        normalizedData.ingredients = normalizedData.ingredients.map((ing) => {
+          if (ing.inventoryItem && typeof ing.inventoryItem === "object") {
+            return {
+              ...ing,
+              inventoryItem: ing.inventoryItem._id || ing.inventoryItem.value,
+            };
+          }
+          if (ing._id && !ing.inventoryItem) {
+            return {
+              inventoryItem: ing._id,
+              quantity: ing.quantity || 1,
+            };
+          }
+          return ing;
+        });
+      }
 
       // Generate itemId for inventory add
       let itemId = normalizedData.itemId?.trim();
@@ -631,11 +659,11 @@ const Inventory = () => {
         throw new Error(errorMsg);
       }
 
-      // Refresh list and reset modal
       setPage(1);
       setHasMore(true);
       await fetchItems();
       setSelectedItem(null);
+      setSelectedCake(null);
       setModalMode("view");
 
       showToast({
@@ -668,22 +696,44 @@ const Inventory = () => {
   };
 
   const handleConfirmEdit = async () => {
-    if (pendingEditData) {
-      await saveItem(pendingEditData);
+    try {
+      if (pendingEditData) {
+        await saveItem(pendingEditData);
+        setPendingEditData(null);
+      } else if (pendingCakeData) {
+        await saveItem(pendingCakeData);
+        setPendingCakeData(null);
+      }
+    } catch (err) {
+      console.error("Confirm save failed", err);
+    } finally {
+      setShowConfirmation(false);
+      setModalMode("view");
+      setFormData({});
+      setSelectedIngredientOption(null);
+      setIngredientForm({ quantity: 1 });
     }
-    setPendingEditData(null);
-    setShowConfirmation(false);
   };
 
   const handleDelete = (itemId) => {
-    const item = items.find((i) => i._id === itemId);
+    const item =
+      items.find((i) => i._id === itemId) ||
+      cakeItems.find((c) => c._id === itemId) ||
+      null;
     setItemToDelete(item);
     setIsConfirmOpen(true);
   };
 
   const confirmDelete = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/inventory/${itemToDelete._id}`, {
+      if (!itemToDelete) return;
+
+      const isCake = itemToDelete.baseCost !== undefined || itemToDelete.price !== undefined;
+      const url = isCake
+        ? `${API_BASE}/api/cake/${itemToDelete._id}`
+        : `${API_BASE}/api/inventory/${itemToDelete._id}`;
+
+      const res = await fetch(url, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -712,6 +762,8 @@ const Inventory = () => {
       setIsConfirmOpen(false);
       setIsViewOpen(false);
       setItemToDelete(null);
+      setViewedItem(null);
+      setSelectedCake(null);
     }
   };
 
@@ -761,7 +813,7 @@ const Inventory = () => {
     // Normalize ingredients for Cake Schema
     const normalizedIngredients = Array.isArray(formData.ingredients)
       ? formData.ingredients.map((ing) => ({
-          inventoryItem: ing._id || ing.value || null, // Ensure ObjectId is sent
+          inventoryItem: ing._id || ing.value || ing.inventoryItem || null,
           quantity: Number(ing.quantity) || 1,
         }))
       : [];
@@ -771,7 +823,7 @@ const Inventory = () => {
       unitPrice: Number(formData.unitPrice) || 0,
       amount: Number(formData.amount) || 0,
       price: Number(formData.price) || 0,
-      layers: Number(formData.layers) || 1,
+      // category should remain as selected value (id or object handled later in saveItem)
       availability:
         formData.availability === "Regular" ? "Always" : formData.availability,
       seasonalPeriod:
@@ -799,19 +851,18 @@ const Inventory = () => {
         type: "success",
         duration: 3000,
       });
-      /* showPopup("Cake saved successfully!"); */
     }
   };
 
-  /* const handleConfirmEditCake = async () => {
-    if (pendingCakeData) {
-      await saveItem(pendingCakeData);
-      showPopup("Cake updated successfully!");
-    }
-    setPendingCakeData(null);
-    setShowConfirmation(false);
-    closeModal();
-  }; */
+  const handleViewCake = (cake) => {
+    setSelectedCake(cake);
+    setIsViewOpen(true);
+  };
+
+  const handleCloseCakeView = () => {
+    setSelectedCake(null);
+    setIsViewOpen(false);
+  };
 
   const closeModal = () => {
     setModalMode(null);
@@ -829,7 +880,9 @@ const Inventory = () => {
           onClose={() => setPopupMessage("")}
         />
       )}
-      {isViewOpen && viewedItem && (
+
+      {/* Inventory view modal (only for Inventory items) */}
+      {isViewOpen && inventoryType === "Inventory" && viewedItem && (
         <ViewModal
           item={viewedItem}
           fields={[
@@ -877,6 +930,17 @@ const Inventory = () => {
           onDelete={() => handleDelete(viewedItem._id)}
         />
       )}
+
+      {/* Cake view modal (only for Cake Inventory) */}
+      {isViewOpen && inventoryType === "Cake Inventory" && selectedCake && (
+        <CakeViewModal
+          onClose={handleCloseCakeView}
+          categories={categories}
+          cake={selectedCake}
+        />
+      )}
+
+      {/* Confirmation for delete */}
       {isConfirmOpen && (
         <ConfirmationModal
           message={`Are you sure you want to delete "${
@@ -890,7 +954,7 @@ const Inventory = () => {
         />
       )}
 
-      {/* INVENTORY MODAL */}
+      {/* INVENTORY MODAL (Edit / Add inventory item) */}
       {(modalMode === "edit" || modalMode === "add") && (
         <EditModal
           item={modalMode === "edit" ? selectedItem : null}
@@ -927,16 +991,19 @@ const Inventory = () => {
         />
       )}
 
+      {/* Save confirmation (shared for inventory & cake edits) */}
       {showConfirmation && (
         <ConfirmationModal
           message="Are you sure you want to save these changes?"
           onConfirm={handleConfirmEdit}
           onCancel={() => {
             setPendingEditData(null);
+            setPendingCakeData(null);
             setShowConfirmation(false);
           }}
         />
       )}
+
       <DashboardLayout>
         <main className="module-main-content inventory-main">
           <div className="module-header">
@@ -1005,7 +1072,7 @@ const Inventory = () => {
                     ? [
                         { label: "ID", field: "_id" },
                         { label: "Cake Name", field: "name" },
-                        { label: "Layers", field: "layers" },
+                        { label: "Category", field: "category" },
                         { label: "Base Cost", field: "baseCost" },
                         { label: "Price", field: "price" },
                         { label: "Availability", field: "availability" },
@@ -1040,7 +1107,17 @@ const Inventory = () => {
                         <td>{item.itemId}</td>
                         <td>{item.name}</td>
                         <td>{item.stock}</td>
-                        <td>{item.category || "—"}</td>
+                        <td>
+                          {/* show category name if categories are loaded */}
+                          {(
+                            (Array.isArray(categories.inventory) &&
+                              categories.inventory.find(
+                                (c) => c._id === item.category
+                              )?.name) ||
+                            item.category ||
+                            "—"
+                          )}
+                        </td>
                         <td>₱{item.purchasePrice}</td>
                         <td>₱{item.unitPrice}</td>
                         <td>
@@ -1094,7 +1171,17 @@ const Inventory = () => {
                       <tr key={cake._id}>
                         <td>{cake._id}</td>
                         <td>{cake.name}</td>
-                        <td>{cake.layers || "—"}</td>
+                        <td>
+                          {/* cake category name if available */}
+                          {(
+                            (Array.isArray(categories.cake) &&
+                              categories.cake.find(
+                                (c) => c._id === cake.category
+                              )?.name) ||
+                            cake.category ||
+                            "—"
+                          )}
+                        </td>
                         <td>₱{cake.baseCost || 0}</td>
                         <td>₱{cake.price || 0}</td>
                         <td>{cake.availability || "—"}</td>
@@ -1104,8 +1191,8 @@ const Inventory = () => {
                           <button
                             className="module-action-btn module-view-btn"
                             onClick={() => {
-                              setViewedItem(cake);
-                              setIsViewOpen(true);
+                              // Use selectedCake + handleViewCake so CakeViewModal receives the cake
+                              handleViewCake(cake);
                             }}
                           >
                             View

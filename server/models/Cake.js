@@ -4,12 +4,12 @@ const InventoryItem = mongoose.model("InventoryItem");
 const cakeSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
+    category: { type: String, required: true, trim: true },
     size: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "CakeSize",
       required: true,
     },
-    layers: { type: Number, required: true, min: 1 },
     ingredients: [
       {
         inventoryItem: {

@@ -1,78 +1,113 @@
-import React from 'react';
-import '../styles/CakeViewModal.css';
+import React from "react";
+import "../styles/CakeViewModal.css";
 
-const CakeViewModal = ({ cakeData, cakeFields, onClose }) => {
-  if (!cakeData) return null;
+const CakeViewModal = ({ cake, categories, onClose }) => {
+  if (!cake) return null;
 
-  // Render display-only fields
-  const renderField = (field) => {
-    const { name, label } = field;
-
-    // Special handling for price
-    if (name === 'price') {
-      return cakeData[name] ? `₱${cakeData[name]}` : 'N/A';
-    }
-
-    // Special handling for availability
-    if (name === 'availability') {
-      return cakeData[name] || 'N/A';
-    }
-
-    // Default: just return value or fallback
-    return cakeData[name] || 'N/A';
+  const formatDate = (dateString) => {
+    if (!dateString) return "—";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-PH", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   };
 
+  console.log("CakeViewModal data:", {
+    cakeCategory: cake.category,
+    categories,
+  });
+
   return (
-    <div className="cake-modal-overlay">
-      <div className="cake-modal-content">
-        <h2>View Cake</h2>
+    <div className="cake-view-overlay">
+      <div className="cake-view-content">
+        <h2 className="cake-view-title">{cake.name}</h2>
 
-        <div className="cake-form-grid">
+        <div className="cake-view-grid">
           {/* LEFT COLUMN */}
-          <div className="cake-form-left">
-            {cakeFields.map((field) => (
-              <div key={field.name} className="cake-form-group">
-                <label>{field.label}:</label>
-                <p>{renderField(field)}</p>
-              </div>
-            ))}
+          <div className="cake-view-column">
+            <div className="cake-view-field">
+              <label>Category:</label>
+              <p>
+                {Array.isArray(categories?.cake)
+                  ? categories.cake.find(
+                      (c) => c._id.toString() === cake.category
+                    )?.name || `Unknown (${cake.category})`
+                  : `Unknown (${cake.category})`}
+              </p>
+            </div>
 
-            {/* Seasonal Period (conditional) */}
-            {cakeData.availability === 'Seasonal' && (
-              <div className="cake-form-group">
+            <div className="cake-view-field">
+              <label>Size:</label>
+              <p>
+                {cake.size?.name ? cake.size.name : `(Size ID: ${cake.size})`}
+              </p>
+            </div>
+
+            <div className="cake-view-field">
+              <label>Availability:</label>
+              <p>{cake.availability}</p>
+            </div>
+
+            {cake.availability === "Seasonal" && (
+              <div className="cake-view-field">
                 <label>Seasonal Period:</label>
                 <p>
-                  {cakeData.seasonalPeriod?.startDate || 'N/A'} →{' '}
-                  {cakeData.seasonalPeriod?.endDate || 'N/A'}
+                  {formatDate(cake.seasonalPeriod?.startDate)} —{" "}
+                  {formatDate(cake.seasonalPeriod?.endDate)}
                 </p>
               </div>
             )}
+
+            <div className="cake-view-field">
+              <label>Status:</label>
+              <p>{cake.status}</p>
+            </div>
+
+            <div className="cake-view-field">
+              <label>Base Cost:</label>
+              <p>₱{cake.baseCost?.toFixed(2) ?? "0.00"}</p>
+            </div>
+
+            <div className="cake-view-field">
+              <label>Price:</label>
+              <p>₱{cake.price?.toFixed(2) ?? "0.00"}</p>
+            </div>
           </div>
 
-          {/* RIGHT COLUMN */}
-          <div className="cake-form-right">
-            <h3>Ingredients</h3>
-            <div className="cake-ingredient-list">
-              {(!cakeData.ingredients || cakeData.ingredients.length === 0) && (
-                <p>No ingredients listed.</p>
-              )}
-              {cakeData.ingredients?.map((ing, idx) => (
-                <div key={idx} className="cake-ingredient-row">
-                  <span>{ing.name}</span>
-                  <span>{ing.quantity}</span>
-                </div>
-              ))}
-            </div>
+          {/* RIGHT COLUMN - INGREDIENTS */}
+          <div className="cake-view-column">
+            <h3 className="cake-view-subtitle">Ingredients</h3>
+            {cake.ingredients && cake.ingredients.length > 0 ? (
+              <table className="cake-view-ingredient-table">
+                <thead>
+                  <tr>
+                    <th>Ingredient</th>
+                    <th>Quantity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cake.ingredients.map((ing, idx) => (
+                    <tr key={idx}>
+                      <td>
+                        {ing.inventoryItem?.name
+                          ? ing.inventoryItem.name
+                          : `(Item ID: ${ing.inventoryItem})`}
+                      </td>
+                      <td>{ing.quantity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="cake-view-no-ingredients">No ingredients listed.</p>
+            )}
           </div>
         </div>
 
-        {/* Buttons */}
-        <div className="cake-modal-buttons">
-          <button
-            type="button"
-            onClick={onClose}
-            className="cake-btn cancel-btn"
-          >
+        <div className="cake-view-footer">
+          <button className="cake-view-close-btn" onClick={onClose}>
             Close
           </button>
         </div>

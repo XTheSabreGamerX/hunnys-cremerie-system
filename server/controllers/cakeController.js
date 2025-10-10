@@ -25,7 +25,8 @@ const getAllCakes = async (req, res) => {
       .limit(limit)
       .sort({ name: 1 })
       .populate("size", "name description")
-      .populate("ingredients.inventoryItem", "name unitPrice stock");
+      .populate("ingredients.inventoryItem", "name unitPrice stock")
+      .lean();
 
     res.json({ cakes, totalPages, currentPage: page, totalItems: total });
   } catch (err) {
