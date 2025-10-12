@@ -93,8 +93,8 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     {
       label: "Backup and Restore",
       icon: <FaDownload />,
-      path: "/dashboard",
-      roles: ["admin", "owner", "manager"],
+      path: "/backuprestore",
+      roles: ["admin", "owner"],
     },
     {
       label: "Notifications",

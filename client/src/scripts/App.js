@@ -19,6 +19,7 @@ import CustomerManagement from "../pages/CustomerManagement";
 import SalesManagement from "../pages/SalesManagement";
 import SalesReport from "../pages/SalesReport";
 import Notifications from "../pages/Notifications";
+import BackupRestore from "../pages/BackupRestore";
 import Settings from "../pages/Settings";
 
 function App() {
@@ -141,6 +142,18 @@ function App() {
               <ProtectedRoute>
                 <DashboardHeader />
                 <Notifications />
+              </ProtectedRoute>
+            </>
+          }
+        />
+
+        <Route //Notification route
+          path="/backuprestore"
+          element={
+            <>
+              <ProtectedRoute>
+                <DashboardHeader />
+                <BackupRestore />
               </ProtectedRoute>
             </>
           }

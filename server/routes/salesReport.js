@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getSalesRecords, getSalesAnalytics } = require('../controllers/salesReportController');
-const authenticateToken = require('../middleware/auth')
+const authenticateToken = require('../middleware/auth');
 const roleCheck = require('../middleware/roleCheck');
 
 router.get('/sales', authenticateToken, roleCheck(['admin', 'owner', 'manager']), getSalesRecords);

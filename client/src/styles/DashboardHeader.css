@@ -52,6 +52,10 @@
   margin-left: 30px;
 }
 
+.dashboard-container.collapsed .backup-restore-main {
+  margin-left: 20px;
+}
+
 .dashboard-container.collapsed .settings-main {
   margin-left: 50px;
 }

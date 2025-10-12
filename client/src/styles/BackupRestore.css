@@ -1,0 +1,87 @@
+/* ========== Backup & Restore Styles ========== */
+.backup-restore-main {
+  padding: 2rem;
+  color: #333;
+  margin-left: 100px;
+}
+
+.backup-restore-title {
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Main Container for Aesthetics */
+.backup-restore-container {
+  background-color: #f8f9fa;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
+.backup-restore-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  justify-items: center;
+}
+
+/* Individual Card */
+.backup-restore-card {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  width: 220px;
+  height: 150px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  transition: box-shadow 0.2s ease;
+}
+
+/* Removed hover animation */
+.backup-restore-card-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.backup-restore-card-actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.backup-restore-btn {
+  padding: 0.5rem 0.8rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.backup-restore-backup-btn {
+  background-color: #3498db;
+  color: white;
+}
+
+.backup-restore-backup-btn:hover {
+  background-color: #2980b9;
+}
+
+.backup-restore-restore-btn {
+  background-color: #2ecc71;
+  color: white;
+}
+
+.backup-restore-restore-btn:hover {
+  background-color: #27ae60;
+}
+
+.backup-restore-btn:active {
+  transform: scale(0.97);
+}
