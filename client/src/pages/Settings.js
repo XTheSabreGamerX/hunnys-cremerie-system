@@ -8,7 +8,6 @@ import { FiTrash2 } from "react-icons/fi";
 import "../styles/Settings.css";
 
 const Settings = () => {
-  const [uoms, setUoms] = useState([]);
   const [cakeSizes, setCakeSizes] = useState([]);
   const [categories, setCategories] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -55,18 +54,11 @@ const Settings = () => {
     return [
       {
         name: "name",
-        label:
-          section === "uom"
-            ? "Unit of Measurement"
-            : section === "size"
-            ? "Cake Size"
-            : "Category",
+        label: section === "size" ? "Cake Size" : "Category",
         type: "text",
         required: true,
         placeholder:
-          section === "uom"
-            ? "Enter unit (e.g., kg, box)"
-            : section === "size"
+          section === "size"
             ? "Enter cake size (e.g., 8-inch)"
             : "Enter category (e.g., Bread, Cake)",
       },
@@ -74,7 +66,6 @@ const Settings = () => {
   };
 
   useEffect(() => {
-    fetchData(`${API_BASE}/api/settings/uom`, setUoms);
     fetchData(`${API_BASE}/api/settings/size`, setCakeSizes);
     fetchData(`${API_BASE}/api/settings/category`, setCategories);
   }, [API_BASE]);
@@ -135,13 +126,7 @@ const Settings = () => {
 
       const saved = await res.json();
 
-      if (activeSection === "uom") {
-        setUoms((prev) =>
-          isEditing
-            ? prev.map((u) => (u._id === saved._id ? saved : u))
-            : [...prev, saved]
-        );
-      } else if (activeSection === "size") {
+      if (activeSection === "size") {
         setCakeSizes((prev) =>
           isEditing
             ? prev.map((s) => (s._id === saved._id ? saved : s))
@@ -193,9 +178,7 @@ const Settings = () => {
         throw new Error(errorData.error || "Failed to delete item");
       }
 
-      if (sectionKey === "uom") {
-        setUoms((prev) => prev.filter((u) => u._id !== id));
-      } else if (sectionKey === "size") {
+      if (sectionKey === "size") {
         setCakeSizes((prev) => prev.filter((s) => s._id !== id));
       } else if (sectionKey === "category") {
         setCategories((prev) => prev.filter((c) => c._id !== id));
@@ -241,14 +224,6 @@ const Settings = () => {
 
           <div className="settings-sections-container">
             {[
-              {
-                key: "uom",
-                title: "Units of Measurement (UoM)",
-                addLabel: "+ Add UoM",
-                data: uoms,
-                setter: setUoms,
-                deleteUrl: "/api/settings/uom",
-              },
               {
                 key: "size",
                 title: "Cake Sizes",

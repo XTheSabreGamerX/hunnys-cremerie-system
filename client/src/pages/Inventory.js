@@ -61,11 +61,6 @@ const Inventory = () => {
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
   const inventoryFields = [
-    {
-      label: "Item ID",
-      name: "itemId",
-      placeholder: "e.g. BOX-001, CAKE-025, etc... Leave empty for default ID",
-    },
     { label: "Item Name", name: "name", required: true },
     {
       label: "Stock",
