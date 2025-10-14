@@ -1,4 +1,5 @@
 const InventoryItem = require("../models/InventoryItem");
+const Category = require("../models/Category");
 const { createNotification } = require("../controllers/notificationController");
 const { createLog } = require("../controllers/activityLogController");
 const ActionRequest = require("../models/ActionRequest");
@@ -111,8 +112,13 @@ const getAllInventoryItems = async (req, res) => {
 // Adding a new inventory item
 const addInventoryItem = async (req, res) => {
   try {
+    const categoryDoc = await Category.findById(req.body.category);
+    if (!categoryDoc)
+      return res.status(400).json({ message: "Invalid category" });
+
     const item = new InventoryItem({
       ...req.body,
+      category: categoryDoc.name,
       createdBy: req.user.id,
     });
 
@@ -201,6 +207,14 @@ const updateInventoryItem = async (req, res) => {
       });
     }
 
+    if (req.body.category) {
+      const categoryDoc = await Category.findById(req.body.category);
+      if (!categoryDoc) {
+        return res.status(400).json({ message: "Invalid category" });
+      }
+      req.body.category = categoryDoc.name;
+    }
+
     Object.assign(item, req.body);
 
     if (item.unitPrice < item.purchasePrice) {
@@ -240,59 +254,6 @@ const updateInventoryItem = async (req, res) => {
     res.status(500).json({ message: err.message || "Failed to update item." });
   }
 };
-
-/*const updateInventoryItem = async (req, res) => {
-  try {
-    const { unitPrice, purchasePrice } = req.body;
-
-    if (unitPrice !== undefined && purchasePrice !== undefined) {
-      if (unitPrice < purchasePrice) {
-        return res.status(400).json({
-          error: "Unit Price must be greater than or equal to Purchase Price",
-        });
-      }
-    }
-
-    const updated = await InventoryItem.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-
-    if (!updated) {
-      return res.status(404).json({ error: "Item not found" });
-    }
-
-    try {
-      await createLog({
-        action: "Updated Item",
-        module: "Inventory",
-        description: `User ${req.user.username} updated an item: ${updated.name}`,
-        userId: req.user.id,
-      });
-    } catch (logErr) {
-      console.error("[Activity Log] Failed to log update:", logErr.message);
-    }
-
-    await Notification.create({
-      roles: ["admin", "owner", "manager"],
-      isGlobal: false,
-      message: `An inventory item "${updated.name}" was edited.`,
-      type: "info",
-    });
-
-    res.json(updated);
-  } catch (err) {
-    console.error("Update error:", err);
-
-    if (err.name === "ValidationError") {
-      const messages = Object.values(err.errors).map((e) => e.message);
-      return res.status(400).json({ message: messages.join(", ") });
-    }
-
-    res.status(500).json({ error: "Failed to update item." });
-  }
-};*/
 
 // Deleting an inventory item
 const deleteInventoryItem = async (req, res) => {
