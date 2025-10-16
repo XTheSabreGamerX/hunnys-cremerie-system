@@ -36,6 +36,7 @@ const inventoryItemSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
+  //isSplit boolean default false optional (tag for repacking)
 });
 
 // Calculates Status After Creation/Update

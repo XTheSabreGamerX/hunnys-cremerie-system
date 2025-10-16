@@ -28,6 +28,7 @@ const MONGO_URI = process.env.MONGO_URI;
 
 const allowedOrigins = [
   'http://localhost:3000',
+  'https://www.hunnyscremerie.online',
   'https://hunnys.netlify.app'
 ];
 
