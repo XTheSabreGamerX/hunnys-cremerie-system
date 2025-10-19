@@ -1,3 +1,4 @@
+const Fuse = require("fuse.js");
 const InventoryItem = require("../models/InventoryItem");
 const Category = require("../models/Category");
 const { createNotification } = require("../controllers/notificationController");
@@ -23,82 +24,99 @@ function computeStatus(item) {
   return "Well-stocked";
 }
 
-// GET all inventory items (with search + pagination + column filter)
+// GET all inventory items (with search + pagination + column filter + fuzzy search)
 const getAllInventoryItems = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
     const search = req.query.search?.trim() || "";
     const field = req.query.field;
     const order = req.query.order === "desc" ? -1 : 1;
-
     const fetchAll = req.query.all === "true";
 
-    let searchFilter = {};
-
-    if (search) {
-      const isNumber = !isNaN(search);
-      const isDate = !isNaN(Date.parse(search));
-
-      if (field) {
-        if (
-          ["purchasePrice", "unitPrice", "amount", "restockThreshold"].includes(
-            field
-          ) &&
-          isNumber
-        ) {
-          searchFilter[field] = Number(search);
-        } else if (field === "expirationDate" && isDate) {
-          searchFilter[field] = new Date(search);
-        } else {
-          searchFilter[field] = { $regex: search, $options: "i" };
-        }
-      } else {
-        searchFilter = {
-          $or: [
-            { itemId: { $regex: search, $options: "i" } },
-            { name: { $regex: search, $options: "i" } },
-            { category: { $regex: search, $options: "i" } },
-            { supplier: { $regex: search, $options: "i" } },
-            { status: { $regex: search, $options: "i" } },
-            ...(isNumber
-              ? [
-                  { purchasePrice: Number(search) },
-                  { unitPrice: Number(search) },
-                  { amount: Number(search) },
-                  { restockThreshold: Number(search) },
-                ]
-              : []),
-            ...(isDate ? [{ expirationDate: new Date(search) }] : []),
-          ],
-        };
-      }
-    }
-
-    const totalItems = await InventoryItem.countDocuments(searchFilter);
-    const totalPages = Math.ceil(totalItems / limit);
-
-    let query = InventoryItem.find(searchFilter)
+    // Fetch all items first
+    const allItems = await InventoryItem.find()
       .sort(field ? { [field]: order } : { itemId: 1 })
       .populate("unit", "name amount")
       .populate("createdBy", "username");
 
-    if (!fetchAll) {
-      query = query.skip(skip).limit(limit);
+    // If no search, just return paginated results
+    if (!search) {
+      const totalItems = allItems.length;
+      const totalPages = Math.ceil(totalItems / limit);
+      const paginatedItems = fetchAll
+        ? allItems
+        : allItems.slice((page - 1) * limit, page * limit);
+
+      return res.json({
+        items: paginatedItems,
+        currentPage: page,
+        totalPages,
+        totalItems,
+      });
     }
 
-    const items = await query;
-
-    // If ?all=true → return raw items
-    if (fetchAll) {
-      return res.json(items);
+    // Determine Fuse.js keys based on column filter
+    let fuseKeys = [];
+    if (field) {
+      // Column filter applied → only search that field
+      if (
+        ["purchasePrice", "unitPrice", "amount", "restockThreshold"].includes(
+          field
+        )
+      ) {
+        fuseKeys = [
+          { name: field, getFn: (item) => item[field]?.toString() || "" },
+        ];
+      } else if (field === "unit.name") {
+        fuseKeys = [
+          { name: "unit.name", getFn: (item) => item.unit?.name || "" },
+        ];
+      } else {
+        fuseKeys = [field];
+      }
+    } else {
+      // No column filter → search all relevant fields
+      fuseKeys = [
+        "itemId",
+        "name",
+        "category",
+        "supplier",
+        "status",
+        {
+          name: "purchasePrice",
+          getFn: (item) => item.purchasePrice?.toString() || "",
+        },
+        {
+          name: "unitPrice",
+          getFn: (item) => item.unitPrice?.toString() || "",
+        },
+        { name: "amount", getFn: (item) => item.amount?.toString() || "" },
+        {
+          name: "restockThreshold",
+          getFn: (item) => item.restockThreshold?.toString() || "",
+        },
+        { name: "unit.name", getFn: (item) => item.unit?.name || "" },
+      ];
     }
 
-    // Otherwise return paginated format
+    // Fuse.js fuzzy search
+    const fuse = new Fuse(allItems, {
+      keys: fuseKeys,
+      threshold: 0.4, // adjust for stricter/looser search
+      ignoreLocation: true,
+    });
+
+    const fuseResults = fuse.search(search).map((result) => result.item);
+
+    const totalItems = fuseResults.length;
+    const totalPages = Math.ceil(totalItems / limit);
+    const paginatedResults = fetchAll
+      ? fuseResults
+      : fuseResults.slice((page - 1) * limit, page * limit);
+
     res.json({
-      items: items || [],
+      items: paginatedResults,
       currentPage: page,
       totalPages,
       totalItems,
