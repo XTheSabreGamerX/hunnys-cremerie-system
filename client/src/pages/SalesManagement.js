@@ -19,6 +19,10 @@ const SalesManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [paginatedItems, setPaginatedItems] = useState([]);
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -74,6 +78,20 @@ const SalesManagement = () => {
       })
       .catch(() => console.error("Failed to fetch customers"));
   }, [authHeader, isUnregistered]);
+
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentItems = inventoryItems.slice(startIndex, endIndex);
+    setPaginatedItems(currentItems);
+    setTotalPages(Math.ceil(inventoryItems.length / itemsPerPage));
+  }, [inventoryItems, currentPage, itemsPerPage]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
 
   const handleAddToCart = (product) => {
     if (product.stock <= 0) return;
@@ -217,67 +235,125 @@ const SalesManagement = () => {
       )}
       <DashboardLayout>
         <main className="pos-main">
-          <section className="pos-products">
-            <div className="pos-products-header">
+          <section className="sales-products">
+            <div className="sales-products-header">
               <input
                 type="text"
                 placeholder="Search products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pos-search-input"
+                className="sales-search-input"
               />
             </div>
 
-            <div className="pos-products-list">
-              {inventoryItems
-                .filter((item) =>
-                  item.name.toLowerCase().includes(searchQuery.toLowerCase())
-                )
-                .sort((a, b) => {
-                  if (
-                    a.status === "Well-stocked" &&
-                    b.status !== "Well-stocked"
-                  )
-                    return -1;
-                  if (
-                    a.status !== "Well-stocked" &&
-                    b.status === "Well-stocked"
-                  )
-                    return 1;
-                  return 0;
-                })
-                .map((item) => (
-                  <div
-                    key={item._id}
-                    className={`pos-product-card ${
-                      item.stock <= 0 ||
-                      item.status === "Out of stock" ||
-                      item.status === "Expired"
-                        ? "disabled-product"
-                        : ""
-                    }`}
-                    onClick={() =>
-                      item.stock > 0 &&
-                      item.status !== "Out of stock" &&
-                      item.status !== "Expired"
-                        ? handleAddToCart(item)
-                        : null
-                    }
-                  >
-                    <h3>{item.name}</h3>
-                    <p>₱{item.unitPrice}</p>
-                    <p>Stock: {item.stock}</p>
-                    <p>
-                      <span
-                        className={`product-status ${item.status
-                          .replace(/\s+/g, "-")
-                          .toLowerCase()}`}
+            <div className="sales-products-table-container">
+              <table className="sales-products-table">
+                <thead>
+                  <tr>
+                    <th>Item ID</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Purchase Price</th>
+                    <th>Unit Price</th>
+                    <th>Unit</th>
+                    <th>Stock</th>
+                    <th>Status</th>
+                    <th>Amount</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {paginatedItems
+                    .filter((item) =>
+                      item.name
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase())
+                    )
+                    .sort((a, b) => {
+                      if (
+                        a.status === "Well-stocked" &&
+                        b.status !== "Well-stocked"
+                      )
+                        return -1;
+                      if (
+                        a.status !== "Well-stocked" &&
+                        b.status === "Well-stocked"
+                      )
+                        return 1;
+                      return 0;
+                    })
+                    .map((item) => (
+                      <tr
+                        key={item._id}
+                        className={`sales-table-row ${
+                          item.stock <= 0 ||
+                          item.status === "Out of stock" ||
+                          item.status === "Expired"
+                            ? "disabled-row"
+                            : ""
+                        }`}
+                        onClick={() =>
+                          item.stock > 0 &&
+                          item.status !== "Out of stock" &&
+                          item.status !== "Expired"
+                            ? handleAddToCart(item)
+                            : null
+                        }
                       >
-                        {item.status}
-                      </span>
-                    </p>
-                  </div>
-                ))}
+                        <td>{item.itemId}</td>
+                        <td>{item.name}</td>
+                        <td>{item.category}</td>
+                        <td>₱{item.purchasePrice}</td>
+                        <td>₱{item.unitPrice}</td>
+                        <td>{item.unit?.name || "N/A"}</td>
+                        <td>{item.stock}</td>
+                        <td>
+                          <span
+                            className={`product-status ${item.status
+                              .replace(/\s+/g, "-")
+                              .toLowerCase()}`}
+                          >
+                            {item.status}
+                          </span>
+                        </td>
+                        <td>{item.amount}</td>
+                      </tr>
+                    ))}
+
+                  {/* Show message if no matching results */}
+                  {paginatedItems.filter((item) =>
+                    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).length === 0 && (
+                    <tr>
+                      <td colSpan="9" className="no-results">
+                        No matching products found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="pos-pagination">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="pos-pagination-btn"
+              >
+                Previous
+              </button>
+
+              <span className="pos-pagination-info">
+                Page {currentPage} of {totalPages}
+              </span>
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="pos-pagination-btn"
+              >
+                Next
+              </button>
             </div>
           </section>
 
