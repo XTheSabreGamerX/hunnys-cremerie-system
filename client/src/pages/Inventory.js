@@ -40,7 +40,8 @@ const Inventory = () => {
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("success");
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [inventoryType, setInventoryType] = useState("Inventory");
   const [selectedIngredientOption, setSelectedIngredientOption] =
     useState(null);
@@ -267,33 +268,12 @@ const Inventory = () => {
           : data;
 
         if (inventoryType === "Inventory") {
-          setItems((prev) => {
-            const combined =
-              page === 1
-                ? wrappedData.items || []
-                : [...prev, ...(wrappedData.items || [])];
-
-            const uniqueItems = Array.from(
-              new Map(combined.map((item) => [item._id, item])).values()
-            );
-
-            return uniqueItems;
-          });
-          setHasMore(page < (wrappedData.totalPages || 1));
+          setItems(wrappedData.items || []);
+          setTotalPages(wrappedData.totalPages || 1);
+          setTotalItems(wrappedData.totalItems || 0);
         } else {
-          setCakeItems((prev) => {
-            const combined =
-              page === 1
-                ? wrappedData.cakes || []
-                : [...prev, ...(wrappedData.cakes || [])];
-
-            const uniqueCakes = Array.from(
-              new Map(combined.map((cake) => [cake._id, cake])).values()
-            );
-
-            return uniqueCakes;
-          });
-          setHasMore(page < (wrappedData.totalPages || 1));
+          setCakeItems(wrappedData.cakes || []);
+          setTotalPages(wrappedData.totalPages || 1);
         }
       } catch (err) {
         console.error("Error fetching inventory:", err);
@@ -404,38 +384,18 @@ const Inventory = () => {
     fetchSuppliers();
   }, [page, searchQuery, columnFilter, fetchItems, fetchSuppliers]);
 
-  // Infinite Scroll for pagination
-  useEffect(() => {
-    const container = containerRef.current;
-
-    const handleScroll = () => {
-      if (
-        container &&
-        container.scrollTop + container.clientHeight >=
-          container.scrollHeight - 50 &&
-        hasMore
-      ) {
-        setPage((prev) => prev + 1);
-      }
-    };
-
-    if (container) {
-      container.addEventListener("scroll", handleScroll);
-    }
-
-    return () => {
-      if (container) {
-        container.removeEventListener("scroll", handleScroll);
-      }
-    };
-  }, [hasMore]);
-
   const handleInventoryToggle = (type) => {
     setInventoryType(type);
     setPage(1);
     setIsViewOpen(false);
     setViewedItem(null);
+    setSelectedItem(null);
     setSelectedCake(null);
+    setFormData({});
+    setSelectedIngredientOption(null);
+    setIngredientForm({ quantity: 1 });
+    setPendingEditData(null);
+    setPendingCakeData(null);
   };
 
   const validateFormData = (data) => {
@@ -660,7 +620,6 @@ const Inventory = () => {
       }
 
       setPage(1);
-      setHasMore(true);
       await fetchItems();
       setSelectedItem(null);
       setSelectedCake(null);
@@ -744,7 +703,6 @@ const Inventory = () => {
       const data = await res.json();
 
       setPage(1);
-      setHasMore(true);
       await fetchItems();
 
       showToast({
@@ -1057,7 +1015,6 @@ const Inventory = () => {
                 <tr>
                   {(inventoryType === "Inventory"
                     ? [
-                        { label: "#", field: null },
                         { label: "ID", field: "itemId" },
                         { label: "Item Name", field: "name" },
                         { label: "Stock", field: "stock" },
@@ -1101,12 +1058,11 @@ const Inventory = () => {
                 {inventoryType === "Inventory" ? (
                   items.length === 0 ? (
                     <tr>
-                      <td colSpan="12">No items found.</td>
+                      <td colSpan="11">No items found.</td>
                     </tr>
                   ) : (
-                    items.map((item, index) => (
+                    items.map((item) => (
                       <tr key={item._id}>
-                        <td>{index + 1}</td>
                         <td>{item.itemId}</td>
                         <td>{item.name}</td>
                         <td>{item.stock}</td>
@@ -1202,6 +1158,54 @@ const Inventory = () => {
                 ) : null}
               </tbody>
             </table>
+          </div>
+
+          <div className="pagination">
+            {/* Use a wrapper div for column layout */}
+            <div className="pagination-top">
+              {inventoryType === "Inventory" && totalItems > 0 && (
+                <p className="pagination-info">
+                  Showing {(page - 1) * 10 + 1}-
+                  {Math.min(page * 10, totalItems)} of {totalItems} items
+                </p>
+              )}
+
+              {inventoryType === "Cake Inventory" && cakeItems.length > 0 && (
+                <p className="pagination-info">
+                  Showing {(page - 1) * 10 + 1}-
+                  {Math.min(page * 10, cakeItems.length)} of {cakeItems.length}{" "}
+                  cakes
+                </p>
+              )}
+            </div>
+
+            <div className="pagination-buttons">
+              <button
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={page === 1}
+              >
+                Prev
+              </button>
+
+              {[...Array(totalPages)].map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setPage(i + 1)}
+                  className={page === i + 1 ? "active" : ""}
+                >
+                  {i + 1}
+                </button>
+              ))}
+
+              <button
+                onClick={() =>
+                  setPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={page === totalPages}
+              >
+                Next
+              </button>
+            </div>
           </div>
         </main>
       </DashboardLayout>

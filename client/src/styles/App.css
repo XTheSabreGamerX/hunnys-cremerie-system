@@ -100,7 +100,7 @@ html, body, #root {
 .module-table-container {
   width: 100%;
   max-width: 1500px;
-  max-height: 600px;
+  height: 540px;
   background-color: rgba(128, 128, 128, 0.3);
   padding: 1rem;
   border-radius: 10px;
@@ -175,4 +175,48 @@ html, body, #root {
 }
 .module-add-btn:hover {
   background-color: #246b44;
+}
+
+.pagination {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* center both counter and buttons */
+  gap: 8px; /* spacing between counter and buttons */
+}
+
+.pagination-info {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 4px; /* spacing between buttons */
+}
+
+.pagination button {
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  background-color: #f9f9f9;
+  color: #333;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.pagination button:hover {
+  background-color: #e0e0e0;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination button.active {
+  background-color: #4caf50;
+  color: white;
+  border-color: #4caf50;
 }
