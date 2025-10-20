@@ -4,6 +4,6 @@ const { backupInventory } = require('../controllers/backupController');
 const authenticateToken = require('../middleware/auth');
 const roleCheck = require('../middleware/roleCheck');
 
-router.get('/backup/inventory', authenticateToken, roleCheck(['admin', 'owner']), backupInventory);
+router.get('/inventory', authenticateToken, roleCheck(['admin', 'owner']), backupInventory);
 
 module.exports = router;

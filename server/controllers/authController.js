@@ -61,7 +61,7 @@ const loginUser = async (req, res) => {
         needsPasswordReset: user.needsPasswordReset,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "24h" }
+      { expiresIn: "10m" }
     );
 
     res.status(200).json({

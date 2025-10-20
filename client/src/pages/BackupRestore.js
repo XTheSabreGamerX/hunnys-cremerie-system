@@ -4,24 +4,48 @@ import '../styles/BackupRestore.css';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
+const DEFAULT_HEADERS = {
+  Authorization: `Bearer ${localStorage.getItem('token')}`,
+};
+
 const BackupRestore = () => {
+  const modules = [
+    { key: 'inventory', label: 'Inventory' },
+    { key: 'supplier', label: 'Supplier' },
+    { key: 'sales', label: 'Sales' },
+    { key: 'users', label: 'Users' },
+  ];
+
   const handleBackup = async (module) => {
     try {
       const response = await fetch(`${API_BASE}/api/backup/${module}`, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          DEFAULT_HEADERS,
         },
       });
 
       if (!response.ok) throw new Error('Backup failed.');
 
       const blob = await response.blob();
+
+      let filename = `${module}_backup.xlsx`;
+      const disposition = response.headers.get('Content-Disposition');
+
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match && match[1]) {
+          filename = decodeURIComponent(match[1]);
+        }
+      }
+
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${module}_backup.xlsx`;
+      a.download = filename;
+      document.body.appendChild(a);
       a.click();
+      a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Backup error:', err);
@@ -35,31 +59,30 @@ const BackupRestore = () => {
 
   return (
     <DashboardLayout>
-      <div className='backup-restore-main'>
-        <h2 className='backup-restore-title'>Backup & Restore</h2>
+      <div className="backup-restore-main">
+        <h2 className="backup-restore-title">Backup & Restore</h2>
 
-        <div className='backup-restore-container'>
-          <div className='backup-restore-grid'>
-            {/* Inventory Card */}
-            <div className='backup-restore-card'>
-              <h3 className='backup-restore-card-title'>Inventory</h3>
-              <div className='backup-restore-card-actions'>
-                <button
-                  className='backup-restore-btn backup-restore-backup-btn'
-                  onClick={() => handleBackup('inventory')}
-                >
-                  Backup
-                </button>
-                <button
-                  className='backup-restore-btn backup-restore-restore-btn'
-                  onClick={() => handleRestore('inventory')}
-                >
-                  Restore
-                </button>
+        <div className="backup-restore-container">
+          <div className="backup-restore-grid">
+            {modules.map((mod) => (
+              <div key={mod.key} className="backup-restore-card">
+                <h3 className="backup-restore-card-title">{mod.label}</h3>
+                <div className="backup-restore-card-actions">
+                  <button
+                    className="backup-restore-btn backup-restore-backup-btn"
+                    onClick={() => handleBackup(mod.key)}
+                  >
+                    Backup
+                  </button>
+                  <button
+                    className="backup-restore-btn backup-restore-restore-btn"
+                    onClick={() => handleRestore(mod.key)}
+                  >
+                    Restore
+                  </button>
+                </div>
               </div>
-            </div>
-
-            {/* Future Cards (Supplier, Sales, etc.) */}
+            ))}
           </div>
         </div>
       </div>
