@@ -69,7 +69,8 @@ const Login = () => {
       const data = await res.json();
 
       if (res.ok) {
-        localStorage.setItem("token", data.token);
+        localStorage.setItem("token", data.accessToken);
+        localStorage.setItem("refreshToken", data.refreshToken);
         localStorage.setItem("user", JSON.stringify(data.user));
         localStorage.setItem("isLoggedIn", "true");
 
@@ -211,9 +212,7 @@ const Login = () => {
       const data = await res.json();
 
       if (res.ok) {
-        setPopupMessage(
-          "Password reset successfully! You can now log in."
-        );
+        setPopupMessage("Password reset successfully! You can now log in.");
         setPopupType("success");
         setShowChangePasswordModal(false);
       } else {

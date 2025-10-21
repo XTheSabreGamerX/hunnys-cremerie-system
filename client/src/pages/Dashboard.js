@@ -16,6 +16,7 @@ import {
   FaClipboardList,
 } from "react-icons/fa";
 import DashboardLayout from "../scripts/DashboardLayout";
+import { authFetch, API_BASE } from "../utils/tokenUtils";
 import "../styles/Dashboard.css";
 
 const Dashboard = () => {
@@ -29,16 +30,14 @@ const Dashboard = () => {
 
   const [lineData, setLineData] = useState([]);
 
-  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
-  const token = localStorage.getItem("token");
   const navigate = useNavigate();
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login");
     }
-  }, [token, navigate]);
+  }, [navigate]);
 
   const user = JSON.parse(localStorage.getItem("user"));
   const role = user?.role ? user.role.toLowerCase() : null;
@@ -97,12 +96,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/dashboard`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await authFetch(`${API_BASE}/api/dashboard`);
 
         if (!res.ok) throw new Error("Failed to fetch dashboard stats");
 
@@ -114,20 +108,14 @@ const Dashboard = () => {
     };
 
     fetchStats();
-  }, [API_BASE, token]);
+  }, []);
 
   // Fetch revenue data
   useEffect(() => {
     const fetchRevenueCost = async () => {
       try {
-        const res = await fetch(
-          `${API_BASE}/api/dashboard/revenue-cost-by-day`,
-          {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-          }
+        const res = await authFetch(
+          `${API_BASE}/api/dashboard/revenue-cost-by-day`
         );
         if (!res.ok) throw new Error("Failed to fetch revenue/cost data");
         const data = await res.json();
@@ -137,55 +125,59 @@ const Dashboard = () => {
       }
     };
     fetchRevenueCost();
-  }, [API_BASE, token]);
+  }, []);
 
   return (
     <>
       <DashboardLayout>
-      <main className="dashboard-main-content">
-        <h1 className="dashboard-title">Dashboard</h1>
-        <div className="dashboard-grid">
-          {dashboardCards
-            .filter((card) => card.allowedRoles.includes(role))
-            .map((card, index) => (
-              <Link key={index} to={card.link} className="dashboard-card-link">
-                <div className="dashboard-card">
-                  {card.icon}
-                  <h2>{card.title}</h2>
-                  <p>{card.value}</p>
-                </div>
-              </Link>
-            ))}
-        </div>
-
-        {canView(["admin", "owner", "manager"]) && (
-          <div className="dashboard-line-chart-container">
-            <h2 className="dashboard-line-chart-title">Financial Overview</h2>
-            <div className="dashboard-line-chart">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={lineData}>
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#4CAF50"
-                    name="Revenue"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="cost"
-                    stroke="#FF5722"
-                    name="Cost"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+        <main className="dashboard-main-content">
+          <h1 className="dashboard-title">Dashboard</h1>
+          <div className="dashboard-grid">
+            {dashboardCards
+              .filter((card) => card.allowedRoles.includes(role))
+              .map((card, index) => (
+                <Link
+                  key={index}
+                  to={card.link}
+                  className="dashboard-card-link"
+                >
+                  <div className="dashboard-card">
+                    {card.icon}
+                    <h2>{card.title}</h2>
+                    <p>{card.value}</p>
+                  </div>
+                </Link>
+              ))}
           </div>
-        )}
-      </main>
+
+          {canView(["admin", "owner", "manager"]) && (
+            <div className="dashboard-line-chart-container">
+              <h2 className="dashboard-line-chart-title">Financial Overview</h2>
+              <div className="dashboard-line-chart">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={lineData}>
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#4CAF50"
+                      name="Revenue"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="cost"
+                      stroke="#FF5722"
+                      name="Cost"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+        </main>
       </DashboardLayout>
     </>
   );

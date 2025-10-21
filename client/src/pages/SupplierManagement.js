@@ -5,6 +5,7 @@ import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
 import PopupMessage from "../components/PopupMessage";
 import ConfirmationModal from "../components/ConfirmationModal";
+import { authFetch, API_BASE } from "../utils/tokenUtils";
 import "../styles/App.css";
 import "../styles/SupplierManagement.css";
 
@@ -33,8 +34,6 @@ const SupplierManagement = () => {
     }
   }, [navigate]);
 
-  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
   const supplierFields = [
     { label: "Supplier ID", name: "supplierId", required: "true" },
     { label: "Name", name: "name", required: "true" },
@@ -52,18 +51,8 @@ const SupplierManagement = () => {
   };
 
   const fetchSuppliers = useCallback(async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.error("No token found.");
-      return;
-    }
-
     try {
-      const res = await fetch(`${API_BASE}/api/suppliers`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await authFetch(`${API_BASE}/api/suppliers`);
 
       if (!res.ok) {
         const err = await res.json();
@@ -80,7 +69,7 @@ const SupplierManagement = () => {
     } catch (err) {
       console.error("Error fetching suppliers:", err.message);
     }
-  }, [API_BASE]);
+  }, []);
 
   useEffect(() => {
     fetchSuppliers();
@@ -116,12 +105,6 @@ const SupplierManagement = () => {
   };
 
   const saveSupplier = async (data) => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      showPopup("Authentication required.", "error");
-      return;
-    }
-
     try {
       const method = modalMode === "add" ? "POST" : "PUT";
       const url =
@@ -129,12 +112,9 @@ const SupplierManagement = () => {
           ? `${API_BASE}/api/suppliers`
           : `${API_BASE}/api/suppliers/${data._id}`;
 
-      await fetch(url, {
+      await authFetch(url, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json'},
         body: JSON.stringify(data),
       });
 
@@ -176,20 +156,11 @@ const SupplierManagement = () => {
   };
 
   const confirmDelete = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      showPopup("Authentication required.", "error");
-      return;
-    }
-
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE}/api/suppliers/${supplierToDelete._id}`,
         {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
         }
       );
 

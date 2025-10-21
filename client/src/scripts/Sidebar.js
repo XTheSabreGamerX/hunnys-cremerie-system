@@ -24,8 +24,10 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
 
   const logout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
     localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("sidebarCollapsed");
     navigate("/login");
   };
 

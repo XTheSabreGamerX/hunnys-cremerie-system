@@ -9,6 +9,7 @@ import CakeViewModal from "../components/CakeViewModal";
 import PopupMessage from "../components/PopupMessage";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { showToast } from "../components/ToastContainer";
+import { authFetch, API_BASE } from "../utils/tokenUtils";
 import DateRangeFilter from "../components/DateRangeFilter";
 import "../styles/App.css";
 import "../styles/Inventory.css";
@@ -47,19 +48,15 @@ const Inventory = () => {
     useState(null);
   const [ingredientForm, setIngredientForm] = useState({ quantity: 1 });
 
-  const nanoid = customAlphabet("0123456789", 6);
-  const containerRef = useRef(null);
-
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    if (!token) {
-      navigate("/login");
-    }
-  }, [token, navigate]);
+    const token = localStorage.getItem("token");
+    if (!token) navigate("/login");
+  }, [navigate]);
 
-  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+  const nanoid = customAlphabet("0123456789", 6);
+  const containerRef = useRef(null);
 
   const inventoryFields = [
     { label: "Item Name", name: "name", required: true },
@@ -176,15 +173,10 @@ const Inventory = () => {
       name: "ingredients",
       type: "multiselect",
       loadOptions: (inputValue) =>
-        fetch(
+        authFetch(
           `${API_BASE}/api/inventory?all=true&search=${encodeURIComponent(
             inputValue
-          )}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+          )}`
         )
           .then((res) => {
             if (!res.ok) throw new Error("Failed to fetch inventory options");
@@ -245,9 +237,7 @@ const Inventory = () => {
           )}`;
         }
 
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await authFetch(url);
 
         const data = await res.json();
 
@@ -279,22 +269,12 @@ const Inventory = () => {
         console.error("Error fetching inventory:", err);
       }
     },
-    [API_BASE, page, searchQuery, columnFilter, inventoryType, token]
+    [page, searchQuery, columnFilter, inventoryType]
   );
 
   const fetchSuppliers = useCallback(async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.error("No token found.");
-      return;
-    }
-
     try {
-      const res = await fetch(`${API_BASE}/api/suppliers`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await authFetch(`${API_BASE}/api/suppliers`);
 
       if (!res.ok) {
         const err = await res.json();
@@ -311,16 +291,12 @@ const Inventory = () => {
     } catch (err) {
       console.error("Error fetching suppliers:", err.message);
     }
-  }, [API_BASE]);
+  }, []);
 
   useEffect(() => {
     const fetchUoms = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/settings/uom`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await authFetch(`${API_BASE}/api/settings/uom`);
         if (!res.ok) throw new Error("Failed to fetch UoMs");
         const data = await res.json();
         setUoms(data);
@@ -329,17 +305,13 @@ const Inventory = () => {
       }
     };
 
-    if (token) fetchUoms();
-  }, [API_BASE, page, token]);
+    fetchUoms();
+  }, []);
 
   useEffect(() => {
     const fetchCakeSizes = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/settings/size`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await authFetch(`${API_BASE}/api/settings/size`);
         if (!res.ok) throw new Error("Failed to fetch cake sizes");
         const data = await res.json();
         setCakeSizes(data);
@@ -348,17 +320,13 @@ const Inventory = () => {
       }
     };
 
-    if (token) fetchCakeSizes();
-  }, [API_BASE, token]);
+    fetchCakeSizes();
+  }, []);
 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/settings/category`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await authFetch(`${API_BASE}/api/settings/category`);
         if (!res.ok) throw new Error("Failed to fetch categories");
         const data = await res.json();
 
@@ -376,8 +344,8 @@ const Inventory = () => {
       }
     };
 
-    if (token) fetchCategories();
-  }, [API_BASE, token]);
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     fetchItems();
@@ -594,12 +562,8 @@ const Inventory = () => {
         url = `${API_BASE}/api/inventory/${normalizedData._id}`;
       }
 
-      const res = await fetch(url, {
+      const res = await authFetch(url, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(payload),
       });
 
@@ -693,11 +657,8 @@ const Inventory = () => {
         ? `${API_BASE}/api/cake/${itemToDelete._id}`
         : `${API_BASE}/api/inventory/${itemToDelete._id}`;
 
-      const res = await fetch(url, {
+      const res = await authFetch(url, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
       });
 
       const data = await res.json();
@@ -1187,15 +1148,22 @@ const Inventory = () => {
                 Prev
               </button>
 
-              {[...Array(totalPages)].map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setPage(i + 1)}
-                  className={page === i + 1 ? "active" : ""}
-                >
-                  {i + 1}
-                </button>
-              ))}
+              {Array.from({
+                length: Math.min(7, totalPages),
+              }).map((_, idx) => {
+                const start = Math.max(1, Math.min(page - 3, totalPages - 6));
+                const pageNumber = start + idx;
+                if (pageNumber > totalPages) return null;
+                return (
+                  <button
+                    key={pageNumber}
+                    onClick={() => setPage(pageNumber)}
+                    className={page === pageNumber ? "active" : ""}
+                  >
+                    {pageNumber}
+                  </button>
+                );
+              })}
 
               <button
                 onClick={() =>

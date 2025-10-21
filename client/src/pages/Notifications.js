@@ -1,11 +1,16 @@
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { authFetch, API_BASE } from "../utils/tokenUtils";
 import DashboardLayout from "../scripts/DashboardLayout";
 import "../styles/Notifications.css";
-import { FiInfo, FiAlertTriangle, FiCheckCircle, FiXCircle } from "react-icons/fi";
+import {
+  FiInfo,
+  FiAlertTriangle,
+  FiCheckCircle,
+  FiXCircle,
+} from "react-icons/fi";
 
 const Notifications = () => {
-  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
   const PAGE_SIZE = 12;
 
   const [notifications, setNotifications] = useState([]);
@@ -13,22 +18,14 @@ const Notifications = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
-  const token = localStorage.getItem("token");
   const navigate = useNavigate();
   const containerRef = useRef(null);
 
-  const authHeader = useMemo(
-    () => ({
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    }),
-    [token]
-  );
-
   // Redirect if no token
   useEffect(() => {
+    const token = localStorage.getItem("token");
     if (!token) navigate("/login");
-  }, [token, navigate]);
+  }, [navigate]);
 
   const getIcon = (type) => {
     switch (type) {
@@ -47,7 +44,7 @@ const Notifications = () => {
 
   // Fetch notifications for the current page
   useEffect(() => {
-    if (!token || page < 1) return;
+    if (page < 1) return;
 
     const controller = new AbortController();
     const signal = controller.signal;
@@ -55,21 +52,22 @@ const Notifications = () => {
     const fetchNotifications = async () => {
       setIsLoading(true);
       try {
-        // Clear notifications if first page
         if (page === 1) {
           setNotifications([]);
           setHasMore(true);
         }
 
-        const res = await fetch(
+        const res = await authFetch(
           `${API_BASE}/api/notifications?page=${page}&limit=${PAGE_SIZE}`,
-          { headers: authHeader, signal }
+          { signal }
         );
 
         if (!res.ok) throw new Error("Failed to fetch notifications");
 
         const data = await res.json();
-        const pageRecords = Array.isArray(data.notifications) ? data.notifications : [];
+        const pageRecords = Array.isArray(data.notifications)
+          ? data.notifications
+          : [];
 
         setNotifications((prev) =>
           page === 1 ? pageRecords : [...prev, ...pageRecords]
@@ -85,7 +83,7 @@ const Notifications = () => {
     fetchNotifications();
 
     return () => controller.abort();
-  }, [API_BASE, page, token, authHeader]);
+  }, [page]);
 
   // Infinite scroll handler
   useEffect(() => {
@@ -103,7 +101,10 @@ const Notifications = () => {
           return;
         }
 
-        if (container.scrollTop + container.clientHeight >= container.scrollHeight - 80) {
+        if (
+          container.scrollTop + container.clientHeight >=
+          container.scrollHeight - 80
+        ) {
           setPage((prev) => prev + 1);
         }
 
@@ -118,12 +119,11 @@ const Notifications = () => {
     };
   }, [hasMore, isLoading]);
 
-  // Reset notifications when token changes
   useEffect(() => {
     setNotifications([]);
     setPage(1);
     setHasMore(true);
-  }, [token]);
+  }, []);
 
   const formatPH = (iso) =>
     new Date(iso).toLocaleString("en-PH", { timeZone: "Asia/Manila" });
@@ -131,56 +131,75 @@ const Notifications = () => {
   return (
     <>
       <DashboardLayout>
-      <main className="notifications-main">
-        <div className="notifications-content">
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 12,
-            }}
-          >
-            <h1 className="notifications-title">Notifications</h1>
-          </div>
-
-          <div
-            className="notifications-list-wrapper"
-            ref={containerRef}
-            style={{ maxHeight: "65vh", overflowY: "auto", paddingRight: 8 }}
-          >
-            <div className="notifications-list">
-              {isLoading && notifications.length === 0 ? (
-                <p style={{ padding: 12, textAlign: "center" }}>Loading...</p>
-              ) : notifications.length === 0 ? (
-                <p style={{ padding: 12 }}>No notifications yet.</p>
-              ) : (
-                notifications.map((notif) => (
-                  <div key={notif._id} className={`notification-card ${notif.type}`}>
-                    <div className="notification-icon">{getIcon(notif.type)}</div>
-                    <div className="notification-body">
-                      <p className="message">{notif.message}</p>
-                      <span className="date">{formatPH(notif.createdAt)}</span>
-                    </div>
-                  </div>
-                ))
-              )}
+        <main className="notifications-main">
+          <div className="notifications-content">
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 12,
+              }}
+            >
+              <h1 className="notifications-title">Notifications</h1>
             </div>
 
-            {isLoading && notifications.length > 0 && (
-              <div style={{ textAlign: "center", padding: "8px 0", color: "#666" }}>
-                Loading...
+            <div
+              className="notifications-list-wrapper"
+              ref={containerRef}
+              style={{ maxHeight: "65vh", overflowY: "auto", paddingRight: 8 }}
+            >
+              <div className="notifications-list">
+                {isLoading && notifications.length === 0 ? (
+                  <p style={{ padding: 12, textAlign: "center" }}>Loading...</p>
+                ) : notifications.length === 0 ? (
+                  <p style={{ padding: 12 }}>No notifications yet.</p>
+                ) : (
+                  notifications.map((notif) => (
+                    <div
+                      key={notif._id}
+                      className={`notification-card ${notif.type}`}
+                    >
+                      <div className="notification-icon">
+                        {getIcon(notif.type)}
+                      </div>
+                      <div className="notification-body">
+                        <p className="message">{notif.message}</p>
+                        <span className="date">
+                          {formatPH(notif.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-            )}
 
-            {!hasMore && notifications.length > 0 && (
-              <div style={{ textAlign: "center", padding: "8px 0", color: "#666" }}>
-                No more notifications
-              </div>
-            )}
+              {isLoading && notifications.length > 0 && (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "8px 0",
+                    color: "#666",
+                  }}
+                >
+                  Loading...
+                </div>
+              )}
+
+              {!hasMore && notifications.length > 0 && (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "8px 0",
+                    color: "#666",
+                  }}
+                >
+                  No more notifications
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
       </DashboardLayout>
     </>
   );

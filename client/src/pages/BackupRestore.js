@@ -1,12 +1,7 @@
 import React from 'react';
 import DashboardLayout from '../scripts/DashboardLayout';
+import { authFetch, API_BASE } from '../utils/tokenUtils';
 import '../styles/BackupRestore.css';
-
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
-const DEFAULT_HEADERS = {
-  Authorization: `Bearer ${localStorage.getItem('token')}`,
-};
 
 const BackupRestore = () => {
   const modules = [
@@ -18,11 +13,8 @@ const BackupRestore = () => {
 
   const handleBackup = async (module) => {
     try {
-      const response = await fetch(`${API_BASE}/api/backup/${module}`, {
+      const response = await authFetch(`${API_BASE}/api/backup/${module}`, {
         method: 'GET',
-        headers: {
-          DEFAULT_HEADERS,
-        },
       });
 
       if (!response.ok) throw new Error('Backup failed.');

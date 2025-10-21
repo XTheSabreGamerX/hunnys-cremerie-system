@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { customAlphabet } from "nanoid/non-secure";
+import { authFetch, API_BASE } from "../utils/tokenUtils";
 import DashboardLayout from "../scripts/DashboardLayout";
 import PopupMessage from "../components/PopupMessage";
 import "../styles/SalesManagement.css";
-
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const SalesManagement = () => {
   const [inventoryItems, setInventoryItems] = useState([]);
@@ -25,19 +24,11 @@ const SalesManagement = () => {
   const [paginatedItems, setPaginatedItems] = useState([]);
 
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
-
-  const authHeader = useMemo(
-    () => ({
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    }),
-    [token]
-  );
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
     if (!token) navigate("/login");
-  }, [token, navigate]);
+  }, [navigate]);
 
   const showPopup = (message, type = "success") => {
     setPopupMessage(message);
@@ -54,22 +45,18 @@ const SalesManagement = () => {
 
   // Fetch inventory
   useEffect(() => {
-    fetch(`${API_BASE}/api/inventory?page=1&limit=1000`, {
-      headers: authHeader,
-    })
+    authFetch(`${API_BASE}/api/inventory?page=1&limit=1000`)
       .then((res) => res.json())
       .then((data) => {
         const items = Array.isArray(data) ? data : data.items;
         setInventoryItems(items || []);
       })
       .catch((err) => console.error("Failed to fetch inventory items", err));
-  }, [authHeader]);
+  }, []);
 
   // Fetch customers
   useEffect(() => {
-    fetch(`${API_BASE}/api/customers?page=1&limit=1000`, {
-      headers: authHeader,
-    })
+    authFetch(`${API_BASE}/api/customers?page=1&limit=1000`)
       .then((res) => res.json())
       .then((data) => {
         const custs = Array.isArray(data.customers) ? data.customers : [];
@@ -77,7 +64,7 @@ const SalesManagement = () => {
         if (!isUnregistered && custs[0]) setCustomerName(custs[0].name);
       })
       .catch(() => console.error("Failed to fetch customers"));
-  }, [authHeader, isUnregistered]);
+  }, [isUnregistered]);
 
   useEffect(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -189,9 +176,8 @@ const SalesManagement = () => {
     };
 
     try {
-      const res = await fetch(`${API_BASE}/api/sales`, {
+      const res = await authFetch(`${API_BASE}/api/sales`, {
         method: "POST",
-        headers: authHeader,
         body: JSON.stringify(saleToSend),
       });
 
@@ -199,9 +185,8 @@ const SalesManagement = () => {
 
       await Promise.all(
         cartItems.map((item) =>
-          fetch(`${API_BASE}/api/inventory/${item._id}`, {
+          authFetch(`${API_BASE}/api/inventory/${item._id}`, {
             method: "PUT",
-            headers: authHeader,
             body: JSON.stringify({ stock: item.stock - item.quantity }),
           })
         )
@@ -250,15 +235,14 @@ const SalesManagement = () => {
               <table className="sales-products-table">
                 <thead>
                   <tr>
-                    <th>Item ID</th>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Purchase Price</th>
-                    <th>Unit Price</th>
-                    <th>Unit</th>
-                    <th>Stock</th>
-                    <th>Status</th>
-                    <th>Amount</th>
+                    <th className="col-itemid">Item ID</th>
+                    <th className="col-name">Name</th>
+                    <th className="col-category">Category</th>
+                    <th className="col-purchase">Purchase Price</th>
+                    <th className="col-unitprice">Unit Price</th>
+                    <th className="col-amountunit">Unit</th>
+                    <th className="col-stock">Stock</th>
+                    <th className="col-status">Status</th>
                   </tr>
                 </thead>
 
@@ -300,14 +284,22 @@ const SalesManagement = () => {
                             : null
                         }
                       >
-                        <td>{item.itemId}</td>
-                        <td>{item.name}</td>
-                        <td>{item.category}</td>
-                        <td>₱{item.purchasePrice}</td>
-                        <td>₱{item.unitPrice}</td>
-                        <td>{item.unit?.name || "N/A"}</td>
-                        <td>{item.stock}</td>
-                        <td>
+                        <td className="col-itemid">{item.itemId}</td>
+                        <td className="col-name" title={item.name}>
+                          {item.name}
+                        </td>
+                        <td className="col-category">{item.category}</td>
+                        <td className="col-purchase">₱{item.purchasePrice}</td>
+                        <td className="col-unitprice">₱{item.unitPrice}</td>
+
+                        <td className="col-amountunit">
+                          {item.amount
+                            ? `${item.amount} ${item.unit?.name || ""}`
+                            : "—"}
+                        </td>
+
+                        <td className="col-stock">{item.stock}</td>
+                        <td className="col-status">
                           <span
                             className={`product-status ${item.status
                               .replace(/\s+/g, "-")
@@ -316,7 +308,6 @@ const SalesManagement = () => {
                             {item.status}
                           </span>
                         </td>
-                        <td>{item.amount}</td>
                       </tr>
                     ))}
 
@@ -325,7 +316,7 @@ const SalesManagement = () => {
                     item.name.toLowerCase().includes(searchQuery.toLowerCase())
                   ).length === 0 && (
                     <tr>
-                      <td colSpan="9" className="no-results">
+                      <td colSpan="8" className="no-results">
                         No matching products found.
                       </td>
                     </tr>

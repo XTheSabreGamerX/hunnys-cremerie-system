@@ -30,17 +30,16 @@ const getAllInventoryItems = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const search = req.query.search?.trim() || "";
+    const normalizedSearch = search.replace(/\s+/g, ''); // remove all spaces for search
     const field = req.query.field;
     const order = req.query.order === "desc" ? -1 : 1;
     const fetchAll = req.query.all === "true";
 
-    // Fetch all items first
     const allItems = await InventoryItem.find()
       .sort(field ? { [field]: order } : { itemId: 1 })
       .populate("unit", "name amount")
       .populate("createdBy", "username");
 
-    // If no search, just return paginated results
     if (!search) {
       const totalItems = allItems.length;
       const totalPages = Math.ceil(totalItems / limit);
@@ -56,58 +55,44 @@ const getAllInventoryItems = async (req, res) => {
       });
     }
 
-    // Determine Fuse.js keys based on column filter
     let fuseKeys = [];
+    const normalizeFn = (value) => (value?.toString() || "").replace(/\s+/g, ''); // normalize spaces
+
     if (field) {
-      // Column filter applied → only search that field
       if (
         ["purchasePrice", "unitPrice", "amount", "restockThreshold"].includes(
           field
         )
       ) {
-        fuseKeys = [
-          { name: field, getFn: (item) => item[field]?.toString() || "" },
-        ];
+        fuseKeys = [{ name: field, getFn: (item) => normalizeFn(item[field]) }];
       } else if (field === "unit.name") {
-        fuseKeys = [
-          { name: "unit.name", getFn: (item) => item.unit?.name || "" },
-        ];
+        fuseKeys = [{ name: "unit.name", getFn: (item) => normalizeFn(item.unit?.name) }];
       } else {
         fuseKeys = [field];
       }
     } else {
-      // No column filter → search all relevant fields
       fuseKeys = [
-        "itemId",
-        "name",
-        "category",
-        "supplier",
-        "status",
-        {
-          name: "purchasePrice",
-          getFn: (item) => item.purchasePrice?.toString() || "",
-        },
-        {
-          name: "unitPrice",
-          getFn: (item) => item.unitPrice?.toString() || "",
-        },
-        { name: "amount", getFn: (item) => item.amount?.toString() || "" },
-        {
-          name: "restockThreshold",
-          getFn: (item) => item.restockThreshold?.toString() || "",
-        },
-        { name: "unit.name", getFn: (item) => item.unit?.name || "" },
+        { name: "itemId", getFn: (item) => normalizeFn(item.itemId) },
+        { name: "name", getFn: (item) => normalizeFn(item.name) },
+        { name: "category", getFn: (item) => normalizeFn(item.category) },
+        { name: "supplier", getFn: (item) => normalizeFn(item.supplier) },
+        { name: "status", getFn: (item) => normalizeFn(item.status) },
+        { name: "purchasePrice", getFn: (item) => normalizeFn(item.purchasePrice) },
+        { name: "unitPrice", getFn: (item) => normalizeFn(item.unitPrice) },
+        { name: "amount", getFn: (item) => normalizeFn(item.amount) },
+        { name: "restockThreshold", getFn: (item) => normalizeFn(item.restockThreshold) },
+        { name: "unit.name", getFn: (item) => normalizeFn(item.unit?.name) },
       ];
     }
 
     // Fuse.js fuzzy search
     const fuse = new Fuse(allItems, {
       keys: fuseKeys,
-      threshold: 0.4, // adjust for stricter/looser search
+      threshold: 0.4,
       ignoreLocation: true,
     });
 
-    const fuseResults = fuse.search(search).map((result) => result.item);
+    const fuseResults = fuse.search(normalizedSearch).map((result) => result.item);
 
     const totalItems = fuseResults.length;
     const totalPages = Math.ceil(totalItems / limit);
@@ -126,6 +111,7 @@ const getAllInventoryItems = async (req, res) => {
     res.status(500).json({ message: "Server error while fetching inventory" });
   }
 };
+
 
 // Adding a new inventory item
 const addInventoryItem = async (req, res) => {

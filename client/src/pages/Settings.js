@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { authFetch, API_BASE } from "../utils/tokenUtils";
 import DashboardLayout from "../scripts/DashboardLayout";
 import EditModal from "../components/EditModal";
 import ConfirmationModal from "../components/ConfirmationModal";
@@ -18,15 +19,13 @@ const Settings = () => {
   const [pendingDelete, setPendingDelete] = useState(null);
 
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login");
     }
-  }, [token, navigate]);
-
-  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+  }, [navigate]);
 
   const settingsFields = (section) => {
     if (section === "category") {
@@ -68,15 +67,11 @@ const Settings = () => {
   useEffect(() => {
     fetchData(`${API_BASE}/api/settings/size`, setCakeSizes);
     fetchData(`${API_BASE}/api/settings/category`, setCategories);
-  }, [API_BASE]);
+  }, []);
 
   const fetchData = async (url, setter) => {
     try {
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const res = await authFetch(url);
       if (!res.ok) throw new Error("Failed to fetch " + url);
       const data = await res.json();
       setter(data);
@@ -110,11 +105,10 @@ const Settings = () => {
     const method = isEditing ? "PUT" : "POST";
 
     try {
-      const res = await fetch(url, {
+      const res = await authFetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify(settingData),
       });
@@ -166,12 +160,12 @@ const Settings = () => {
     const { sectionKey, id } = pendingDelete;
 
     try {
-      const res = await fetch(`${API_BASE}/api/settings/${sectionKey}/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const res = await authFetch(
+        `${API_BASE}/api/settings/${sectionKey}/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));

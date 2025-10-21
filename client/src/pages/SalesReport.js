@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../scripts/DashboardLayout";
 import ReceiptModal from "../components/ReceiptModal";
@@ -17,6 +17,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { authFetch, API_BASE } from "../utils/tokenUtils";
 import "../styles/SalesReport.css";
 
 const SalesReport = () => {
@@ -28,11 +29,10 @@ const SalesReport = () => {
     "#8A2BE2",
     "#FF69B4",
   ];
-  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
   const PAGE_SIZE = 6;
 
-  const [records, setRecords] = useState([]); // Paginated
-  const [fullSales, setFullSales] = useState([]); // For cards and charts
+  const [records, setRecords] = useState([]);
+  const [fullSales, setFullSales] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,39 +44,27 @@ const SalesReport = () => {
 
   const [selectedSale, setSelectedSale] = useState(null);
 
-  const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const navigate = useNavigate();
   const containerRef = useRef(null);
 
-  const authHeader = useMemo(
-    () => ({
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    }),
-    [token]
-  );
-
-  // Redirect if not logged in / unauthorized role
   useEffect(() => {
-      if (!token) {
-        navigate("/login");
-      } else if(user.role === "staff") {
-        navigate("/dashboard")
-      }
-    }, [token, user.role, navigate]);
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/login");
+    } else if (user.role === "staff") {
+      navigate("/dashboard");
+    }
+  }, [user.role, navigate]);
 
   // Fetch all sales for analytics and charts
   useEffect(() => {
-    if (!token) return;
-
     const controller = new AbortController();
     const signal = controller.signal;
 
     const fetchAllSales = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/sales/all`, {
-          headers: authHeader,
+        const res = await authFetch(`${API_BASE}/api/sales/all`, {
           signal,
         });
         if (!res.ok) throw new Error("Failed to fetch all sales");
@@ -90,11 +78,11 @@ const SalesReport = () => {
 
     fetchAllSales();
     return () => controller.abort();
-  }, [API_BASE, token, authHeader]);
+  }, []);
 
   // Paginated fetch
   useEffect(() => {
-    if (!token || page < 1) return;
+    if (page < 1) return;
 
     const controller = new AbortController();
     const signal = controller.signal;
@@ -102,9 +90,9 @@ const SalesReport = () => {
     const fetchPage = async (pageNumber) => {
       setIsLoading(true);
       try {
-        const res = await fetch(
+        const res = await authFetch(
           `${API_BASE}/api/salesReport/sales?page=${pageNumber}&limit=${PAGE_SIZE}`,
-          { headers: authHeader, signal }
+          { signal }
         );
         if (!res.ok) throw new Error("Failed to fetch sales data");
 
@@ -124,7 +112,7 @@ const SalesReport = () => {
 
     fetchPage(page);
     return () => controller.abort();
-  }, [API_BASE, page, token, authHeader]);
+  }, [page]);
 
   // Infinite scroll
   useEffect(() => {
@@ -157,7 +145,7 @@ const SalesReport = () => {
     setRecords([]);
     setPage(1);
     setHasMore(true);
-  }, [token]);
+  }, []);
 
   // Refresh function (currently used in sale refunds)
   const refreshSales = async () => {
@@ -165,10 +153,8 @@ const SalesReport = () => {
     setPage(1);
 
     try {
-      const response = await fetch(
-        `${API_BASE}/api/salesReport/sales?page=1&limit=${PAGE_SIZE}`,
-        { headers: authHeader }
-      );
+      const response = await authFetch(
+        `${API_BASE}/api/salesReport/sales?page=1&limit=${PAGE_SIZE}`);
       const data = await response.json();
 
       const pageRecords = Array.isArray(data.records) ? data.records : [];
@@ -288,175 +274,181 @@ const SalesReport = () => {
       )}
 
       <DashboardLayout>
-      <main className="sales-report-main">
-        <h1 className="sales-report-title">Sales Report</h1>
+        <main className="sales-report-main">
+          <h1 className="sales-report-title">Sales Report</h1>
 
-        <section className="sales-report-analytics">
-          <div className="sales-card highlight">
-            <h3>Total Sales</h3>
-            <p>₱{analytics?.totalSales ?? 0}</p>
-          </div>
-          <div className="sales-card">
-            <h3>Total Profit</h3>
-            <p
-              style={{
-                color: analytics?.totalProfit < 0 ? "red" : "inherit",
-                fontWeight: analytics?.totalProfit < 0 ? "bold" : "normal",
-              }}
-            >
-              ₱{analytics?.totalProfit ?? 0}
-            </p>
-          </div>
-          <div className="sales-card">
-            <h3>Total Transactions</h3>
-            <p>{analytics?.totalTransactions ?? 0}</p>
-          </div>
-          <div className="sales-card">
-            <h3>Best-Selling Items</h3>
-            <ul>
-              {analytics?.bestSelling?.map((item) => (
-                <li key={item._id}>
-                  {item._id} – <span>{item.totalSold}</span>
-                </li>
-              )) ?? <li>No data</li>}
-            </ul>
-          </div>
-          <div className="sales-card">
-            <h3>Payment Breakdown</h3>
-            <ul>
-              {analytics?.paymentBreakdown?.map((p) => (
-                <li key={p._id}>
-                  {p._id}: <span>₱{p.total}</span>
-                </li>
-              )) ?? <li>No data</li>}
-            </ul>
-          </div>
-        </section>
+          <section className="sales-report-analytics">
+            <div className="sales-card highlight">
+              <h3>Total Sales</h3>
+              <p>₱{(analytics?.totalSales ?? 0).toFixed(2)}</p>
+            </div>
+            <div className="sales-card">
+              <h3>Total Profit</h3>
+              <p
+                style={{
+                  color: analytics?.totalProfit < 0 ? "red" : "inherit",
+                  fontWeight: analytics?.totalProfit < 0 ? "bold" : "normal",
+                }}
+              >
+                ₱{(analytics?.totalProfit ?? 0).toFixed(2)}
+              </p>
+            </div>
+            <div className="sales-card">
+              <h3>Total Transactions</h3>
+              <p>{analytics?.totalTransactions ?? 0}</p>
+            </div>
+            <div className="sales-card">
+              <h3>Best-Selling Items</h3>
+              <ul>
+                {analytics?.bestSelling?.map((item) => (
+                  <li key={item._id}>
+                    {item._id} – <span>{item.totalSold}</span>
+                  </li>
+                )) ?? <li>No data</li>}
+              </ul>
+            </div>
+            <div className="sales-card">
+              <h3>Payment Breakdown</h3>
+              <ul>
+                {analytics?.paymentBreakdown?.map((p) => (
+                  <li key={p._id}>
+                    {p._id}: <span>₱{p.total}</span>
+                  </li>
+                )) ?? <li>No data</li>}
+              </ul>
+            </div>
+          </section>
 
-        <section className="sales-report-records">
-          <h2>Transaction Records</h2>
-          <div className="records-table-wrapper" ref={containerRef}>
-            <table className="records-table">
-              <thead>
-                <tr>
-                  <th>Sale ID</th>
-                  <th>Customer</th>
-                  <th>Order Type</th>
-                  <th>Total Amount</th>
-                  <th>Payment Method</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.length === 0 && !isLoading ? (
+          <section className="sales-report-records">
+            <h2>Transaction Records</h2>
+            <div className="records-table-wrapper" ref={containerRef}>
+              <table className="records-table">
+                <thead>
                   <tr>
-                    <td colSpan="6">No sales records found.</td>
+                    <th>Sale ID</th>
+                    <th>Customer</th>
+                    <th>Order Type</th>
+                    <th>Total Amount</th>
+                    <th>Payment Method</th>
+                    <th>Date</th>
                   </tr>
-                ) : (
-                  records.map((r) => (
-                    <tr
-                      key={r.saleId}
-                      onClick={() => openReceipt(r)}
-                      style={{ cursor: "pointer" }}
-                    >
-                      <td>{r.saleId}</td>
-                      <td>{r.customerName}</td>
-                      <td>{r.orderType}</td>
-                      <td>₱{r.totalAmount}</td>
-                      <td>{r.paymentMethod}</td>
-                      <td>
-                        {new Date(r.createdAt).toLocaleDateString("en-PH", {
-                          timeZone: "Asia/Manila",
-                        })}
+                </thead>
+                <tbody>
+                  {records.length === 0 && !isLoading ? (
+                    <tr>
+                      <td colSpan="6">No sales records found.</td>
+                    </tr>
+                  ) : (
+                    records.map((r) => (
+                      <tr
+                        key={r.saleId}
+                        onClick={() => openReceipt(r)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <td>{r.saleId}</td>
+                        <td>{r.customerName}</td>
+                        <td>{r.orderType}</td>
+                        <td>₱{r.totalAmount}</td>
+                        <td>{r.paymentMethod}</td>
+                        <td>
+                          {new Date(r.createdAt).toLocaleDateString("en-PH", {
+                            timeZone: "Asia/Manila",
+                          })}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                  {isLoading && (
+                    <tr>
+                      <td colSpan="6" style={{ textAlign: "center" }}>
+                        Loading...
                       </td>
                     </tr>
-                  ))
-                )}
-                {isLoading && (
-                  <tr>
-                    <td colSpan="6" style={{ textAlign: "center" }}>
-                      Loading...
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-            {!hasMore && records.length > 0 && (
-              <div
-                style={{ textAlign: "center", padding: "8px 0", color: "#666" }}
-              >
-                No more records
-              </div>
-            )}
+                  )}
+                </tbody>
+              </table>
+              {!hasMore && records.length > 0 && (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "8px 0",
+                    color: "#666",
+                  }}
+                >
+                  No more records
+                </div>
+              )}
+            </div>
+          </section>
+
+          <div className="sales-chart-container">
+            <h2 className="sales-chart-title">Daily Sales Trend</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={lineData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="total"
+                  name="Total Sale"
+                  stroke="#2ecc71"
+                  strokeWidth={3}
+                  dot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
-        </section>
 
-        <div className="sales-chart-container">
-          <h2 className="sales-chart-title">Daily Sales Trend</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={lineData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="total"
-                name="Total Sale"
-                stroke="#2ecc71"
-                strokeWidth={3}
-                dot={{ r: 5 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+          <div className="sales-chart-container">
+            <h2 className="sales-chart-title">Sales by Category</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={barData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar
+                  dataKey="total"
+                  name="Total Sale Made"
+                  fill="#27ae60"
+                  barSize={40}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
 
-        <div className="sales-chart-container">
-          <h2 className="sales-chart-title">Sales by Category</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={barData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar
-                dataKey="total"
-                name="Total Sale Made"
-                fill="#27ae60"
-                barSize={40}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="sales-chart-container">
-          <h2 className="sales-chart-title">Sales Distribution by Category</h2>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={pieData}
-                dataKey="total"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={120}
-                label
-              >
-                {pieData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index % COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => `₱${value}`} />
-              <Legend verticalAlign="bottom" height={36} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </main>
+          <div className="sales-chart-container">
+            <h2 className="sales-chart-title">
+              Sales Distribution by Category
+            </h2>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  dataKey="total"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={120}
+                  label
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => `₱${value}`} />
+                <Legend verticalAlign="bottom" height={36} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </main>
       </DashboardLayout>
     </>
   );

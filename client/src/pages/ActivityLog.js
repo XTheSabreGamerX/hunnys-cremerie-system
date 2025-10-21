@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { authFetch, API_BASE } from "../utils/tokenUtils";
 import DashboardLayout from "../scripts/DashboardLayout";
 import DateRangeFilter from "../components/DateRangeFilter";
 import "../styles/ActivityLog.css";
@@ -9,33 +10,26 @@ const ActivityLog = () => {
   const [selectedRange, setSelectedRange] = useState("All");
   const navigate = useNavigate();
 
-  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
-
-  const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   // Redirect if not logged in / unauthorized role
   useEffect(() => {
+    const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login");
     } else if(user.role === "staff") {
       navigate("/dashboard")
     }
-  }, [token, user.role, navigate]);
+  }, [user.role, navigate]);
 
+  // Include pagination, currently buggy, not fetching all
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const res = await fetch(
+        const res = await authFetch(
           `${API_BASE}/api/activitylog?range=${encodeURIComponent(
             selectedRange
-          )}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+          )}`
         );
 
         const data = await res.json();
@@ -47,7 +41,7 @@ const ActivityLog = () => {
     };
 
     fetchLogs();
-  }, [API_BASE, selectedRange]);
+  }, [selectedRange]);
 
   return (
     <>

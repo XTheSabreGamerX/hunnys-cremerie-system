@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { authFetch, API_BASE } from "../utils/tokenUtils";
 import DashboardLayout from "../scripts/DashboardLayout";
 import ConfirmationModal from "../components/ConfirmationModal";
 import PopupMessage from "../components/PopupMessage";
@@ -25,27 +26,18 @@ const UserManagement = () => {
   const [confirmMessage, setConfirmMessage] = useState("");
   const [onConfirmAction, setOnConfirmAction] = useState(() => () => {});
 
-  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-
-  const authHeader = useMemo(
-    () => ({
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    }),
-    [token]
-  );
 
   // Redirect if not logged in / unauthorized role
   useEffect(() => {
+    const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login");
     } else if (user.role === "staff") {
       navigate("/dashboard");
     }
-  }, [token, user.role, navigate]);
+  }, [user.role, navigate]);
 
   const showPopup = (message, type = "success") => {
     setPopupMessage(message);
@@ -58,42 +50,34 @@ const UserManagement = () => {
 
   // Fetch all users
   const fetchUsers = useCallback(() => {
-    fetch(`${API_BASE}/api/user`, {
-      headers: authHeader,
-    })
+    authFetch(`${API_BASE}/api/user`)
       .then((res) => res.json())
       .then((data) => setUsers(data))
       .catch((err) => console.error("Error fetching users:", err));
-  }, [API_BASE, authHeader]);
+  }, []);
 
   // Fetch all registration requests
   const fetchRequests = useCallback(() => {
-    fetch(`${API_BASE}/api/request`, {
-      headers: authHeader,
-    })
+    authFetch(`${API_BASE}/api/request`)
       .then((res) => res.json())
       .then((data) => setRequests(data))
       .catch((err) => console.error("Error fetching requests:", err));
-  }, [API_BASE, authHeader]);
+  }, []);
 
   // Fetch all password reset requests
   const fetchResetRequests = useCallback(() => {
-    fetch(`${API_BASE}/api/resetRequest`, {
-      headers: authHeader,
-    })
+    authFetch(`${API_BASE}/api/resetRequest`)
       .then((res) => res.json())
       .then((data) => setResetRequests(data))
       .catch((err) => console.error("Error fetching reset requests:", err));
-  }, [API_BASE, authHeader]);
+  }, []);
 
   const fetchActionRequests = useCallback(() => {
-    fetch(`${API_BASE}/api/actionRequest`, {
-      headers: authHeader,
-    })
+    authFetch(`${API_BASE}/api/actionRequest`)
       .then((res) => res.json())
       .then((data) => setActionRequests(data))
       .catch((err) => console.error("Error fetching action requests:", err));
-  }, [API_BASE, authHeader]);
+  }, []);
 
   useEffect(() => {
     fetchUsers();
@@ -105,9 +89,8 @@ const UserManagement = () => {
   // Approve registration requests
   const handleApprove = async (id) => {
     try {
-      const res = await fetch(`${API_BASE}/api/request/approve/${id}`, {
+      const res = await authFetch(`${API_BASE}/api/request/approve/${id}`, {
         method: "POST",
-        headers: authHeader,
       });
       const data = await res.json();
 
@@ -132,9 +115,8 @@ const UserManagement = () => {
 
   // Reject registration requests
   const handleReject = (id) => {
-    fetch(`${API_BASE}/api/request/reject/${id}`, {
+    authFetch(`${API_BASE}/api/request/reject/${id}`, {
       method: "DELETE",
-      headers: authHeader,
     })
       .then(() => {
         showToast({
@@ -157,9 +139,8 @@ const UserManagement = () => {
   // Deactivate accounts
   const handleDeactivate = async (id) => {
     try {
-      const res = await fetch(`${API_BASE}/api/user/deactivate/${id}`, {
+      const res = await authFetch(`${API_BASE}/api/user/deactivate/${id}`, {
         method: "PUT",
-        headers: authHeader,
       });
       const data = await res.json();
       showToast({
@@ -183,9 +164,8 @@ const UserManagement = () => {
   // Reactivate accounts
   const handleReactivate = async (id) => {
     try {
-      const res = await fetch(`${API_BASE}/api/user/reactivate/${id}`, {
+      const res = await authFetch(`${API_BASE}/api/user/reactivate/${id}`, {
         method: "POST",
-        headers: authHeader,
       });
       const data = await res.json();
 
@@ -215,11 +195,10 @@ const UserManagement = () => {
   // Save account edit changes
   const handleSaveEdit = async (updatedUser) => {
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `${API_BASE}/api/user/update/${updatedUser._id}`,
         {
           method: "PUT",
-          headers: authHeader,
           body: JSON.stringify({
             username: updatedUser.username,
             email: updatedUser.email,
@@ -244,10 +223,12 @@ const UserManagement = () => {
   // Approve password reset
   const handleApproveReset = async (id) => {
     try {
-      const res = await fetch(`${API_BASE}/api/resetRequest/${id}/approve`, {
-        method: "PUT",
-        headers: authHeader,
-      });
+      const res = await authFetch(
+        `${API_BASE}/api/resetRequest/${id}/approve`,
+        {
+          method: "PUT",
+        }
+      );
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");
@@ -265,9 +246,8 @@ const UserManagement = () => {
   // Reject password reset
   const handleRejectReset = async (id) => {
     try {
-      const res = await fetch(`${API_BASE}/api/resetRequest/${id}/reject`, {
+      const res = await authFetch(`${API_BASE}/api/resetRequest/${id}/reject`, {
         method: "PUT",
-        headers: authHeader,
       });
 
       if (!res.ok) {
@@ -286,9 +266,8 @@ const UserManagement = () => {
   // Deletes password resets
   const handleDeleteReset = async (id) => {
     try {
-      const res = await fetch(`${API_BASE}/api/resetRequest/${id}`, {
+      const res = await authFetch(`${API_BASE}/api/resetRequest/${id}`, {
         method: "DELETE",
-        headers: authHeader,
       });
 
       if (!res.ok) {
@@ -308,10 +287,12 @@ const UserManagement = () => {
   // Approve action request
   const handleApproveAction = async (id) => {
     try {
-      const res = await fetch(`${API_BASE}/api/actionRequest/approve/${id}`, {
-        method: "POST",
-        headers: authHeader,
-      });
+      const res = await authFetch(
+        `${API_BASE}/api/actionRequest/approve/${id}`,
+        {
+          method: "POST",
+        }
+      );
 
       if (!res.ok) throw new Error("Failed to approve request");
 
@@ -336,10 +317,12 @@ const UserManagement = () => {
   // Reject action request
   const handleRejectAction = async (id) => {
     try {
-      const res = await fetch(`${API_BASE}/api/actionRequest/reject/${id}`, {
-        method: "DELETE",
-        headers: authHeader,
-      });
+      const res = await authFetch(
+        `${API_BASE}/api/actionRequest/reject/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (!res.ok) throw new Error("Failed to reject request");
 
@@ -424,8 +407,8 @@ const UserManagement = () => {
                             setConfirmMessage(
                               "Are you sure you want to accept this registration?"
                             );
-                            setOnConfirmAction(
-                              () => () => handleApprove(request._id)
+                            setOnConfirmAction(() =>
+                              handleApprove(request._id)
                             );
                             setShowConfirm(true);
                           }}

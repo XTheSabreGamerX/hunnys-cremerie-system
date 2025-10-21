@@ -1,20 +1,14 @@
-import React, {
-  useEffect,
-  useState,
-  useCallback,
-  useRef,
-  useMemo,
-} from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { authFetch, API_BASE } from "../utils/tokenUtils";
 import DashboardLayout from "../scripts/DashboardLayout";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
 import PopupMessage from "../components/PopupMessage";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { showToast } from "../components/ToastContainer";
+import "../styles/App.css";
 import "../styles/CustomerManagement.css";
-
-const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const CustomerManagement = () => {
   const [customers, setCustomers] = useState([]);
@@ -29,85 +23,35 @@ const CustomerManagement = () => {
   const [popupType, setPopupType] = useState("");
   const [modalMode, setModalMode] = useState("view");
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const containerRef = useRef(null);
+  const [totalPages, setTotalPages] = useState(1);
 
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login");
     }
-  }, [token, navigate]);
-
-  const authHeader = useMemo(
-    () => ({
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    }),
-    [token]
-  );
+  }, [navigate]);
 
   const fetchCustomers = useCallback(async () => {
     try {
-      const res = await fetch(
-        `${API_BASE}/api/customers?page=${page}&limit=10`,
-        {
-          headers: authHeader,
-        }
+      const res = await authFetch(
+        `${API_BASE}/api/customers?page=${page}&limit=10`
       );
       const data = await res.json();
 
-      const wrappedData = Array.isArray(data)
-        ? {
-            customers: data,
-            currentPage: 1,
-            totalPages: 1,
-          }
-        : data;
-
-      const newItems = Array.isArray(wrappedData.customers)
-        ? wrappedData.customers
-        : [];
-
-      setCustomers((prev) =>
-        page === 1 ? newItems : [...(prev || []), ...newItems]
-      );
-      setHasMore(page < wrappedData.totalPages);
+      setCustomers(data.customers || []);
+      setTotalPages(data.totalPages || 1);
     } catch (err) {
       console.error("Error fetching customers:", err);
-      setHasMore(false);
+      setCustomers([]);
     }
-  }, [page, authHeader]);
+  }, [page]);
 
   useEffect(() => {
     fetchCustomers();
   }, [page, fetchCustomers]);
-
-  useEffect(() => {
-    const container = containerRef.current;
-
-    const handleScroll = () => {
-      if (
-        container.scrollTop + container.clientHeight >=
-          container.scrollHeight - 50 &&
-        hasMore
-      ) {
-        setPage((prev) => prev + 1);
-      }
-    };
-
-    if (container) {
-      container.addEventListener("scroll", handleScroll);
-    }
-
-    return () => {
-      if (container) {
-        container.removeEventListener("scroll", handleScroll);
-      }
-    };
-  }, [hasMore]);
 
   const validateCustomerData = (data) => {
     const { customerId, name } = data;
@@ -136,9 +80,8 @@ const CustomerManagement = () => {
     if (!validateCustomerData(newCustomer)) return;
 
     try {
-      const response = await fetch(`${API_BASE}/api/customers`, {
+      const response = await authFetch(`${API_BASE}/api/customers`, {
         method: "POST",
-        headers: authHeader,
         body: JSON.stringify(newCustomer),
       });
 
@@ -160,14 +103,10 @@ const CustomerManagement = () => {
     if (!validateCustomerData(updatedCustomer)) return;
 
     try {
-      const response = await fetch(
+      const response = await authFetch(
         `${API_BASE}/api/customers/${updatedCustomer._id}`,
         {
           method: "PUT",
-          headers: {
-            ...authHeader,
-            "Content-Type": "application/json",
-          },
           body: JSON.stringify(updatedCustomer),
         }
       );
@@ -185,7 +124,6 @@ const CustomerManagement = () => {
           duration: 3000,
         });
       } else {
-        // Direct update (admin/manager/owner)
         setCustomers((prev) =>
           prev.map((customer) =>
             customer._id === result._id ? result : customer
@@ -193,7 +131,6 @@ const CustomerManagement = () => {
         );
 
         setPage(1);
-        setHasMore(true);
         await fetchCustomers();
 
         showToast({
@@ -217,15 +154,16 @@ const CustomerManagement = () => {
 
   const confirmDelete = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/customers/${itemToDelete._id}`, {
-        method: "DELETE",
-        headers: authHeader,
-      });
+      const res = await authFetch(
+        `${API_BASE}/api/customers/${itemToDelete._id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       const data = await res.json();
 
       setPage(1);
-      setHasMore(true);
       await fetchCustomers();
 
       if (res.ok && data.message === "Customer deleted successfully") {
@@ -387,7 +325,7 @@ const CustomerManagement = () => {
             </button>
           </div>
 
-          <div className="module-table-container" ref={containerRef}>
+          <div className="module-table-container">
             <table>
               <thead>
                 <tr>
@@ -453,6 +391,47 @@ const CustomerManagement = () => {
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="pagination">
+            <p className="pagination-info">
+              Showing {(page - 1) * 10 + 1}-
+              {Math.min(page * 10, customers.length)} of {customers.length}{" "}
+              customers
+            </p>
+
+            <div className="pagination-buttons">
+              <button
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={page === 1}
+              >
+                Prev
+              </button>
+
+              {Array.from({ length: Math.min(7, totalPages) }).map((_, idx) => {
+                const start = Math.max(1, Math.min(page - 3, totalPages - 6));
+                const pageNumber = start + idx;
+                if (pageNumber > totalPages) return null;
+                return (
+                  <button
+                    key={pageNumber}
+                    onClick={() => setPage(pageNumber)}
+                    className={page === pageNumber ? "active" : ""}
+                  >
+                    {pageNumber}
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() =>
+                  setPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={page === totalPages}
+              >
+                Next
+              </button>
+            </div>
           </div>
         </main>
       </DashboardLayout>
