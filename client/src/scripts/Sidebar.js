@@ -2,7 +2,7 @@ import React from "react";
 import "../styles/Sidebar.css";
 import Logo from "../elements/images/icon32x32.png";
 import { Menu } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { ImHome, ImUsers, ImList } from "react-icons/im";
 import { CgBox } from "react-icons/cg";
 import {
@@ -15,10 +15,12 @@ import {
   FaDownload,
   FaEnvelope,
   FaCog,
+  FaClipboard,
 } from "react-icons/fa";
 
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = JSON.parse(localStorage.getItem("user"));
   const role = user?.role?.toLowerCase() || null;
 
@@ -66,6 +68,12 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
       label: "Sales Report",
       icon: <FaChartLine />,
       path: "/sales-report",
+      roles: ["admin", "owner"],
+    },
+    {
+      label: "Report",
+      icon: <FaClipboard />,
+      path: "/dashboard",
       roles: ["admin", "owner"],
     },
     {
@@ -126,14 +134,20 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
           {sidebarItems.map(
             (item) =>
               item.roles.includes(role) && (
-                <Link to={item.path} className="sidebar-item" key={item.label}>
+                <Link
+                  to={item.path}
+                  className={`sidebar-item ${
+                    location.pathname === item.path ? "active" : ""
+                  }`}
+                  key={item.label}
+                >
                   {item.icon}
                   <span className="label">{item.label}</span>
                 </Link>
               )
           )}
         </nav>
-        
+
         {!isCollapsed && (
           <button onClick={logout} className="logout-button">
             Logout
