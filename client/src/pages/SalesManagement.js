@@ -75,12 +75,6 @@ const SalesManagement = () => {
     setTotalPages(Math.ceil(inventoryItems.length / itemsPerPage));
   }, [inventoryItems, currentPage, itemsPerPage]);
 
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage);
-    }
-  };
-
   const handleAddToCart = (product) => {
     if (product.stock <= 0) return;
 
@@ -242,7 +236,7 @@ const SalesManagement = () => {
                     <th className="col-category">Category</th>
                     <th className="col-purchase">Purchase Price</th>
                     <th className="col-unitprice">Unit Price</th>
-                    <th className="col-amountunit">Unit</th>
+                    <th className="col-amountunit">Amount</th>
                     <th className="col-stock">Stock</th>
                     <th className="col-status">Status</th>
                   </tr>
@@ -435,45 +429,13 @@ const SalesManagement = () => {
                 Unregistered Customer
               </label>
 
-              <label>
-                Tax Rate (%)
+              <label className="tax-toggle">
                 <input
-                  type="number"
-                  value={taxRate}
-                  min={0}
-                  max={100}
-                  step={0.01}
-                  inputMode="decimal"
-                  onKeyDown={(e) => {
-                    if (["e", "E", "+", "-", ","].includes(e.key)) {
-                      e.preventDefault();
-                    }
-                  }}
-                  onInput={(e) => {
-                    const input = e.target.value;
-                    const cleaned = input.replace(/[^0-9.]/g, "");
-                    if (cleaned !== input) {
-                      e.target.value = cleaned;
-                    }
-                  }}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (v === "") {
-                      setTaxRate("");
-                      return;
-                    }
-                    const num = Number(v);
-                    if (!Number.isFinite(num)) return;
-                    const clamped = Math.min(Math.max(num, 0), 100);
-                    setTaxRate(clamped);
-                  }}
-                  onBlur={(e) => {
-                    let num = parseFloat(e.target.value);
-                    if (!Number.isFinite(num)) num = 0;
-                    const clamped = Math.min(Math.max(num, 0), 100);
-                    setTaxRate(Number(clamped.toFixed(2)));
-                  }}
+                  type="checkbox"
+                  checked={taxRate === 12}
+                  onChange={(e) => setTaxRate(e.target.checked ? 12 : 0)}
                 />
+                Apply 12% VAT
               </label>
 
               <label>
