@@ -61,6 +61,7 @@
   padding: 0.75rem;
   text-align: left;
   border-bottom: 1px solid #eee;
+  word-wrap: break-word;
 }
 
 .sales-products-table th {
@@ -85,6 +86,46 @@
 
 .sales-table-row.disabled-row:hover {
   background-color: #f9f9f9;
+}
+
+.sales-products-table th:nth-child(1),
+.sales-products-table td:nth-child(1) {
+  width: 7%;
+}
+
+.sales-products-table th:nth-child(2),
+.sales-products-table td:nth-child(2) {
+  width: 12%;
+}
+
+.sales-products-table th:nth-child(3),
+.sales-products-table td:nth-child(3) {
+  width: 12%;
+}
+
+.sales-products-table th:nth-child(4),
+.sales-products-table td:nth-child(4) {
+  width: 7%;
+}
+
+.sales-products-table th:nth-child(5),
+.sales-products-table td:nth-child(5) {
+  width: 7%;
+}
+
+.sales-products-table th:nth-child(6),
+.sales-products-table td:nth-child(6) {
+  width: 7%;
+}
+
+.sales-products-table th:nth-child(7),
+.sales-products-table td:nth-child(7) {
+  width: 10%;
+}
+
+.sales-products-table th:nth-child(8),
+.sales-products-table td:nth-child(8) {
+  width: 15%;
 }
 
 /* ================= STATUS BADGES ================= */
@@ -290,41 +331,4 @@
 .pos-cart-items::-webkit-scrollbar-thumb {
   background-color: rgba(0, 0, 0, 0.2);
   border-radius: 3px;
-}
-
-/* ================= PAGINATION ================= */
-.pos-pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.75rem;
-  margin-top: 1rem;
-  padding: 0.75rem 0;
-  border-top: 1px solid #ddd;
-}
-
-.pos-pagination-btn {
-  background-color: #007bff;
-  color: #fff;
-  padding: 0.4rem 0.9rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s ease;
-}
-
-.pos-pagination-btn:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-
-.pos-pagination-btn:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.pos-pagination-info {
-  font-size: 0.9rem;
-  color: #333;
-  font-weight: 500;
 }

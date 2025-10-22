@@ -4,6 +4,7 @@ import { customAlphabet } from "nanoid/non-secure";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
 import DashboardLayout from "../scripts/DashboardLayout";
 import PopupMessage from "../components/PopupMessage";
+import "../styles/App.css";
 import "../styles/SalesManagement.css";
 
 const SalesManagement = () => {
@@ -158,8 +159,9 @@ const SalesManagement = () => {
 
     const saleToSend = {
       saleId: generateSaleID(alphabet),
-      customerName:
-        isUnregistered || !customerName ? "Unregistered" : customerName,
+      customerName: isUnregistered
+        ? customerName.trim() || "Unregistered"
+        : customerName,
       orderType,
       items: cartItems.map((i) => ({
         itemId: i._id,
@@ -325,26 +327,52 @@ const SalesManagement = () => {
               </table>
             </div>
 
-            <div className="pos-pagination">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="pos-pagination-btn"
-              >
-                Previous
-              </button>
+            <div className="pagination">
+              <p className="pagination-info">
+                Showing {(currentPage - 1) * 10 + 1}-
+                {Math.min(currentPage * 10, inventoryItems.length)} of{" "}
+                {inventoryItems.length} items
+              </p>
 
-              <span className="pos-pagination-info">
-                Page {currentPage} of {totalPages}
-              </span>
+              <div className="pagination-buttons">
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPage === 1}
+                >
+                  Prev
+                </button>
 
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="pos-pagination-btn"
-              >
-                Next
-              </button>
+                {Array.from({ length: Math.min(7, totalPages) }).map(
+                  (_, idx) => {
+                    const start = Math.max(
+                      1,
+                      Math.min(currentPage - 3, totalPages - 6)
+                    );
+                    const pageNumber = start + idx;
+                    if (pageNumber > totalPages) return null;
+                    return (
+                      <button
+                        key={pageNumber}
+                        onClick={() => setCurrentPage(pageNumber)}
+                        className={currentPage === pageNumber ? "active" : ""}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  }
+                )}
+
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </section>
 
