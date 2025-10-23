@@ -1,5 +1,5 @@
 import React from 'react';
-import loginLogo from '../elements/images/loginlogo.svg';
+import loginLogo from '../elements/images/logo.webp';
 import '../styles/Header.css';
 
 const Header = () => {
