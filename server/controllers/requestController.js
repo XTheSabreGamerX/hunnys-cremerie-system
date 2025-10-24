@@ -130,7 +130,7 @@ const requestApprove = async (req, res) => {
       action: "Registration Approval",
       module: "User Management",
       description: `Approval of registration request for user: ${request.email}`,
-      userId: newUser._id,
+      userId: req.user.id || null,
     });
 
     await createNotification({
@@ -163,7 +163,7 @@ const requestReject = async (req, res) => {
       action: "Registration Rejected",
       module: "User Management",
       description: `Rejection of registration request for user: ${request.email}`,
-      userId: null,
+      userId: req.user.id || null,
     });
 
     await createNotification({

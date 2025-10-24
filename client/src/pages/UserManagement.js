@@ -407,8 +407,8 @@ const UserManagement = () => {
                             setConfirmMessage(
                               "Are you sure you want to accept this registration?"
                             );
-                            setOnConfirmAction(() =>
-                              handleApprove(request._id)
+                            setOnConfirmAction(
+                              () => () => handleApprove(request._id)
                             );
                             setShowConfirm(true);
                           }}
