@@ -1,4 +1,5 @@
 const Customer = require("../models/Customer");
+const Fuse = require("fuse.js");
 const { createLog } = require("../controllers/activityLogController");
 const { createNotification } = require("../controllers/notificationController");
 const ActionRequest = require("../models/ActionRequest");
@@ -23,6 +24,88 @@ const getAllCustomers = async (req, res) => {
   } catch (err) {
     console.error("Failed to get customers:", err);
     res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// GET /api/customers/paginated
+const getPaginatedCustomers = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search?.trim() || "";
+    const field = req.query.field;
+    const order = req.query.order === "desc" ? -1 : 1;
+    const fetchAll = req.query.all === "true";
+
+    const allCustomers = await Customer.find().sort(
+      field ? { [field]: order } : { customerId: 1 }
+    );
+
+    if (!search) {
+      const totalItems = allCustomers.length;
+      const totalPages = Math.ceil(totalItems / limit);
+      const paginatedItems = fetchAll
+        ? allCustomers
+        : allCustomers.slice((page - 1) * limit, page * limit);
+
+      return res.json({
+        customers: paginatedItems,
+        currentPage: page,
+        totalPages,
+        totalItems,
+      });
+    }
+
+    const normalizeFn = (value) => (value?.toString() || "").trim();
+
+    let dynamicThreshold = 0.3;
+    if (field) {
+      if (["customerId", "email", "phoneNumber"].includes(field)) {
+        dynamicThreshold = 0.1;
+      } else if (["name", "address"].includes(field)) {
+        dynamicThreshold = 0.3;
+      }
+    }
+
+    const fuse = new Fuse(allCustomers, {
+      keys: [
+        { name: "customerId", getFn: (i) => normalizeFn(i.customerId) },
+        { name: "name", getFn: (i) => normalizeFn(i.name) },
+        { name: "email", getFn: (i) => normalizeFn(i.email) },
+        { name: "phoneNumber", getFn: (i) => normalizeFn(i.phoneNumber) },
+        { name: "address", getFn: (i) => normalizeFn(i.address) },
+      ],
+      threshold: dynamicThreshold,
+      ignoreLocation: true,
+    });
+
+    let fuseResults = fuse.search(search.trim()).map((r) => r.item);
+
+    if (field) {
+      fuseResults.sort((a, b) => {
+        const valA = a[field] ? a[field].toString().toLowerCase() : "";
+        const valB = b[field] ? b[field].toString().toLowerCase() : "";
+        if (valA < valB) return order === 1 ? -1 : 1;
+        if (valA > valB) return order === 1 ? 1 : -1;
+        return 0;
+      });
+    }
+
+    const totalItems = fuseResults.length;
+    const totalPages = Math.ceil(totalItems / limit);
+    const paginatedResults = fetchAll
+      ? fuseResults
+      : fuseResults.slice((page - 1) * limit, page * limit);
+
+    res.json({
+      customers: paginatedResults,
+      currentPage: page,
+      totalPages,
+      totalItems,
+    });
+  } catch (err) {
+    console.error("[GET CUSTOMERS] Server error:", err);
+    res.status(500).json({ message: "Server error while fetching customers" });
   }
 };
 
@@ -222,6 +305,7 @@ const deleteCustomer = async (req, res) => {
 
 module.exports = {
   getAllCustomers,
+  getPaginatedCustomers,
   createCustomer,
   updateCustomer,
   deleteCustomer,

@@ -1127,7 +1127,7 @@ const Inventory = () => {
               {inventoryType === "Inventory" && totalItems > 0 && (
                 <p className="pagination-info">
                   Showing {(page - 1) * 10 + 1}-
-                  {Math.min(page * 10, totalItems)} of {totalItems} items
+                  {Math.min(page * 10, totalItems * 10)} of {totalItems} items
                 </p>
               )}
 

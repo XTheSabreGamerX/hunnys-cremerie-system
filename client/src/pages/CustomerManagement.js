@@ -13,7 +13,6 @@ import "../styles/CustomerManagement.css";
 const CustomerManagement = () => {
   const [customers, setCustomers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchField, setSearchField] = useState("customerId");
   const [selectedItem, setSelectedItem] = useState(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -24,6 +23,8 @@ const CustomerManagement = () => {
   const [modalMode, setModalMode] = useState("view");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [columnFilter, setColumnFilter] = useState({ field: "", order: "" });
 
   const navigate = useNavigate();
 
@@ -37,21 +38,26 @@ const CustomerManagement = () => {
   const fetchCustomers = useCallback(async () => {
     try {
       const res = await authFetch(
-        `${API_BASE}/api/customers?page=${page}&limit=10`
+        `${API_BASE}/api/customers/paginated?page=${page}&limit=10&search=${encodeURIComponent(
+          searchQuery
+        )}&field=${encodeURIComponent(
+          columnFilter.field || ""
+        )}&order=${encodeURIComponent(columnFilter.order || "")}`
       );
       const data = await res.json();
 
       setCustomers(data.customers || []);
       setTotalPages(data.totalPages || 1);
+      setTotalItems(data.totalItems || (data.items ? data.items.length : 0));
     } catch (err) {
       console.error("Error fetching customers:", err);
       setCustomers([]);
     }
-  }, [page]);
+  }, [page, searchQuery, columnFilter]);
 
   useEffect(() => {
     fetchCustomers();
-  }, [page, fetchCustomers]);
+  }, [page, searchQuery, columnFilter, fetchCustomers]);
 
   const validateCustomerData = (data) => {
     const { customerId, name } = data;
@@ -206,12 +212,18 @@ const CustomerManagement = () => {
     setIsConfirmOpen(true);
   };
 
-  const displayedCustomers = Array.isArray(customers)
-    ? customers.filter((customer) => {
-        const value = customer[searchField];
-        return value?.toLowerCase().includes(searchQuery.toLowerCase());
-      })
-    : [];
+  const handleColumnClick = (field) => {
+    if (columnFilter.field === field) {
+      if (columnFilter.order === "asc") {
+        setColumnFilter({ field, order: "desc" });
+      } else {
+        setColumnFilter({ field: "", order: "" });
+      }
+    } else {
+      setColumnFilter({ field, order: "asc" });
+    }
+    setPage(1);
+  };
 
   return (
     <>
@@ -294,18 +306,6 @@ const CustomerManagement = () => {
           </div>
 
           <div className="module-actions-container">
-            <select
-              className="module-filter-dropdown"
-              value={searchField}
-              onChange={(e) => setSearchField(e.target.value)}
-            >
-              <option value="customerId">Customer ID</option>
-              <option value="name">Name</option>
-              <option value="email">Email</option>
-              <option value="phoneNumber">Phone</option>
-              <option value="address">Address</option>
-            </select>
-
             <input
               type="text"
               className="module-search-input"
@@ -329,23 +329,39 @@ const CustomerManagement = () => {
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Number</th>
-                  <th>Address</th>
-                  <th>Created</th>
-                  <th>Updated</th>
+                  {[
+                    { key: "customerId", label: "ID" },
+                    { key: "name", label: "Name" },
+                    { key: "email", label: "Email" },
+                    { key: "phoneNumber", label: "Number" },
+                    { key: "address", label: "Address" },
+                    { key: "createdAt", label: "Created" },
+                    { key: "updatedAt", label: "Updated" },
+                  ].map(({ key, label }) => (
+                    <th
+                      key={key}
+                      className="sortable-header"
+                      onClick={() => handleColumnClick(key)}
+                    >
+                      {label}
+                      {columnFilter.field === key && (
+                        <span className="sort-arrow">
+                          {columnFilter.order === "asc" ? "▲" : "▼"}
+                        </span>
+                      )}
+                    </th>
+                  ))}
+
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {displayedCustomers.length === 0 ? (
+                {customers.length === 0 ? (
                   <tr>
                     <td colSpan="8">No customers found.</td>
                   </tr>
                 ) : (
-                  displayedCustomers.map((customer) => (
+                  customers.map((customer) => (
                     <tr key={customer._id}>
                       <td>{customer.customerId}</td>
                       <td>{customer.name}</td>
@@ -395,9 +411,8 @@ const CustomerManagement = () => {
 
           <div className="pagination">
             <p className="pagination-info">
-              Showing {(page - 1) * 10 + 1}-
-              {Math.min(page * 10, customers.length)} of {customers.length}{" "}
-              customers
+              Showing {(page - 1) * 10 + 1}–
+              {Math.min(page * 10, totalPages * 10)} of {totalItems} customers
             </p>
 
             <div className="pagination-buttons">

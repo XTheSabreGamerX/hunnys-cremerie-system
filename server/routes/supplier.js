@@ -3,12 +3,15 @@ const router = express.Router();
 const authenticateToken = require('../middleware/auth');
 const {
     getAllSuppliers,
+    getPaginatedSuppliers,
     createSupplier,
     updateSupplier,
     deleteSupplier
 } = require ('../controllers/supplierController');
 
 router.get('/', authenticateToken, getAllSuppliers);
+
+router.get('/paginated', authenticateToken, getPaginatedSuppliers);
 
 router.post('/', authenticateToken, createSupplier);
 

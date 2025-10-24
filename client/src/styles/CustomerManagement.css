@@ -37,3 +37,16 @@
 .customer-main .module-table-container table td:nth-child(8) {
   width: 15%;
 }
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.sort-arrow {
+  font-size: 0.8rem;
+  margin-left: 4px;
+  color: #ffffff;
+}
