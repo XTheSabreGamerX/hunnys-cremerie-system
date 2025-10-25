@@ -11,7 +11,6 @@ import "../styles/SupplierManagement.css";
 
 const SupplierManagement = () => {
   const [suppliers, setSuppliers] = useState([]);
-  const [filteredSuppliers, setFilteredSuppliers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchField, setSearchField] = useState("supplierId");
   const [selectedSupplier, setSelectedSupplier] = useState(null);
@@ -25,13 +24,17 @@ const SupplierManagement = () => {
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("success");
 
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [sortField, setSortField] = useState("");
+  const [sortOrder, setSortOrder] = useState("asc");
+
   const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/login");
-    }
+    if (!token) navigate("/login");
   }, [navigate]);
 
   const supplierFields = [
@@ -44,61 +47,41 @@ const SupplierManagement = () => {
   const showPopup = (message, type = "success") => {
     setPopupMessage(message);
     setPopupType(type);
-    setTimeout(() => {
-      setPopupMessage("");
-      setPopupType("success");
-    }, 2000);
+    setTimeout(() => setPopupMessage(""), 2000);
   };
 
   const fetchSuppliers = useCallback(async () => {
     try {
-      const res = await authFetch(`${API_BASE}/api/suppliers`);
+      const params = new URLSearchParams({
+        page,
+        limit: 10,
+        search: searchQuery,
+        field: sortField,
+        order: sortOrder,
+      });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Failed to fetch suppliers");
-      }
-
+      const res = await authFetch(
+        `${API_BASE}/api/suppliers/paginated?${params}`
+      );
+      if (!res.ok) throw new Error("Failed to fetch suppliers");
       const data = await res.json();
-      if (!Array.isArray(data)) {
-        console.error("Expected an array, got:", data);
-        return;
-      }
 
-      setSuppliers(data);
+      setSuppliers(data.suppliers || []);
+      setTotalPages(data.totalPages || 1);
+      setTotalItems(data.totalItems || 0);
     } catch (err) {
-      console.error("Error fetching suppliers:", err.message);
+      console.error("Error fetching suppliers:", err);
+      showPopup("Failed to load suppliers.", "error");
     }
-  }, []);
+  }, [page, searchQuery, sortField, sortOrder]);
 
   useEffect(() => {
     fetchSuppliers();
   }, [fetchSuppliers]);
 
-  useEffect(() => {
-    const query = searchQuery.toLowerCase().trim();
-    if (!query) {
-      setFilteredSuppliers([]);
-      return;
-    }
-    const filtered = suppliers.filter((s) =>
-      (s[searchField] || "").toLowerCase().includes(query)
-    );
-    setFilteredSuppliers(filtered);
-  }, [searchQuery, searchField, suppliers]);
-
   const validateFormData = (data) => {
     if (!data.supplierId?.trim() || !data.name?.trim()) {
       showPopup("Please fill out required fields.", "error");
-      return false;
-    }
-    if (
-      modalMode === "add" &&
-      suppliers.some(
-        (s) => s.supplierId.toLowerCase() === data.supplierId.toLowerCase()
-      )
-    ) {
-      showPopup("Supplier ID already exists.", "error");
       return false;
     }
     return true;
@@ -114,13 +97,13 @@ const SupplierManagement = () => {
 
       await authFetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json'},
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
       await fetchSuppliers();
       setSelectedSupplier(null);
-      setModalMode("view");
+      setModalMode(null);
       showPopup(
         `Supplier ${modalMode === "add" ? "added" : "updated"} successfully!`
       );
@@ -132,7 +115,6 @@ const SupplierManagement = () => {
 
   const handleAddOrEdit = async (data) => {
     if (!validateFormData(data)) return;
-
     if (modalMode === "edit") {
       setPendingEditData(data);
       setShowConfirmation(true);
@@ -142,9 +124,7 @@ const SupplierManagement = () => {
   };
 
   const handleConfirmEdit = async () => {
-    if (pendingEditData) {
-      await saveSupplier(pendingEditData);
-    }
+    if (pendingEditData) await saveSupplier(pendingEditData);
     setPendingEditData(null);
     setShowConfirmation(false);
   };
@@ -164,14 +144,8 @@ const SupplierManagement = () => {
         }
       );
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Delete failed.");
-      }
-
-      setSuppliers((prev) =>
-        prev.filter((s) => s._id !== supplierToDelete._id)
-      );
+      if (!res.ok) throw new Error("Delete failed.");
+      await fetchSuppliers();
       showPopup("Supplier deleted successfully!");
     } catch (err) {
       console.error("Delete failed:", err);
@@ -183,7 +157,20 @@ const SupplierManagement = () => {
     }
   };
 
-  const isFiltering = searchQuery.trim() !== "";
+  const handleSort = (field) => {
+    if (sortField === field) {
+      if (sortOrder === "asc") {
+        setSortOrder("desc");
+      } else {
+        setSortField("");
+        setSortOrder("");
+      }
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+    setPage(1);
+  };
 
   return (
     <>
@@ -206,12 +193,12 @@ const SupplierManagement = () => {
             {
               name: "createdAt",
               label: "Created",
-              formatter: (val) => new Date(val).toLocaleString(),
+              formatter: (v) => new Date(v).toLocaleString(),
             },
             {
               name: "updatedAt",
               label: "Updated",
-              formatter: (val) => new Date(val).toLocaleString(),
+              formatter: (v) => new Date(v).toLocaleString(),
             },
           ]}
           onClose={() => {
@@ -261,63 +248,81 @@ const SupplierManagement = () => {
       )}
 
       <DashboardLayout>
-      <main className="module-main-content supplier-main">
-        <div className="module-header">
-          <h1 className="module-title">Supplier Management</h1>
-        </div>
+        <main className="module-main-content supplier-main">
+          <div className="module-header">
+            <h1 className="module-title">Supplier Management</h1>
+          </div>
 
-        <div className="module-actions-container">
-          <select
-            className="module-filter-dropdown"
-            value={searchField}
-            onChange={(e) => setSearchField(e.target.value)}
-          >
-            <option value="supplierId">Supplier ID</option>
-            <option value="name">Name</option>
-            <option value="contact">Contact</option>
-            <option value="company">Company</option>
-          </select>
+          <div className="module-actions-container">
+            <select
+              className="module-filter-dropdown"
+              value={searchField}
+              onChange={(e) => setSearchField(e.target.value)}
+            >
+              <option value="supplierId">Supplier ID</option>
+              <option value="name">Name</option>
+              <option value="contact">Contact</option>
+              <option value="company">Company</option>
+            </select>
 
-          <input
-            type="text"
-            className="module-search-input"
-            placeholder="Search"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+            <input
+              type="text"
+              className="module-search-input"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+            />
 
-          <button
-            className="module-action-btn module-add-btn"
-            onClick={() => {
-              setModalMode("add");
-              setSelectedSupplier(null);
-            }}
-          >
-            Add Supplier
-          </button>
-        </div>
+            <button
+              className="module-action-btn module-add-btn"
+              onClick={() => {
+                setModalMode("add");
+                setSelectedSupplier(null);
+              }}
+            >
+              Add Supplier
+            </button>
+          </div>
 
-        <div className="module-table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Contact</th>
-                <th>Company</th>
-                <th>Created At</th>
-                <th>Updated At</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(isFiltering ? filteredSuppliers : suppliers).length === 0 ? (
+          <div className="module-table-container">
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan="7">No suppliers found.</td>
+                  {[
+                    { key: "supplierId", label: "ID" },
+                    { key: "name", label: "Name" },
+                    { key: "contact", label: "Contact" },
+                    { key: "company", label: "Company" },
+                    { key: "createdAt", label: "Created" },
+                    { key: "updatedAt", label: "Updated" },
+                  ].map(({ key, label }) => (
+                    <th
+                      key={key}
+                      onClick={() => handleSort(key)}
+                      style={{
+                        cursor: "pointer",
+                        userSelect: "none",
+                      }}
+                    >
+                      {label}{" "}
+                      {sortField === key && (
+                        <span>{sortOrder === "asc" ? "▲" : "▼"}</span>
+                      )}
+                    </th>
+                  ))}
+                  <th style={{ cursor: "default" }}>Actions</th>
                 </tr>
-              ) : (
-                (isFiltering ? filteredSuppliers : suppliers).map(
-                  (supplier) => (
+              </thead>
+              <tbody>
+                {suppliers.length === 0 ? (
+                  <tr>
+                    <td colSpan="7">No suppliers found.</td>
+                  </tr>
+                ) : (
+                  suppliers.map((supplier) => (
                     <tr key={supplier._id}>
                       <td>{supplier.supplierId}</td>
                       <td>{supplier.name}</td>
@@ -335,7 +340,6 @@ const SupplierManagement = () => {
                         >
                           Edit
                         </button>
-
                         <button
                           className="module-action-btn module-view-btn"
                           onClick={() => {
@@ -347,13 +351,51 @@ const SupplierManagement = () => {
                         </button>
                       </td>
                     </tr>
-                  )
-                )
-              )}
-            </tbody>
-          </table>
-        </div>
-      </main>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Your pagination UI unchanged */}
+          <div className="pagination">
+            <p className="pagination-info">
+              Showing {(page - 1) * 10 + 1}–{Math.min(page * 10, totalItems)} of{" "}
+              {totalItems} suppliers
+            </p>
+
+            <div className="pagination-buttons">
+              <button
+                onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                disabled={page === 1}
+              >
+                Prev
+              </button>
+
+              {Array.from({ length: Math.min(7, totalPages) }).map((_, idx) => {
+                const start = Math.max(1, Math.min(page - 3, totalPages - 6));
+                const pageNumber = start + idx;
+                if (pageNumber > totalPages) return null;
+                return (
+                  <button
+                    key={pageNumber}
+                    onClick={() => setPage(pageNumber)}
+                    className={page === pageNumber ? "active" : ""}
+                  >
+                    {pageNumber}
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+                disabled={page === totalPages}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </main>
       </DashboardLayout>
     </>
   );
