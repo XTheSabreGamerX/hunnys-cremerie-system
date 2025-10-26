@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { customAlphabet } from "nanoid/non-secure";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
@@ -44,16 +44,36 @@ const SalesManagement = () => {
   const nanoid = customAlphabet(alphabet, 8);
   const generateSaleID = () => `SALE-${nanoid()}`;
 
-  // Fetch inventory
+  const fetchInventory = useCallback(async () => {
+    try {
+      let url = `${API_BASE}/api/inventory?page=${currentPage}&limit=10&search=${encodeURIComponent(
+        searchQuery
+      )}`;
+
+      const res = await authFetch(url);
+      if (!res || !res.ok) throw new Error("Failed to fetch inventory");
+
+      const data = await res.json();
+
+      const wrappedData = Array.isArray(data)
+        ? {
+            items: data,
+            currentPage: 1,
+            totalPages: 1,
+            totalItems: data.length,
+          }
+        : data;
+
+      setInventoryItems(wrappedData.items || []);
+      setTotalPages(wrappedData.totalPages || 1);
+    } catch (err) {
+      console.error("Error fetching inventory:", err);
+    }
+  }, [currentPage, searchQuery]);
+
   useEffect(() => {
-    authFetch(`${API_BASE}/api/inventory?page=1&limit=1000`)
-      .then((res) => res.json())
-      .then((data) => {
-        const items = Array.isArray(data) ? data : data.items;
-        setInventoryItems(items || []);
-      })
-      .catch((err) => console.error("Failed to fetch inventory items", err));
-  }, []);
+    fetchInventory();
+  }, [fetchInventory]);
 
   // Fetch customers
   useEffect(() => {
@@ -222,7 +242,10 @@ const SalesManagement = () => {
                 type="text"
                 placeholder="Search products..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="sales-search-input"
               />
             </div>
@@ -243,79 +266,71 @@ const SalesManagement = () => {
                 </thead>
 
                 <tbody>
-                  {paginatedItems
-                    .filter((item) =>
-                      item.name
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase())
-                    )
-                    .sort((a, b) => {
-                      if (
-                        a.status === "Well-stocked" &&
-                        b.status !== "Well-stocked"
-                      )
-                        return -1;
-                      if (
-                        a.status !== "Well-stocked" &&
-                        b.status === "Well-stocked"
-                      )
-                        return 1;
-                      return 0;
-                    })
-                    .map((item) => (
-                      <tr
-                        key={item._id}
-                        className={`sales-table-row ${
-                          item.stock <= 0 ||
-                          item.status === "Out of stock" ||
-                          item.status === "Expired"
-                            ? "disabled-row"
-                            : ""
-                        }`}
-                        onClick={() =>
-                          item.stock > 0 &&
-                          item.status !== "Out of stock" &&
-                          item.status !== "Expired"
-                            ? handleAddToCart(item)
-                            : null
-                        }
-                      >
-                        <td className="col-itemid">{item.itemId}</td>
-                        <td className="col-name" title={item.name}>
-                          {item.name}
-                        </td>
-                        <td className="col-category">{item.category}</td>
-                        <td className="col-purchase">₱{item.purchasePrice}</td>
-                        <td className="col-unitprice">₱{item.unitPrice}</td>
-
-                        <td className="col-amountunit">
-                          {item.amount
-                            ? `${item.amount} ${item.unit?.name || ""}`
-                            : "—"}
-                        </td>
-
-                        <td className="col-stock">{item.stock}</td>
-                        <td className="col-status">
-                          <span
-                            className={`product-status ${item.status
-                              .replace(/\s+/g, "-")
-                              .toLowerCase()}`}
-                          >
-                            {item.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-
-                  {/* Show message if no matching results */}
-                  {paginatedItems.filter((item) =>
-                    item.name.toLowerCase().includes(searchQuery.toLowerCase())
-                  ).length === 0 && (
+                  {paginatedItems.length === 0 ? (
                     <tr>
                       <td colSpan="8" className="no-results">
                         No matching products found.
                       </td>
                     </tr>
+                  ) : (
+                    paginatedItems
+                      .sort((a, b) => {
+                        if (
+                          a.status === "Well-stocked" &&
+                          b.status !== "Well-stocked"
+                        )
+                          return -1;
+                        if (
+                          a.status !== "Well-stocked" &&
+                          b.status === "Well-stocked"
+                        )
+                          return 1;
+                        return 0;
+                      })
+                      .map((item) => (
+                        <tr
+                          key={item._id}
+                          className={`sales-table-row ${
+                            item.stock <= 0 ||
+                            item.status === "Out of stock" ||
+                            item.status === "Expired"
+                              ? "disabled-row"
+                              : ""
+                          }`}
+                          onClick={() =>
+                            item.stock > 0 &&
+                            item.status !== "Out of stock" &&
+                            item.status !== "Expired"
+                              ? handleAddToCart(item)
+                              : null
+                          }
+                        >
+                          <td className="col-itemid">{item.itemId}</td>
+                          <td className="col-name" title={item.name}>
+                            {item.name}
+                          </td>
+                          <td className="col-category">{item.category}</td>
+                          <td className="col-purchase">
+                            ₱{item.purchasePrice}
+                          </td>
+                          <td className="col-unitprice">₱{item.unitPrice}</td>
+                          <td className="col-amountunit">
+                            {item.amount
+                              ? `${item.amount} ${item.unit?.name || ""}`
+                              : "—"}
+                          </td>
+                          <td className="col-stock">{item.stock}</td>
+                          <td className="col-status">
+                            <span
+                              className={`product-status ${item.status
+                                .replace(/\s+/g, "-")
+                                .toLowerCase()}`}
+                            >
+                              {item.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
                   )}
                 </tbody>
               </table>
