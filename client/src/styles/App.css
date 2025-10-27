@@ -126,6 +126,7 @@ html, body, #root {
   vertical-align: middle;
   word-break: break-word;
   border: 1px solid black;
+  height: 100px;
 }
 
 .module-table-container th {
