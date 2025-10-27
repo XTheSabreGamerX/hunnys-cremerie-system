@@ -21,7 +21,7 @@ const SalesManagement = () => {
   const [popupType, setPopupType] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
   const [paginatedItems, setPaginatedItems] = useState([]);
 
   const navigate = useNavigate();
@@ -66,6 +66,7 @@ const SalesManagement = () => {
 
       setInventoryItems(wrappedData.items || []);
       setTotalPages(wrappedData.totalPages || 1);
+      setTotalItems(wrappedData.totalItems || 0);
     } catch (err) {
       console.error("Error fetching inventory:", err);
     }
@@ -88,12 +89,8 @@ const SalesManagement = () => {
   }, [isUnregistered]);
 
   useEffect(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const currentItems = inventoryItems.slice(startIndex, endIndex);
-    setPaginatedItems(currentItems);
-    setTotalPages(Math.ceil(inventoryItems.length / itemsPerPage));
-  }, [inventoryItems, currentPage, itemsPerPage]);
+    setPaginatedItems(inventoryItems);
+  }, [inventoryItems]);
 
   const handleAddToCart = (product) => {
     if (product.stock <= 0) return;
@@ -339,8 +336,7 @@ const SalesManagement = () => {
             <div className="pagination">
               <p className="pagination-info">
                 Showing {(currentPage - 1) * 10 + 1}-
-                {Math.min(currentPage * 10, inventoryItems.length)} of{" "}
-                {inventoryItems.length} items
+                {Math.min(currentPage * 10, totalItems)} of {totalItems} items
               </p>
 
               <div className="pagination-buttons">
