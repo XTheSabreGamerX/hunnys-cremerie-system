@@ -21,6 +21,7 @@ const SalesManagement = () => {
   const [popupType, setPopupType] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [paginatedItems, setPaginatedItems] = useState([]);
 
   const navigate = useNavigate();
@@ -87,8 +88,12 @@ const SalesManagement = () => {
   }, [isUnregistered]);
 
   useEffect(() => {
-    setPaginatedItems(inventoryItems);
-  }, [inventoryItems]);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentItems = inventoryItems.slice(startIndex, endIndex);
+    setPaginatedItems(currentItems);
+    setTotalPages(Math.ceil(inventoryItems.length / itemsPerPage));
+  }, [inventoryItems, currentPage, itemsPerPage]);
 
   const handleAddToCart = (product) => {
     if (product.stock <= 0) return;
