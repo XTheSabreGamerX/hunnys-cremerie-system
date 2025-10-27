@@ -112,7 +112,6 @@ const getAllInventoryItems = async (req, res) => {
   }
 };
 
-
 // Adding a new inventory item
 const addInventoryItem = async (req, res) => {
   try {
