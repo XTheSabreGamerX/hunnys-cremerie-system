@@ -23,6 +23,7 @@ const SalesManagement = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [paginatedItems, setPaginatedItems] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
 
@@ -161,6 +162,8 @@ const SalesManagement = () => {
       return;
     }
 
+    setLoading(true);
+
     const subtotal = cartItems.reduce(
       (sum, i) => sum + i.unitPrice * i.quantity,
       0
@@ -215,6 +218,8 @@ const SalesManagement = () => {
       setPaymentMethod("");
     } catch (err) {
       showPopup(err.message || "Something went wrong.", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -503,8 +508,12 @@ const SalesManagement = () => {
                   )
                   .toFixed(2)}
               </p>
-              <button className="pos-checkout-btn" onClick={handleSaveSale}>
-                Checkout
+              <button
+                className="pos-checkout-btn"
+                onClick={handleSaveSale}
+                disabled={loading}
+              >
+                {loading ? "Checking Out..." : "Checkout"}
               </button>
             </div>
           </section>

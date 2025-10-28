@@ -30,7 +30,7 @@ const getAllInventoryItems = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const search = req.query.search?.trim() || "";
-    const normalizedSearch = search.replace(/\s+/g, ''); // remove all spaces for search
+    const normalizedSearch = search.replace(/\s+/g, ""); // remove all spaces for search
     const field = req.query.field;
     const order = req.query.order === "desc" ? -1 : 1;
     const fetchAll = req.query.all === "true";
@@ -56,7 +56,8 @@ const getAllInventoryItems = async (req, res) => {
     }
 
     let fuseKeys = [];
-    const normalizeFn = (value) => (value?.toString() || "").replace(/\s+/g, ''); // normalize spaces
+    const normalizeFn = (value) =>
+      (value?.toString() || "").replace(/\s+/g, ""); // normalize spaces
 
     if (field) {
       if (
@@ -66,7 +67,9 @@ const getAllInventoryItems = async (req, res) => {
       ) {
         fuseKeys = [{ name: field, getFn: (item) => normalizeFn(item[field]) }];
       } else if (field === "unit.name") {
-        fuseKeys = [{ name: "unit.name", getFn: (item) => normalizeFn(item.unit?.name) }];
+        fuseKeys = [
+          { name: "unit.name", getFn: (item) => normalizeFn(item.unit?.name) },
+        ];
       } else {
         fuseKeys = [field];
       }
@@ -77,10 +80,16 @@ const getAllInventoryItems = async (req, res) => {
         { name: "category", getFn: (item) => normalizeFn(item.category) },
         { name: "supplier", getFn: (item) => normalizeFn(item.supplier) },
         { name: "status", getFn: (item) => normalizeFn(item.status) },
-        { name: "purchasePrice", getFn: (item) => normalizeFn(item.purchasePrice) },
+        {
+          name: "purchasePrice",
+          getFn: (item) => normalizeFn(item.purchasePrice),
+        },
         { name: "unitPrice", getFn: (item) => normalizeFn(item.unitPrice) },
         { name: "amount", getFn: (item) => normalizeFn(item.amount) },
-        { name: "restockThreshold", getFn: (item) => normalizeFn(item.restockThreshold) },
+        {
+          name: "restockThreshold",
+          getFn: (item) => normalizeFn(item.restockThreshold),
+        },
         { name: "unit.name", getFn: (item) => normalizeFn(item.unit?.name) },
       ];
     }
@@ -92,7 +101,9 @@ const getAllInventoryItems = async (req, res) => {
       ignoreLocation: true,
     });
 
-    const fuseResults = fuse.search(normalizedSearch).map((result) => result.item);
+    const fuseResults = fuse
+      .search(normalizedSearch)
+      .map((result) => result.item);
 
     const totalItems = fuseResults.length;
     const totalPages = Math.ceil(totalItems / limit);
@@ -218,6 +229,8 @@ const updateInventoryItem = async (req, res) => {
       req.body.category = categoryDoc.name;
     }
 
+    req.body.updatedBy = req.user.id;
+
     Object.assign(item, req.body);
 
     if (item.unitPrice < item.purchasePrice) {
@@ -227,23 +240,6 @@ const updateInventoryItem = async (req, res) => {
     }
 
     await item.save();
-
-    try {
-      await createLog({
-        action: "Updated Item",
-        module: "Inventory",
-        description: `User ${req.user.username} updated an item: ${item.name}`,
-        userId: req.user.id,
-      });
-
-      await createNotification({
-        message: `An inventory item "${item.name}" was updated.`,
-        type: "info",
-        roles: ["admin", "owner", "manager"],
-      });
-    } catch (logErr) {
-      console.error("[Activity Log] Failed to log update:", logErr.message);
-    }
 
     res.json(item);
   } catch (err) {

@@ -509,6 +509,42 @@ const Inventory = () => {
         });
       }
 
+      // Normalize category and unit fields
+      if (normalizedData.category) {
+        if (typeof normalizedData.category === "object") {
+          normalizedData.category =
+            normalizedData.category._id ||
+            normalizedData.category.value ||
+            normalizedData.category.name ||
+            "";
+        } else if (typeof normalizedData.category === "string") {
+          const foundCategory =
+            categories.inventory?.find(
+              (c) =>
+                c._id === normalizedData.category ||
+                c.name === normalizedData.category
+            )?._id || "";
+          normalizedData.category = foundCategory;
+        }
+      }
+
+      if (normalizedData.unit) {
+        if (typeof normalizedData.unit === "object") {
+          normalizedData.unit =
+            normalizedData.unit._id ||
+            normalizedData.unit.value ||
+            normalizedData.unit.name ||
+            "";
+        } else if (typeof normalizedData.unit === "string") {
+          const foundUnit =
+            uoms.find(
+              (u) =>
+                u._id === normalizedData.unit || u.name === normalizedData.unit
+            )?._id || "";
+          normalizedData.unit = foundUnit;
+        }
+      }
+
       // Generate itemId for inventory add
       let itemId = normalizedData.itemId?.trim();
       if (modalMode === "add" && !itemId) {
@@ -791,6 +827,9 @@ const Inventory = () => {
     setIngredientForm({ quantity: 1 });
   };
 
+  console.log("Selected Item:", selectedItem);
+  console.log("Form Data:", formData);
+
   return (
     <>
       {popupMessage && (
@@ -800,7 +839,6 @@ const Inventory = () => {
           onClose={() => setPopupMessage("")}
         />
       )}
-
       {/* Inventory view modal (only for Inventory items) */}
       {isViewOpen && inventoryType === "Inventory" && viewedItem && (
         <ViewModal
@@ -850,7 +888,6 @@ const Inventory = () => {
           onDelete={() => handleDelete(viewedItem._id)}
         />
       )}
-
       {/* Cake view modal (only for Cake Inventory) */}
       {isViewOpen && inventoryType === "Cake Inventory" && selectedCake && (
         <CakeViewModal
@@ -859,7 +896,6 @@ const Inventory = () => {
           cake={selectedCake}
         />
       )}
-
       {/* Confirmation for delete */}
       {isConfirmOpen && (
         <ConfirmationModal
@@ -891,7 +927,6 @@ const Inventory = () => {
           uoms={uoms}
         />
       )}
-
       {/* CAKE MODAL */}
       {(modalMode === "cake-add" || modalMode === "cake-edit") && (
         <CakeEditModal
@@ -910,7 +945,6 @@ const Inventory = () => {
           onClose={closeModal}
         />
       )}
-
       {/* Save confirmation (shared for inventory & cake edits) */}
       {showConfirmation && (
         <ConfirmationModal
@@ -923,7 +957,6 @@ const Inventory = () => {
           }}
         />
       )}
-
       <DashboardLayout>
         <main className="module-main-content inventory-main">
           <div className="module-header">
@@ -1060,7 +1093,30 @@ const Inventory = () => {
                           <button
                             className="module-action-btn module-edit-btn"
                             onClick={() => {
+                              const categoryId =
+                                categories.inventory?.find(
+                                  (c) =>
+                                    c._id === item.category ||
+                                    c._id === item.category?._id ||
+                                    c.name === item.category
+                                )?._id || "";
+
+                              const unitId =
+                                uoms.find(
+                                  (u) =>
+                                    u._id === item.unit ||
+                                    u._id === item.unit?._id ||
+                                    u.name === item.unit
+                                )?._id || "";
+
+                              const normalized = {
+                                ...item,
+                                category: categoryId,
+                                unit: unitId,
+                              };
+
                               setSelectedItem(item);
+                              setFormData(normalized);
                               setModalMode("edit");
                             }}
                           >

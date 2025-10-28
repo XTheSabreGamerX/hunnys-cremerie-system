@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const { createNotification } = require("../controllers/notificationController");
+const { createLog } = require("../controllers/activityLogController");
 
 const inventoryItemSchema = new mongoose.Schema({
   itemId: { type: String, unique: true },
@@ -50,7 +52,11 @@ function calculateStatus(stock, threshold, expirationDate) {
 
 // Pre-save hook
 inventoryItemSchema.pre("save", function (next) {
-  this.status = calculateStatus(this.stock, this.restockThreshold, this.expirationDate);
+  this.status = calculateStatus(
+    this.stock,
+    this.restockThreshold,
+    this.expirationDate
+  );
   next();
 });
 
@@ -63,9 +69,7 @@ inventoryItemSchema.pre("findOneAndUpdate", function (next) {
     update.restockThreshold !== undefined ||
     update.expirationDate !== undefined
   ) {
-    const stock =
-      update.stock ??
-      (update.$set ? update.$set.stock : undefined);
+    const stock = update.stock ?? (update.$set ? update.$set.stock : undefined);
     const restockThreshold =
       update.restockThreshold ??
       (update.$set ? update.$set.restockThreshold : undefined);
@@ -76,7 +80,33 @@ inventoryItemSchema.pre("findOneAndUpdate", function (next) {
     update.status = calculateStatus(stock, restockThreshold, expirationDate);
     this.setUpdate(update);
   }
+  next();
+});
 
+inventoryItemSchema.post("save", async function (doc, next) {
+  try {
+    if (this.$locals?.skipLog) return next();
+
+    // Create log
+    await createLog({
+      action: "Updated Item",
+      module: "Inventory",
+      description: `Inventory item "${doc.name}" was updated.`,
+      userId: doc.updatedBy || doc.createdBy,
+    });
+
+    // Create notification
+    await createNotification({
+      message: `Inventory item "${doc.name}" was updated.`,
+      type: "info",
+      roles: ["admin", "owner", "manager"],
+    });
+  } catch (err) {
+    console.error(
+      "[Inventory Hook] Failed to create log/notification:",
+      err.message
+    );
+  }
   next();
 });
 

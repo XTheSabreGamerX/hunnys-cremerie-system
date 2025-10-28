@@ -99,6 +99,13 @@ const EditModal = ({
     setItemForm({ itemId: "", quantity: 1 });
   };
 
+  const normalizeValue = (fieldName, value, options) => {
+    if (!value) return "";
+    if (options?.some((opt) => opt.value === value)) return value;
+    const match = options?.find((opt) => opt.label === value);
+    return match ? match.value : value;
+  };
+
   return (
     <div className="inventory-modal-overlay">
       <div className="inventory-modal-content">
@@ -212,7 +219,11 @@ const EditModal = ({
                 {field.type === "select" ? (
                   <select
                     className="inventory-input"
-                    value={formData[field.name] || ""}
+                    value={normalizeValue(
+                      field.name,
+                      formData[field.name],
+                      field.options
+                    )}
                     onChange={(e) => handleChange(field.name, e.target.value)}
                   >
                     <option value="">Select an option</option>

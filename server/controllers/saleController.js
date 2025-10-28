@@ -82,6 +82,8 @@ const createSale = async (req, res) => {
       inventoryItem.stock -= soldItem.quantity;
       if (inventoryItem.stock < 0) inventoryItem.stock = 0;
 
+      inventoryItem.$locals = { skipLog: true }
+
       await inventoryItem.save();
     }
 
