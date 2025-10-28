@@ -14,6 +14,7 @@ const EditModal = ({
   setPopupMessage,
   setPopupType,
 }) => {
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState(() => {
     if (mode === "edit" && item) {
       return {
@@ -45,9 +46,17 @@ const EditModal = ({
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave(formData);
+    setLoading(true);
+
+    try {
+      await onSave(formData);
+    } catch (error) {
+      console.error("Save failed:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddItem = () => {
@@ -229,13 +238,18 @@ const EditModal = ({
           )}
 
           <div className="inventory-modal-buttons">
-            <button type="submit" className="inventory-btn save-btn">
-              Save
+            <button
+              type="submit"
+              className="inventory-btn save-btn"
+              disabled={loading}
+            >
+              {loading ? "Saving..." : "Save"}
             </button>
             <button
               type="button"
               onClick={onClose}
               className="inventory-btn cancel-btn"
+              disabled={loading}
             >
               Cancel
             </button>
