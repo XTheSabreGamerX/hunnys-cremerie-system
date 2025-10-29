@@ -27,6 +27,7 @@ const SalesManagement = () => {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState("Sales");
   const [activeSupplier, setActiveSupplier] = useState(null);
+  const [suppliers, setSuppliers] = useState([]);
 
   const navigate = useNavigate();
 
@@ -79,6 +80,24 @@ const SalesManagement = () => {
   useEffect(() => {
     fetchInventory();
   }, [fetchInventory, mode]);
+
+  // Fetch suppliers
+  useEffect(() => {
+    authFetch(`${API_BASE}/api/suppliers?page=1&limit=1000`)
+      .then((res) => res.json())
+      .then((data) => {
+        const allSuppliers = Array.isArray(data.suppliers)
+          ? data.suppliers
+          : data;
+        setSuppliers(allSuppliers);
+      })
+      .catch((err) => console.error("Failed to fetch suppliers:", err));
+  }, []);
+
+  const getSupplierName = (supplierId) => {
+    const supplier = suppliers.find((s) => s._id === supplierId);
+    return supplier ? supplier.name : "-";
+  };
 
   // Fetch customers
   useEffect(() => {
@@ -425,7 +444,9 @@ const SalesManagement = () => {
                               : "—"}
                           </td>
                           <td className="col-stock">{item.stock}</td>
-                          <td className="col-supplier">{item.supplier}</td>
+                          <td className="col-supplier">
+                            {getSupplierName(item.supplier)}
+                          </td>
                           <td className="col-status">
                             <span
                               className={`product-status ${item.status
