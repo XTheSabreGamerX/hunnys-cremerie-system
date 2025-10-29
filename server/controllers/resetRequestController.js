@@ -37,7 +37,7 @@ const createResetRequest = async (req, res) => {
       action: "Password Reset Request",
       module: "Login",
       description: `A password request was created.`,
-      userId: req.user.id,
+      userId: req.user ? req.user.id : null,
     });
 
     await createNotification({

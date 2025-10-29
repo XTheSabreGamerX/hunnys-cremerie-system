@@ -4,6 +4,7 @@ import { customAlphabet } from "nanoid/non-secure";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
 import DashboardLayout from "../scripts/DashboardLayout";
 import PopupMessage from "../components/PopupMessage";
+import DateRangeFilter from "../components/DateRangeFilter";
 import "../styles/App.css";
 import "../styles/SalesManagement.css";
 
@@ -24,6 +25,8 @@ const SalesManagement = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [paginatedItems, setPaginatedItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState("Sales");
+  const [activeSupplier, setActiveSupplier] = useState(null);
 
   const navigate = useNavigate();
 
@@ -75,7 +78,7 @@ const SalesManagement = () => {
 
   useEffect(() => {
     fetchInventory();
-  }, [fetchInventory]);
+  }, [fetchInventory, mode]);
 
   // Fetch customers
   useEffect(() => {
@@ -94,11 +97,32 @@ const SalesManagement = () => {
   }, [inventoryItems]);
 
   const handleAddToCart = (product) => {
-    if (product.stock <= 0) return;
+    if (
+      mode === "Sales" &&
+      (product.stock <= 0 ||
+        product.status === "Out of stock" ||
+        product.status === "Expired")
+    ) {
+      return;
+    }
+
+    if (mode === "pa") {
+      if (!activeSupplier) {
+        setActiveSupplier(product.supplier);
+      } else if (product.supplier !== activeSupplier) {
+        showPopup(
+          "You can only add items from the same supplier in Product Acquisition mode.",
+          "error"
+        );
+        return;
+      }
+    }
 
     setInventoryItems((prev) =>
       prev.map((i) =>
-        i._id === product._id ? { ...i, stock: i.stock - 1 } : i
+        i._id === product._id
+          ? { ...i, stock: mode === "Sales" ? i.stock - 1 : i.stock }
+          : i
       )
     );
 
@@ -115,14 +139,21 @@ const SalesManagement = () => {
   const handleIncreaseQuantity = (itemId) => {
     setCartItems((prev) =>
       prev.map((cartItem) => {
-        if (cartItem._id === itemId && cartItem.quantity < cartItem.stock) {
-          setInventoryItems((prevInv) =>
-            prevInv.map((invItem) =>
-              invItem._id === itemId
-                ? { ...invItem, stock: invItem.stock - 1 }
-                : invItem
-            )
-          );
+        if (cartItem._id === itemId) {
+          if (mode === "Sales" && cartItem.quantity >= cartItem.stock) {
+            return cartItem;
+          }
+
+          if (mode === "Sales") {
+            setInventoryItems((prevInv) =>
+              prevInv.map((invItem) =>
+                invItem._id === itemId
+                  ? { ...invItem, stock: invItem.stock - 1 }
+                  : invItem
+              )
+            );
+          }
+
           return { ...cartItem, quantity: cartItem.quantity + 1 };
         }
         return cartItem;
@@ -150,65 +181,121 @@ const SalesManagement = () => {
 
   const handleSaveSale = async () => {
     if (cartItems.length === 0) {
-      showPopup("Please add at least one item to the sale.", "error");
+      showPopup("Please add at least one item.", "error");
       return;
     }
-    if (!orderType) {
-      showPopup("Please select an order type.", "error");
-      return;
+
+    if (mode === "sale") {
+      if (!orderType) {
+        showPopup("Please select an order type.", "error");
+        return;
+      }
+      if (!paymentMethod) {
+        showPopup("Please select a payment method.", "error");
+        return;
+      }
+    } else if (mode === "pa") {
+      if (!paymentMethod) {
+        showPopup("Please select a payment method.", "error");
+        return;
+      }
     }
-    if (!paymentMethod) {
-      showPopup("Please select a payment method.", "error");
-      return;
+
+    if (mode === "pa") {
+      const suppliers = [...new Set(cartItems.map((i) => i.supplier))];
+      if (suppliers.length > 1) {
+        showPopup(
+          "All items must come from the same supplier in Product Acquisition mode.",
+          "error"
+        );
+        return;
+      }
+      if (!activeSupplier && suppliers.length === 0) {
+        showPopup(
+          "Unable to determine supplier. Please reselect an item.",
+          "error"
+        );
+        return;
+      }
     }
 
     setLoading(true);
 
-    const subtotal = cartItems.reduce(
-      (sum, i) => sum + i.unitPrice * i.quantity,
-      0
-    );
-    const taxAmount = taxRate > 0 ? (subtotal * taxRate) / 100 : 0;
-    const totalAmount = subtotal + taxAmount;
-
-    const saleToSend = {
-      saleId: generateSaleID(alphabet),
-      customerName: isUnregistered
-        ? customerName.trim() || "Unregistered"
-        : customerName,
-      orderType,
-      items: cartItems.map((i) => ({
-        itemId: i._id,
-        name: i.name,
-        price: i.unitPrice,
-        quantity: i.quantity,
-        purchasePrice: i.purchasePrice || 0,
-      })),
-      subtotal,
-      taxRate: taxRate || 0,
-      taxAmount,
-      totalAmount,
-      paymentMethod,
-    };
-
     try {
-      const res = await authFetch(`${API_BASE}/api/sales`, {
-        method: "POST",
-        body: JSON.stringify(saleToSend),
-      });
-
-      if (!res.ok) throw new Error("Failed to create sale.");
-
-      await Promise.all(
-        cartItems.map((item) =>
-          authFetch(`${API_BASE}/api/inventory/${item._id}`, {
-            method: "PUT",
-            body: JSON.stringify({ stock: item.stock - item.quantity }),
-          })
-        )
+      // Shared subtotal + totals
+      const subtotal = cartItems.reduce(
+        (sum, i) =>
+          sum + (mode === "pa" ? i.purchasePrice : i.unitPrice) * i.quantity,
+        0
       );
+      const taxAmount =
+        mode === "sale" && taxRate > 0 ? (subtotal * taxRate) / 100 : 0;
+      const totalAmount = subtotal + taxAmount;
 
-      showPopup("Sale created successfully!", "success");
+      if (mode === "sale") {
+        // === SALE MODE ===
+        const saleToSend = {
+          saleId: generateSaleID(alphabet),
+          customerName: isUnregistered
+            ? customerName.trim() || "Unregistered"
+            : customerName,
+          orderType,
+          items: cartItems.map((i) => ({
+            itemId: i._id,
+            name: i.name,
+            price: i.unitPrice,
+            quantity: i.quantity,
+            purchasePrice: i.purchasePrice || 0,
+          })),
+          subtotal,
+          taxRate: taxRate || 0,
+          taxAmount,
+          totalAmount,
+          paymentMethod,
+        };
+
+        const res = await authFetch(`${API_BASE}/api/sales`, {
+          method: "POST",
+          body: JSON.stringify(saleToSend),
+        });
+        if (!res.ok) throw new Error("Failed to create sale.");
+
+        await Promise.all(
+          cartItems.map((item) =>
+            authFetch(`${API_BASE}/api/inventory/${item._id}`, {
+              method: "PUT",
+              body: JSON.stringify({ stock: item.stock - item.quantity }),
+            })
+          )
+        );
+
+        showPopup("Sale created successfully!", "success");
+      } else if (mode === "pa") {
+        // === PRODUCT ACQUISITION MODE ===
+        const acquisitionToSend = {
+          supplier: activeSupplier || "Hunnys Crémerie",
+          items: cartItems.map((i) => ({
+            itemId: i._id,
+            name: i.name,
+            quantity: i.quantity,
+            unitCost: i.purchasePrice || 0,
+          })),
+          subtotal,
+          totalAmount,
+          paymentMethod,
+        };
+
+        const res = await authFetch(`${API_BASE}/api/acquisitions`, {
+          method: "POST",
+          body: JSON.stringify(acquisitionToSend),
+        });
+        if (!res.ok) throw new Error("Failed to create acquisition.");
+
+        showPopup(
+          "Product acquisition request created successfully!",
+          "success"
+        );
+      }
 
       setCartItems([]);
       setOrderType("Walk-in");
@@ -240,6 +327,14 @@ const SalesManagement = () => {
         <main className="pos-main">
           <section className="sales-products">
             <div className="sales-products-header">
+              <DateRangeFilter
+                options={["Sales", "Product Acquisition (WIP, don't use yet)"]}
+                onChange={(newMode) => {
+                  setMode(newMode);
+                  setCartItems([]);
+                }}
+              />
+
               <input
                 type="text"
                 placeholder="Search products..."
@@ -263,6 +358,7 @@ const SalesManagement = () => {
                     <th className="col-unitprice">Unit Price</th>
                     <th className="col-amountunit">Amount</th>
                     <th className="col-stock">Stock</th>
+                    <th className="col-supplier">Supplier</th>
                     <th className="col-status">Status</th>
                   </tr>
                 </thead>
@@ -270,7 +366,7 @@ const SalesManagement = () => {
                 <tbody>
                   {paginatedItems.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="no-results">
+                      <td colSpan="9" className="no-results">
                         No matching products found.
                       </td>
                     </tr>
@@ -293,19 +389,26 @@ const SalesManagement = () => {
                         <tr
                           key={item._id}
                           className={`sales-table-row ${
-                            item.stock <= 0 ||
-                            item.status === "Out of stock" ||
-                            item.status === "Expired"
+                            mode === "Sales" &&
+                            (item.stock <= 0 ||
+                              item.status === "Out of stock" ||
+                              item.status === "Expired")
                               ? "disabled-row"
                               : ""
                           }`}
-                          onClick={() =>
-                            item.stock > 0 &&
-                            item.status !== "Out of stock" &&
-                            item.status !== "Expired"
-                              ? handleAddToCart(item)
-                              : null
-                          }
+                          onClick={() => {
+                            if (mode === "Sales") {
+                              if (
+                                item.stock > 0 &&
+                                item.status !== "Out of stock" &&
+                                item.status !== "Expired"
+                              ) {
+                                handleAddToCart(item);
+                              }
+                            } else {
+                              handleAddToCart(item);
+                            }
+                          }}
                         >
                           <td className="col-itemid">{item.itemId}</td>
                           <td className="col-name" title={item.name}>
@@ -322,6 +425,7 @@ const SalesManagement = () => {
                               : "—"}
                           </td>
                           <td className="col-stock">{item.stock}</td>
+                          <td className="col-supplier">{item.supplier}</td>
                           <td className="col-status">
                             <span
                               className={`product-status ${item.status
@@ -487,7 +591,9 @@ const SalesManagement = () => {
                       <span>{item.quantity}</span>
                       <button
                         onClick={() => handleIncreaseQuantity(item._id)}
-                        disabled={item.quantity >= item.stock}
+                        disabled={
+                          mode === "Sales" ? item.quantity >= item.stock : false
+                        }
                       >
                         +
                       </button>

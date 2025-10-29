@@ -179,10 +179,11 @@ const Login = () => {
     })
       .then(async (res) => {
         const data = await res.json();
-        if (!res.ok) {
+        if (res.status >= 200 && res.status < 300) {
+          return data; // success
+        } else {
           throw new Error(data.message || "Failed to send reset request");
         }
-        return data;
       })
       .then((data) => {
         setResetError("");

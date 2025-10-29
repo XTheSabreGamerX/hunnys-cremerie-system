@@ -59,7 +59,7 @@
 .sales-products-table th,
 .sales-products-table td {
   padding: 0.75rem;
-  text-align: left;
+  text-align: center;
   border-bottom: 1px solid #eee;
   word-wrap: break-word;
   height: 100px;
@@ -127,6 +127,11 @@
 .sales-products-table th:nth-child(8),
 .sales-products-table td:nth-child(8) {
   width: 15%;
+}
+
+.sales-products-table th:nth-child(9),
+.sales-products-table td:nth-child(9) {
+  width: 10%;
 }
 
 /* ================= STATUS BADGES ================= */
