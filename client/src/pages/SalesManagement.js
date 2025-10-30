@@ -125,10 +125,11 @@ const SalesManagement = () => {
       return;
     }
 
-    if (mode === "pa") {
+    if (mode === "Product Acquisition") {
+      const supplierId = product.supplier?._id || product.supplier;
       if (!activeSupplier) {
-        setActiveSupplier(product.supplier);
-      } else if (product.supplier !== activeSupplier) {
+        setActiveSupplier(supplierId);
+      } else if (supplierId !== activeSupplier) {
         showPopup(
           "You can only add items from the same supplier in Product Acquisition mode.",
           "error"
@@ -204,7 +205,7 @@ const SalesManagement = () => {
       return;
     }
 
-    if (mode === "sale") {
+    if (mode === "Sales") {
       if (!orderType) {
         showPopup("Please select an order type.", "error");
         return;
@@ -213,14 +214,14 @@ const SalesManagement = () => {
         showPopup("Please select a payment method.", "error");
         return;
       }
-    } else if (mode === "pa") {
+    } else if (mode === "Product Acquisition") {
       if (!paymentMethod) {
         showPopup("Please select a payment method.", "error");
         return;
       }
     }
 
-    if (mode === "pa") {
+    if (mode === "Product Acquisition") {
       const suppliers = [...new Set(cartItems.map((i) => i.supplier))];
       if (suppliers.length > 1) {
         showPopup(
@@ -244,14 +245,14 @@ const SalesManagement = () => {
       // Shared subtotal + totals
       const subtotal = cartItems.reduce(
         (sum, i) =>
-          sum + (mode === "pa" ? i.purchasePrice : i.unitPrice) * i.quantity,
+          sum + (mode === "Product Acquisition" ? i.purchasePrice : i.unitPrice) * i.quantity,
         0
       );
       const taxAmount =
-        mode === "sale" && taxRate > 0 ? (subtotal * taxRate) / 100 : 0;
+        mode === "Sales" && taxRate > 0 ? (subtotal * taxRate) / 100 : 0;
       const totalAmount = subtotal + taxAmount;
 
-      if (mode === "sale") {
+      if (mode === "Sales") {
         // === SALE MODE ===
         const saleToSend = {
           saleId: generateSaleID(alphabet),
@@ -289,7 +290,7 @@ const SalesManagement = () => {
         );
 
         showPopup("Sale created successfully!", "success");
-      } else if (mode === "pa") {
+      } else if (mode === "Product Acquisition") {
         // === PRODUCT ACQUISITION MODE ===
         const acquisitionToSend = {
           supplier: activeSupplier || "Hunnys Crémerie",
@@ -347,7 +348,7 @@ const SalesManagement = () => {
           <section className="sales-products">
             <div className="sales-products-header">
               <DateRangeFilter
-                options={["Sales", "Product Acquisition (WIP, don't use yet)"]}
+                options={["Sales", "Product Acquisition"]}
                 onChange={(newMode) => {
                   setMode(newMode);
                   setCartItems([]);
