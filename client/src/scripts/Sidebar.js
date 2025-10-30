@@ -75,13 +75,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
       icon: <FaClipboard />,
       path: "/dashboard",
       roles: ["admin", "owner"],
-    },
+    },/* 
     {
       label: "Profitability Dashboard",
       icon: <FaCalculator />,
       path: "/dashboard",
       roles: ["admin", "owner"],
-    },
+    }, */
     {
       label: "Supplier Management",
       icon: <FaTruck />,
