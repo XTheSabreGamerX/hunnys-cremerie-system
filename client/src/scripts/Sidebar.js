@@ -9,7 +9,7 @@ import {
   FaCashRegister,
   FaMoneyBillWave,
   FaChartLine,
-  FaCalculator,
+  /* FaCalculator, */
   FaTruck,
   FaUserTag,
   FaDownload,

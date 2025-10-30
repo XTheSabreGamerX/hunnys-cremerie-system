@@ -201,20 +201,28 @@ const SalesManagement = () => {
   };
 
   const handleRemoveFromCart = (itemId) => {
-    setCartItems((prev) => prev.filter((item) => item._id !== itemId));
+    setCartItems((prev) => {
+      const newCart = prev.filter((i) => i._id !== itemId);
 
-    if (mode === "Sales") {
-      const removedItem = cartItems.find((item) => item._id === itemId);
-      if (removedItem) {
-        setInventoryItems((prevInv) =>
-          prevInv.map((invItem) =>
-            invItem._id === itemId
-              ? { ...invItem, stock: invItem.stock + removedItem.quantity }
-              : invItem
-          )
-        );
+      if (newCart.length === 0) {
+        setActiveSupplier(null);
       }
-    }
+
+      return newCart;
+    });
+
+    setInventoryItems((prevInv) =>
+      prevInv.map((invItem) =>
+        invItem._id === itemId && mode === "Sales"
+          ? {
+              ...invItem,
+              stock:
+                invItem.stock +
+                (cartItems.find((i) => i._id === itemId)?.quantity || 0),
+            }
+          : invItem
+      )
+    );
   };
 
   const handleSaveSale = async () => {
@@ -594,6 +602,12 @@ const SalesManagement = () => {
                 </>
               )}
 
+              {mode === "Product Acquisition" && activeSupplier && (
+                <div className="pa-active-supplier">
+                  <strong>Current Supplier:</strong> {getSupplierName(activeSupplier)}
+                </div>
+              )}
+
               <label className="tax-toggle">
                 <input
                   type="checkbox"
@@ -649,7 +663,15 @@ const SalesManagement = () => {
                         <FiTrash2 />
                       </button>
                     </div>
-                    <span>₱{(item.unitPrice * item.quantity).toFixed(2)}</span>
+                    {/* <span>₱{(item.unitPrice * item.quantity).toFixed(2)}</span> */}
+                    <span>
+                      ₱
+                      {(
+                        (mode === "Product Acquisition"
+                          ? item.purchasePrice
+                          : item.unitPrice) * item.quantity
+                      ).toFixed(2)}
+                    </span>
                   </div>
                 ))
               )}
@@ -658,12 +680,15 @@ const SalesManagement = () => {
             <div className="pos-cart-summary">
               <p>
                 Subtotal: ₱
-                {cartItems
-                  .reduce(
-                    (sum, item) => sum + item.unitPrice * item.quantity,
-                    0
-                  )
-                  .toFixed(2)}
+                {cartItems.reduce(
+                  (sum, item) =>
+                    sum +
+                    (mode === "Product Acquisition"
+                      ? item.purchasePrice
+                      : item.unitPrice) *
+                      item.quantity,
+                  0
+                )}
               </p>
               <button
                 className="pos-checkout-btn"
