@@ -82,7 +82,7 @@ app.use("/api/resetRequest", resetRequestRoutes);
 app.use("/api/activitylog", activityRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/sales", saleRoutes);
-app.use("/api/acquisition", acquisitionRoutes);
+app.use("/api/acquisitions", acquisitionRoutes);
 app.use("/api/salesReport", salesReportRoutes);
 app.use("/api/suppliers", supplierRoutes);
 app.use("/api/customers", customerRoutes);

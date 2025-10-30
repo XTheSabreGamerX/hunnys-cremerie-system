@@ -827,9 +827,6 @@ const Inventory = () => {
     setIngredientForm({ quantity: 1 });
   };
 
-  console.log("Selected Item:", selectedItem);
-  console.log("Form Data:", formData);
-
   return (
     <>
       {popupMessage && (

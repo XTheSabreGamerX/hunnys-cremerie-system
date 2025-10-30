@@ -320,6 +320,7 @@ const SalesManagement = () => {
       } else if (mode === "Product Acquisition") {
         // === PRODUCT ACQUISITION MODE ===
         const acquisitionToSend = {
+          acquisitionId: generateSaleID(alphabet),
           supplier: activeSupplier || "Hunnys Crémerie",
           items: cartItems.map((i) => ({
             itemId: i._id,
@@ -331,6 +332,8 @@ const SalesManagement = () => {
           totalAmount,
           paymentMethod,
         };
+
+        console.log(JSON.stringify(acquisitionToSend, null, 2));
 
         const res = await authFetch(`${API_BASE}/api/acquisitions`, {
           method: "POST",
@@ -604,7 +607,8 @@ const SalesManagement = () => {
 
               {mode === "Product Acquisition" && activeSupplier && (
                 <div className="pa-active-supplier">
-                  <strong>Current Supplier:</strong> {getSupplierName(activeSupplier)}
+                  <strong>Current Supplier:</strong>{" "}
+                  {getSupplierName(activeSupplier)}
                 </div>
               )}
 

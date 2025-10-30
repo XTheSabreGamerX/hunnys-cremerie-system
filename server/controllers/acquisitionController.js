@@ -84,7 +84,7 @@ const getAllAcquisitions = async (req, res) => {
 // CREATE new acquisition (pending by default)
 const createAcquisition = async (req, res) => {
   try {
-    const { items, supplier, totalCost, paymentMethod } = req.body;
+    const { acquisitionId, items, subtotal, totalAmount, paymentMethod } = req.body;
 
     if (!items || items.length === 0) {
       return res
@@ -92,26 +92,26 @@ const createAcquisition = async (req, res) => {
         .json({ message: "No items provided for acquisition" });
     }
 
-    const firstSupplier = items[0].supplier;
-    const mixedSuppliers = items.some(
+    const firstSupplier = req.body.supplier || "Hunnys Crémerie";
+   /*  const mixedSuppliers = items.some(
       (item) => item.supplier !== firstSupplier
-    );
+    ); */
 
-    if (mixedSuppliers) {
+    /* if (mixedSuppliers) {
       return res.status(400).json({
         message:
           "All items in an acquisition must come from the same supplier.",
       });
-    }
+    } */
 
-    const acquisitionId = `ACQ-${Date.now()}`;
-    const createdBy = req.user?._id;
+    const createdBy = req.user?.id;
 
     const acquisition = new Acquisition({
       acquisitionId,
-      supplier: firstSupplier || "Hunnys Crémerie",
+      supplier: firstSupplier,
       items,
-      totalCost,
+      subtotal,
+      totalAmount,
       paymentMethod,
       status: "Pending",
       createdBy,
