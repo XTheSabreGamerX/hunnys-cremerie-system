@@ -5,6 +5,7 @@ import { authFetch, API_BASE } from "../utils/tokenUtils";
 import DashboardLayout from "../scripts/DashboardLayout";
 import PopupMessage from "../components/PopupMessage";
 import DateRangeFilter from "../components/DateRangeFilter";
+import { FiTrash2 } from "react-icons/fi";
 import "../styles/App.css";
 import "../styles/SalesManagement.css";
 
@@ -199,6 +200,23 @@ const SalesManagement = () => {
     );
   };
 
+  const handleRemoveFromCart = (itemId) => {
+    setCartItems((prev) => prev.filter((item) => item._id !== itemId));
+
+    if (mode === "Sales") {
+      const removedItem = cartItems.find((item) => item._id === itemId);
+      if (removedItem) {
+        setInventoryItems((prevInv) =>
+          prevInv.map((invItem) =>
+            invItem._id === itemId
+              ? { ...invItem, stock: invItem.stock + removedItem.quantity }
+              : invItem
+          )
+        );
+      }
+    }
+  };
+
   const handleSaveSale = async () => {
     if (cartItems.length === 0) {
       showPopup("Please add at least one item.", "error");
@@ -245,11 +263,12 @@ const SalesManagement = () => {
       // Shared subtotal + totals
       const subtotal = cartItems.reduce(
         (sum, i) =>
-          sum + (mode === "Product Acquisition" ? i.purchasePrice : i.unitPrice) * i.quantity,
+          sum +
+          (mode === "Product Acquisition" ? i.purchasePrice : i.unitPrice) *
+            i.quantity,
         0
       );
-      const taxAmount =
-        mode === "Sales" && taxRate > 0 ? (subtotal * taxRate) / 100 : 0;
+      const taxAmount = taxRate > 0 ? (subtotal * taxRate) / 100 : 0;
       const totalAmount = subtotal + taxAmount;
 
       if (mode === "Sales") {
@@ -532,44 +551,48 @@ const SalesManagement = () => {
                 </select>
               </label>
 
-              <label>
-                Customer
-                {isUnregistered ? (
-                  <input
-                    type="text"
-                    placeholder="Enter customer name or leave blank."
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                  />
-                ) : (
-                  <select
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                  >
-                    {customers.map((cust) => (
-                      <option key={cust._id} value={cust.name}>
-                        {cust.name} ({cust.customerId})
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </label>
+              {mode === "Sales" && (
+                <>
+                  <label>
+                    Customer
+                    {isUnregistered ? (
+                      <input
+                        type="text"
+                        placeholder="Enter customer name or leave blank."
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                      />
+                    ) : (
+                      <select
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                      >
+                        {customers.map((cust) => (
+                          <option key={cust._id} value={cust.name}>
+                            {cust.name} ({cust.customerId})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </label>
 
-              <label className="pos-unregistered-toggle">
-                <input
-                  type="checkbox"
-                  checked={isUnregistered}
-                  onChange={(e) => {
-                    setIsUnregistered(e.target.checked);
-                    setCustomerName(
-                      e.target.checked
-                        ? ""
-                        : customers[0]?.name || "Unregistered"
-                    );
-                  }}
-                />
-                Unregistered Customer
-              </label>
+                  <label className="pos-unregistered-toggle">
+                    <input
+                      type="checkbox"
+                      checked={isUnregistered}
+                      onChange={(e) => {
+                        setIsUnregistered(e.target.checked);
+                        setCustomerName(
+                          e.target.checked
+                            ? ""
+                            : customers[0]?.name || "Unregistered"
+                        );
+                      }}
+                    />
+                    Unregistered Customer
+                  </label>
+                </>
+              )}
 
               <label className="tax-toggle">
                 <input
@@ -618,6 +641,12 @@ const SalesManagement = () => {
                         }
                       >
                         +
+                      </button>
+                      <button
+                        className="cart-remove-btn"
+                        onClick={() => handleRemoveFromCart(item._id)}
+                      >
+                        <FiTrash2 />
                       </button>
                     </div>
                     <span>₱{(item.unitPrice * item.quantity).toFixed(2)}</span>
