@@ -191,7 +191,7 @@ const confirmAcquisition = async (req, res) => {
       }
     }
 
-    acquisition.status = "Received";
+    acquisition.status = "Delivered";
     await acquisition.save();
 
     try {

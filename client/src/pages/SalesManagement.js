@@ -16,7 +16,7 @@ const SalesManagement = () => {
   const [orderType, setOrderType] = useState("Walk-in");
   const [isUnregistered, setIsUnregistered] = useState(false);
   const [customerName, setCustomerName] = useState("");
-  const [taxRate, setTaxRate] = useState(0);
+  const [taxRate, setTaxRate] = useState(12);
   const [paymentMethod, setPaymentMethod] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [popupMessage, setPopupMessage] = useState("");
@@ -49,6 +49,7 @@ const SalesManagement = () => {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   const nanoid = customAlphabet(alphabet, 8);
   const generateSaleID = () => `SALE-${nanoid()}`;
+  const generateAcqID = () => `ACQ-${nanoid()}`;
 
   const fetchInventory = useCallback(async () => {
     try {
@@ -320,7 +321,7 @@ const SalesManagement = () => {
       } else if (mode === "Product Acquisition") {
         // === PRODUCT ACQUISITION MODE ===
         const acquisitionToSend = {
-          acquisitionId: generateSaleID(alphabet),
+          acquisitionId: generateAcqID(alphabet),
           supplier: activeSupplier || "Hunnys Crémerie",
           items: cartItems.map((i) => ({
             itemId: i._id,
@@ -612,14 +613,14 @@ const SalesManagement = () => {
                 </div>
               )}
 
-              <label className="tax-toggle">
+              {/* <label className="tax-toggle">
                 <input
                   type="checkbox"
                   checked={taxRate === 12}
                   onChange={(e) => setTaxRate(e.target.checked ? 12 : 0)}
                 />
                 Apply 12% VAT
-              </label>
+              </label> */}
 
               <label>
                 Payment Method

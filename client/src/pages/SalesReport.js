@@ -44,13 +44,14 @@ const SalesReport = () => {
   const [pieData, setPieData] = useState([]);
 
   const [selectedSale, setSelectedSale] = useState(null);
+  const [suppliers, setSuppliers] = useState([]);
 
   // Acquisition states
   const [acquisitions, setAcquisitions] = useState([]);
   const [acquisitionPage, setAcquisitionPage] = useState(1);
   const [acquisitionTotalPages, setAcquisitionTotalPages] = useState(1);
   const [acquisitionTotalItems, setAcquisitionTotalItems] = useState(0);
-  const [acquisitionSort, /* setAcquisitionSort */] = useState({
+  const [acquisitionSort /* setAcquisitionSort */] = useState({
     field: "",
     order: "",
   });
@@ -90,6 +91,19 @@ const SalesReport = () => {
 
     fetchAllSales();
     return () => controller.abort();
+  }, []);
+
+  // Fetch suppliers
+  useEffect(() => {
+    authFetch(`${API_BASE}/api/suppliers?page=1&limit=1000`)
+      .then((res) => res.json())
+      .then((data) => {
+        const allSuppliers = Array.isArray(data.suppliers)
+          ? data.suppliers
+          : data;
+        setSuppliers(allSuppliers);
+      })
+      .catch((err) => console.error("Failed to fetch suppliers:", err));
   }, []);
 
   // Paginated fetch
@@ -282,7 +296,7 @@ const SalesReport = () => {
     try {
       setIsLoading(true);
       const res = await authFetch(
-        `${API_BASE}/api/acquisitions?page=${acquisitionPage}&limit=10&field=${encodeURIComponent(
+        `${API_BASE}/api/acquisitions?page=${acquisitionPage}&limit=5&field=${encodeURIComponent(
           acquisitionSort.field || ""
         )}&order=${encodeURIComponent(acquisitionSort.order || "")}`
       );
@@ -307,7 +321,7 @@ const SalesReport = () => {
   const handleConfirmAcquisition = async (acq) => {
     try {
       const res = await authFetch(
-        `${API_BASE}/api/acquisition/confirm/${acq._id}`,
+        `${API_BASE}/api/acquisitions/confirm/${acq._id}`,
         {
           method: "PUT",
         }
@@ -321,7 +335,7 @@ const SalesReport = () => {
   const handleCancelAcquisition = async (acq) => {
     try {
       const res = await authFetch(
-        `${API_BASE}/api/acquisition/cancel/${acq._id}`,
+        `${API_BASE}/api/acquisitions/cancel/${acq._id}`,
         {
           method: "PUT",
         }
@@ -331,6 +345,14 @@ const SalesReport = () => {
       console.error("Cancel error:", err);
     }
   };
+
+  // Map supplier _id to name
+  const supplierMap = React.useMemo(() => {
+    return suppliers.reduce((acc, s) => {
+      acc[s._id] = s.name;
+      return acc;
+    }, {});
+  }, [suppliers]);
 
   return (
     <>
@@ -345,6 +367,7 @@ const SalesReport = () => {
       {selectedAcquisition && (
         <AcquisitionReceiptModal
           acquisition={selectedAcquisition}
+          suppliers={suppliers}
           onClose={() => setSelectedAcquisition(null)}
           onConfirm={handleConfirmAcquisition}
           onCancel={handleCancelAcquisition}
@@ -472,12 +495,13 @@ const SalesReport = () => {
                     <th>Total Cost</th>
                     <th>Payment Method</th>
                     <th>Date</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {acquisitions.length === 0 && !isLoading ? (
                     <tr>
-                      <td colSpan="6">No acquisition records found.</td>
+                      <td colSpan="7">No acquisition records found.</td>
                     </tr>
                   ) : (
                     acquisitions.map((a) => (
@@ -487,7 +511,11 @@ const SalesReport = () => {
                         style={{ cursor: "pointer" }}
                       >
                         <td>{a.acquisitionId}</td>
-                        <td>{a.supplier}</td>
+                        <td>
+                          {supplierMap[a.supplier] ||
+                            a.supplier ||
+                            "Unknown Supplier"}
+                        </td>
                         <td>{a.items?.length || 0}</td>
                         <td>₱{a.totalAmount?.toLocaleString()}</td>
                         <td>{a.paymentMethod}</td>
@@ -496,6 +524,7 @@ const SalesReport = () => {
                             timeZone: "Asia/Manila",
                           })}
                         </td>
+                        <td>{a.status}</td>
                       </tr>
                     ))
                   )}
@@ -524,11 +553,10 @@ const SalesReport = () => {
                 )}
             </div>
 
-            {/* 🔽 Pagination controls go HERE, below the table wrapper */}
             <div className="pagination">
               <p className="pagination-info">
-                Showing {(acquisitionPage - 1) * 10 + 1}–
-                {Math.min(acquisitionPage * 10, acquisitionTotalItems)} of{" "}
+                Showing {(acquisitionPage - 1) * 5 + 1}–
+                {Math.min(acquisitionPage * 5, acquisitionTotalItems)} of{" "}
                 {acquisitionTotalItems} acquisitions
               </p>
 
