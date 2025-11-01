@@ -61,7 +61,7 @@ const Dashboard = () => {
           style={{ color: "#FFC107" }}
         />
       ),
-      link: "/inventory",
+      link: "/inventory?status=low-stock",
       allowedRoles: ["admin", "owner", "manager", "staff"],
     },
     {
@@ -73,7 +73,7 @@ const Dashboard = () => {
           style={{ color: "red" }}
         />
       ),
-      link: "/inventory",
+      link: "/inventory?status=out-of-stock",
       allowedRoles: ["admin", "owner", "manager", "staff"],
     },
     {

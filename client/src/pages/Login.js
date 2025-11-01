@@ -292,12 +292,12 @@ const Login = () => {
           Forgot Password?
         </p>
 
-        <div className="register-link">
+       {/*  <div className="register-link">
           <p>Don't have an account?</p>
           <button onClick={() => setShowRegister(true)}>
             Request Registration
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* Registration Modal */}

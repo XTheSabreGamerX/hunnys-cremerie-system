@@ -6,12 +6,13 @@ import ConfirmationModal from "../components/ConfirmationModal";
 import PopupMessage from "../components/PopupMessage";
 import { showToast } from "../components/ToastContainer";
 import EditUserModal from "../components/EditUserModal";
+import AccountModal from "../components/AccountModal";
 import "../styles/UserManagement.css";
 import "../styles/App.css";
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
-  const [requests, setRequests] = useState([]);
+  const [/* requests */, setRequests] = useState([]);
   const [actionRequests, setActionRequests] = useState([]);
 
   const [popupMessage, setPopupMessage] = useState("");
@@ -19,6 +20,7 @@ const UserManagement = () => {
 
   const [editingUser, setEditingUser] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
 
   const [resetRequests, setResetRequests] = useState([]);
 
@@ -87,7 +89,7 @@ const UserManagement = () => {
   }, [fetchUsers, fetchRequests, fetchResetRequests, fetchActionRequests]);
 
   // Approve registration requests
-  const handleApprove = async (id) => {
+  /* const handleApprove = async (id) => {
     try {
       const res = await authFetch(`${API_BASE}/api/request/approve/${id}`, {
         method: "POST",
@@ -111,10 +113,10 @@ const UserManagement = () => {
       });
       //showPopup("There was an error approving the request.", "error");
     }
-  };
+  }; */
 
   // Reject registration requests
-  const handleReject = (id) => {
+  /* const handleReject = (id) => {
     authFetch(`${API_BASE}/api/request/reject/${id}`, {
       method: "DELETE",
     })
@@ -134,7 +136,7 @@ const UserManagement = () => {
           duration: 3000,
         });
       });
-  };
+  }; */
 
   // Deactivate accounts
   const handleDeactivate = async (id) => {
@@ -365,6 +367,13 @@ const UserManagement = () => {
         />
       )}
 
+      {showAccountModal && (
+        <AccountModal
+          onClose={() => setShowAccountModal(false)}
+          onCreated={fetchUsers}
+        />
+      )}
+
       <PopupMessage
         message={popupMessage}
         type={popupType}
@@ -376,7 +385,7 @@ const UserManagement = () => {
 
       <DashboardLayout>
         <main className="user-management-main-content">
-          <div className="management-container requests-container">
+          {/* <div className="management-container requests-container">
             <h1>Registration Requests</h1>
             <div className="table-wrapper">
               <table>
@@ -435,9 +444,15 @@ const UserManagement = () => {
               </table>
             </div>
           </div>
-
+ */}
           <div className="management-container accounts-container">
             <h1>List of Accounts</h1>
+            <button
+              className="create-staff-btn"
+              onClick={() => setShowAccountModal(true)}
+            >
+              + Create Staff Account
+            </button>
             <div className="table-wrapper">
               <table>
                 <thead>
@@ -450,41 +465,46 @@ const UserManagement = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
-                    <tr key={user._id}>
-                      <td>{user.username}</td>
-                      <td>{user.email}</td>
-                      <td>{user.role || "User"}</td>
-                      <td>{user.status}</td>
+                  {users.map((account) => (
+                    <tr key={account._id}>
+                      <td>{account.username}</td>
+                      <td>{account.email}</td>
+                      <td>{account.role || "User"}</td>
+                      <td>{account.status}</td>
                       <td>
-                        {user.email !== "admin@hunnys.com" ? (
+                        {account.email !== "admin@hunnys.com" ? (
                           <>
                             <button
                               onClick={() => {
                                 const action =
-                                  user.status === "deactivated"
+                                  account.status === "deactivated"
                                     ? "reactivate"
                                     : "deactivate";
                                 setConfirmMessage(
                                   `Are you sure you want to ${action} this account?`
                                 );
                                 setOnConfirmAction(() => async () => {
-                                  if (user.status === "deactivated") {
-                                    await handleReactivate(user._id);
+                                  if (account.status === "deactivated") {
+                                    await handleReactivate(account._id);
                                   } else {
-                                    await handleDeactivate(user._id);
+                                    await handleDeactivate(account._id);
                                   }
                                 });
                                 setShowConfirm(true);
                               }}
                             >
-                              {user.status === "deactivated"
+                              {account.status === "deactivated"
                                 ? "Reactivate"
                                 : "Deactivate"}
                             </button>
-                            <button onClick={() => handleEditClick(user)}>
-                              Edit
-                            </button>
+
+                            {/* Only allow Admins and Owners to edit */}
+                            {(user.role === "admin" ||
+                              user.role === "owner") && (
+                              <button onClick={() => handleEditClick(account)}>
+                                Edit
+                              </button>
+                            )}
                           </>
                         ) : (
                           <em>System Account</em>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { customAlphabet } from "nanoid/non-secure";
 import DashboardLayout from "../scripts/DashboardLayout";
 import EditModal from "../components/EditModal";
@@ -43,12 +43,21 @@ const Inventory = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [inventoryType, /* setInventoryType */] = useState("Inventory");
+  const [inventoryType /* setInventoryType */] = useState("Inventory");
   const [selectedIngredientOption, setSelectedIngredientOption] =
     useState(null);
   const [ingredientForm, setIngredientForm] = useState({ quantity: 1 });
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const status = params.get("status");
+
+    const search = status || "";
+    setSearchQuery(search); // update state for the input box
+  }, [location.search]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -352,7 +361,7 @@ const Inventory = () => {
     fetchSuppliers();
   }, [page, searchQuery, columnFilter, fetchItems, fetchSuppliers]);
 
- /*  const handleInventoryToggle = (type) => {
+  /*  const handleInventoryToggle = (type) => {
     setInventoryType(type);
     setPage(1);
     setIsViewOpen(false);
@@ -961,7 +970,7 @@ const Inventory = () => {
           </div>
 
           <div className="module-actions-container">
-          {/*   <DateRangeFilter
+            {/*   <DateRangeFilter
               options={["Inventory", "Cake Inventory"]}
               onChange={handleInventoryToggle}
             /> */}

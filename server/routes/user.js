@@ -6,7 +6,8 @@ const {
   getAllUsers,
   deactivateUser,
   reactivateUser,
-  updateUser
+  updateUser,
+  createStaffUser,
 } = require('../controllers/userController');
 
 // Gets all user details
@@ -20,5 +21,8 @@ router.post('/reactivate/:id', authenticateToken, roleCheck(['admin', 'owner', '
 
 // Update user account
 router.put('/update/:id', authenticateToken, roleCheck(['admin', 'owner', 'manager']), updateUser);
+
+// Create User
+router.post('/create', authenticateToken, roleCheck(['admin', 'owner']), createStaffUser);
 
 module.exports = router;
