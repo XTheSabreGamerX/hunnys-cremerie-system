@@ -52,14 +52,6 @@ const Inventory = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const status = params.get("status");
-
-    const search = status || "";
-    setSearchQuery(search); // update state for the input box
-  }, [location.search]);
-
-  useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) navigate("/login");
   }, [navigate]);
@@ -280,6 +272,20 @@ const Inventory = () => {
     },
     [page, searchQuery, columnFilter, inventoryType]
   );
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const status = params.get("status") || "";
+    const statusMap = {
+      "low-stock": "Low-Stock",
+      "out-of-stock": "Out Of Stock",
+      "expired": "Expired",
+    };
+
+    setSearchQuery(statusMap[status] || "");
+
+    fetchItems({ status });
+  }, [fetchItems, location.search]);
 
   const fetchSuppliers = useCallback(async () => {
     try {

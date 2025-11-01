@@ -24,6 +24,7 @@ const Dashboard = () => {
     totalInventoryCount: 0,
     lowStockCount: 0,
     outOfStockCount: 0,
+    expiredCount: 0,
     salesToday: 0,
     activityLogsToday: 0,
   });
@@ -77,6 +78,18 @@ const Dashboard = () => {
       allowedRoles: ["admin", "owner", "manager", "staff"],
     },
     {
+      title: "Expired",
+      value: stats.expiredCount,
+      icon: (
+        <FaExclamationTriangle
+          className="dashboard-card-icon"
+          style={{ color: "red" }}
+        />
+      ),
+      link: "/inventory?status=expired",
+      allowedRoles: ["admin", "owner", "manager", "staff"],
+    },
+    {
       title: "Sales Today",
       value: stats.salesToday,
       icon: <FaMoneyBill className="dashboard-card-icon" />,
@@ -101,6 +114,7 @@ const Dashboard = () => {
         if (!res.ok) throw new Error("Failed to fetch dashboard stats");
 
         const data = await res.json();
+        
         setStats(data);
       } catch (err) {
         console.error("Error fetching dashboard stats:", err);

@@ -24,6 +24,7 @@ const getDashboardStats = async (req, res) => {
       totalInventoryCount,
       lowStockCount,
       outOfStockCount,
+      expiredCount,
       salesToday,
       activityLogsToday,
     ] = await Promise.all([
@@ -32,6 +33,8 @@ const getDashboardStats = async (req, res) => {
       Inventory.countDocuments({ status: "Low-stock" }),
 
       Inventory.countDocuments({ status: "Out of stock" }),
+
+      Inventory.countDocuments({ status: "Expired" }),
 
       Sales.aggregate([
         {
@@ -78,6 +81,7 @@ const getDashboardStats = async (req, res) => {
       totalInventoryCount,
       lowStockCount,
       outOfStockCount,
+      expiredCount,
       salesToday,
       activityLogsToday,
     });
