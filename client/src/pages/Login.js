@@ -253,7 +253,9 @@ const Login = () => {
           </div>
         )}
 
-        <form onSubmit={handleLogin}>
+        <form onSubmit={handleLogin} autoComplete="off">
+          <input type="password" style={{ display: 'none' }} />
+          
           <input
             type="email"
             placeholder="Email"

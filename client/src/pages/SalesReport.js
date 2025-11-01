@@ -1,7 +1,8 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../scripts/DashboardLayout";
 import ReceiptModal from "../components/ReceiptModal";
+import AcquisitionReceiptModal from "../components/AcquisitionReceiptModal";
 import {
   LineChart,
   Line,
@@ -43,6 +44,17 @@ const SalesReport = () => {
   const [pieData, setPieData] = useState([]);
 
   const [selectedSale, setSelectedSale] = useState(null);
+
+  // Acquisition states
+  const [acquisitions, setAcquisitions] = useState([]);
+  const [acquisitionPage, setAcquisitionPage] = useState(1);
+  const [acquisitionTotalPages, setAcquisitionTotalPages] = useState(1);
+  const [acquisitionTotalItems, setAcquisitionTotalItems] = useState(0);
+  const [acquisitionSort, /* setAcquisitionSort */] = useState({
+    field: "",
+    order: "",
+  });
+  const [selectedAcquisition, setSelectedAcquisition] = useState(null);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const navigate = useNavigate();
@@ -154,7 +166,8 @@ const SalesReport = () => {
 
     try {
       const response = await authFetch(
-        `${API_BASE}/api/salesReport/sales?page=1&limit=${PAGE_SIZE}`);
+        `${API_BASE}/api/salesReport/sales?page=1&limit=${PAGE_SIZE}`
+      );
       const data = await response.json();
 
       const pageRecords = Array.isArray(data.records) ? data.records : [];
@@ -263,6 +276,62 @@ const SalesReport = () => {
   const openReceipt = (sale) => setSelectedSale(sale);
   const closeReceipt = () => setSelectedSale(null);
 
+  // Acquisition Section
+
+  const fetchAcquisitions = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const res = await authFetch(
+        `${API_BASE}/api/acquisitions?page=${acquisitionPage}&limit=10&field=${encodeURIComponent(
+          acquisitionSort.field || ""
+        )}&order=${encodeURIComponent(acquisitionSort.order || "")}`
+      );
+
+      const data = await res.json();
+      console.log("Fetched acquisitions:", data);
+      setAcquisitions(data.acquisitions || []);
+      setAcquisitionTotalPages(data.totalPages || 1);
+      setAcquisitionTotalItems(data.totalItems || 0);
+    } catch (err) {
+      console.error("Error fetching acquisitions:", err);
+      setAcquisitions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [acquisitionPage, acquisitionSort]);
+
+  useEffect(() => {
+    fetchAcquisitions();
+  }, [fetchAcquisitions]);
+
+  const handleConfirmAcquisition = async (acq) => {
+    try {
+      const res = await authFetch(
+        `${API_BASE}/api/acquisition/confirm/${acq._id}`,
+        {
+          method: "PUT",
+        }
+      );
+      if (res.ok) fetchAcquisitions(acquisitionPage);
+    } catch (err) {
+      console.error("Confirm error:", err);
+    }
+  };
+
+  const handleCancelAcquisition = async (acq) => {
+    try {
+      const res = await authFetch(
+        `${API_BASE}/api/acquisition/cancel/${acq._id}`,
+        {
+          method: "PUT",
+        }
+      );
+      if (res.ok) fetchAcquisitions(acquisitionPage);
+    } catch (err) {
+      console.error("Cancel error:", err);
+    }
+  };
+
   return (
     <>
       {selectedSale && (
@@ -270,6 +339,15 @@ const SalesReport = () => {
           sale={selectedSale}
           onClose={closeReceipt}
           onRefund={refreshSales}
+        />
+      )}
+
+      {selectedAcquisition && (
+        <AcquisitionReceiptModal
+          acquisition={selectedAcquisition}
+          onClose={() => setSelectedAcquisition(null)}
+          onConfirm={handleConfirmAcquisition}
+          onCancel={handleCancelAcquisition}
         />
       )}
 
@@ -312,7 +390,7 @@ const SalesReport = () => {
               <ul>
                 {analytics?.paymentBreakdown?.map((p) => (
                   <li key={p._id}>
-                    {p._id}: <span>₱{p.total}</span>
+                    {p._id}: <span>₱{p.total.toFixed(2)}</span>
                   </li>
                 )) ?? <li>No data</li>}
               </ul>
@@ -378,6 +456,125 @@ const SalesReport = () => {
                   No more records
                 </div>
               )}
+            </div>
+          </section>
+
+          <section className="sales-report-records">
+            <h2>Acquisition Records</h2>
+
+            <div className="records-table-wrapper">
+              <table className="records-table">
+                <thead>
+                  <tr>
+                    <th>Acquisition ID</th>
+                    <th>Supplier</th>
+                    <th>Item Count</th>
+                    <th>Total Cost</th>
+                    <th>Payment Method</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {acquisitions.length === 0 && !isLoading ? (
+                    <tr>
+                      <td colSpan="6">No acquisition records found.</td>
+                    </tr>
+                  ) : (
+                    acquisitions.map((a) => (
+                      <tr
+                        key={a.acquisitionId}
+                        onClick={() => setSelectedAcquisition(a)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <td>{a.acquisitionId}</td>
+                        <td>{a.supplier}</td>
+                        <td>{a.items?.length || 0}</td>
+                        <td>₱{a.totalAmount?.toLocaleString()}</td>
+                        <td>{a.paymentMethod}</td>
+                        <td>
+                          {new Date(a.createdAt).toLocaleDateString("en-PH", {
+                            timeZone: "Asia/Manila",
+                          })}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+
+                  {isLoading && (
+                    <tr>
+                      <td colSpan="6" style={{ textAlign: "center" }}>
+                        Loading...
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+
+              {acquisitionPage >= acquisitionTotalPages &&
+                acquisitions.length > 0 && (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "8px 0",
+                      color: "#666",
+                    }}
+                  >
+                    No more records
+                  </div>
+                )}
+            </div>
+
+            {/* 🔽 Pagination controls go HERE, below the table wrapper */}
+            <div className="pagination">
+              <p className="pagination-info">
+                Showing {(acquisitionPage - 1) * 10 + 1}–
+                {Math.min(acquisitionPage * 10, acquisitionTotalItems)} of{" "}
+                {acquisitionTotalItems} acquisitions
+              </p>
+
+              <div className="pagination-buttons">
+                <button
+                  onClick={() =>
+                    setAcquisitionPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={acquisitionPage === 1}
+                >
+                  Prev
+                </button>
+
+                {Array.from({ length: Math.min(7, acquisitionTotalPages) }).map(
+                  (_, idx) => {
+                    const start = Math.max(
+                      1,
+                      Math.min(acquisitionPage - 3, acquisitionTotalPages - 6)
+                    );
+                    const pageNumber = start + idx;
+                    if (pageNumber > acquisitionTotalPages) return null;
+                    return (
+                      <button
+                        key={pageNumber}
+                        onClick={() => setAcquisitionPage(pageNumber)}
+                        className={
+                          acquisitionPage === pageNumber ? "active" : ""
+                        }
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  }
+                )}
+
+                <button
+                  onClick={() =>
+                    setAcquisitionPage((prev) =>
+                      Math.min(prev + 1, acquisitionTotalPages)
+                    )
+                  }
+                  disabled={acquisitionPage === acquisitionTotalPages}
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </section>
 

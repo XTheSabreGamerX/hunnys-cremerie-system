@@ -10,7 +10,7 @@ import PopupMessage from "../components/PopupMessage";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { showToast } from "../components/ToastContainer";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
-import DateRangeFilter from "../components/DateRangeFilter";
+/* import DateRangeFilter from "../components/DateRangeFilter"; */
 import "../styles/App.css";
 import "../styles/Inventory.css";
 
@@ -43,7 +43,7 @@ const Inventory = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [inventoryType, setInventoryType] = useState("Inventory");
+  const [inventoryType, /* setInventoryType */] = useState("Inventory");
   const [selectedIngredientOption, setSelectedIngredientOption] =
     useState(null);
   const [ingredientForm, setIngredientForm] = useState({ quantity: 1 });
@@ -352,7 +352,7 @@ const Inventory = () => {
     fetchSuppliers();
   }, [page, searchQuery, columnFilter, fetchItems, fetchSuppliers]);
 
-  const handleInventoryToggle = (type) => {
+ /*  const handleInventoryToggle = (type) => {
     setInventoryType(type);
     setPage(1);
     setIsViewOpen(false);
@@ -364,7 +364,7 @@ const Inventory = () => {
     setIngredientForm({ quantity: 1 });
     setPendingEditData(null);
     setPendingCakeData(null);
-  };
+  }; */
 
   const validateFormData = (data) => {
     if (modalMode === "cake-add" || modalMode === "cake-edit") {
@@ -961,10 +961,10 @@ const Inventory = () => {
           </div>
 
           <div className="module-actions-container">
-            <DateRangeFilter
+          {/*   <DateRangeFilter
               options={["Inventory", "Cake Inventory"]}
               onChange={handleInventoryToggle}
-            />
+            /> */}
 
             <input
               type="text"
@@ -989,7 +989,7 @@ const Inventory = () => {
             </button>
 
             {/* Add Cake */}
-            <button
+            {/* <button
               className="module-action-btn module-add-btn"
               onClick={() => {
                 setSelectedCake(null);
@@ -997,7 +997,7 @@ const Inventory = () => {
               }}
             >
               + Add Cake
-            </button>
+            </button> */}
           </div>
 
           <div className="module-table-container" ref={containerRef}>

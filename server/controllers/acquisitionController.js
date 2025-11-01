@@ -17,7 +17,6 @@ const getAllAcquisitions = async (req, res) => {
 
     const allAcquisitions = await Acquisition.find()
       .sort(field ? { [field]: order } : { createdAt: -1 })
-      .populate("items.unit", "name")
       .populate("createdBy", "username");
 
     if (!search) {
