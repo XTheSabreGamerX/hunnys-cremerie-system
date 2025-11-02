@@ -218,6 +218,12 @@ const SalesReport = () => {
       return sum + ((Number(s.totalAmount) || 0) - totalCost);
     }, 0);
 
+    const totalAcquisitionCost = acquisitions.reduce((sum, acq) => {
+      return sum + (Number(acq.totalAmount) || 0);
+    }, 0);
+
+    const totalProfitWithAcquisitions = totalProfit - totalAcquisitionCost;
+
     const totalTransactions = allRecords.length;
 
     const bestSelling = {};
@@ -244,7 +250,7 @@ const SalesReport = () => {
 
     setAnalytics({
       totalSales,
-      totalProfit,
+      totalProfitWithAcquisitions,
       totalTransactions,
       bestSelling: bestSellingArray,
       paymentBreakdown: paymentArray,
@@ -285,7 +291,7 @@ const SalesReport = () => {
     }));
     setBarData(barPieData);
     setPieData(barPieData);
-  }, [fullSales]);
+  }, [fullSales, acquisitions]);
 
   const openReceipt = (sale) => setSelectedSale(sale);
   const closeReceipt = () => setSelectedSale(null);
@@ -387,11 +393,11 @@ const SalesReport = () => {
               <h3>Total Profit</h3>
               <p
                 style={{
-                  color: analytics?.totalProfit < 0 ? "red" : "inherit",
-                  fontWeight: analytics?.totalProfit < 0 ? "bold" : "normal",
+                  color: analytics?.totalProfitWithAcquisitions < 0 ? "red" : "inherit",
+                  fontWeight: analytics?.totalProfitWithAcquisitions < 0 ? "bold" : "normal",
                 }}
               >
-                ₱{(analytics?.totalProfit ?? 0).toFixed(2)}
+                ₱{(analytics?.totalProfitWithAcquisitions ?? 0).toFixed(2)}
               </p>
             </div>
             <div className="sales-card">
