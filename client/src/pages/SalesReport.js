@@ -56,6 +56,7 @@ const SalesReport = () => {
     order: "",
   });
   const [selectedAcquisition, setSelectedAcquisition] = useState(null);
+  const [totalProfit, setTotalProfit] = useState(0);
 
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const navigate = useNavigate();
@@ -209,21 +210,6 @@ const SalesReport = () => {
       0
     );
 
-    const totalProfit = allRecords.reduce((sum, s) => {
-      const totalCost = (s.items || []).reduce((costSum, item) => {
-        const purchasePrice = Number(item.purchasePrice) || 0;
-        const quantity = Number(item.quantity) || 0;
-        return costSum + purchasePrice * quantity;
-      }, 0);
-      return sum + ((Number(s.totalAmount) || 0) - totalCost);
-    }, 0);
-
-    const totalAcquisitionCost = acquisitions.reduce((sum, acq) => {
-      return sum + (Number(acq.totalAmount) || 0);
-    }, 0);
-
-    const totalProfitWithAcquisitions = totalProfit - totalAcquisitionCost;
-
     const totalTransactions = allRecords.length;
 
     const bestSelling = {};
@@ -250,7 +236,6 @@ const SalesReport = () => {
 
     setAnalytics({
       totalSales,
-      totalProfitWithAcquisitions,
       totalTransactions,
       bestSelling: bestSellingArray,
       paymentBreakdown: paymentArray,
@@ -292,6 +277,22 @@ const SalesReport = () => {
     setBarData(barPieData);
     setPieData(barPieData);
   }, [fullSales, acquisitions]);
+
+  useEffect(() => {
+    const fetchProfit = async () => {
+      try {
+        const res = await authFetch(`${API_BASE}/api/salesReport/profit`);
+        if (!res.ok) throw new Error("Failed to fetch profit");
+        const data = await res.json();
+        setTotalProfit(data.totalProfit || 0);
+      } catch (err) {
+        console.error("Profit fetch error:", err);
+        setTotalProfit(0);
+      }
+    };
+
+    fetchProfit();
+  }, []);
 
   const openReceipt = (sale) => setSelectedSale(sale);
   const closeReceipt = () => setSelectedSale(null);
@@ -393,11 +394,11 @@ const SalesReport = () => {
               <h3>Total Profit</h3>
               <p
                 style={{
-                  color: analytics?.totalProfitWithAcquisitions < 0 ? "red" : "inherit",
-                  fontWeight: analytics?.totalProfitWithAcquisitions < 0 ? "bold" : "normal",
+                  color: totalProfit < 0 ? "red" : "inherit",
+                  fontWeight: totalProfit < 0 ? "bold" : "normal",
                 }}
               >
-                ₱{(analytics?.totalProfitWithAcquisitions ?? 0).toFixed(2)}
+                ₱{(totalProfit ?? 0).toFixed(2)}
               </p>
             </div>
             <div className="sales-card">
@@ -455,7 +456,7 @@ const SalesReport = () => {
                         <td>{r.saleId}</td>
                         <td>{r.customerName}</td>
                         <td>{r.orderType}</td>
-                        <td>₱{r.totalAmount}</td>
+                        <td>₱{r.totalAmount.toFixed(2)}</td>
                         <td>{r.paymentMethod}</td>
                         <td>
                           {new Date(r.createdAt).toLocaleDateString("en-PH", {
@@ -523,7 +524,7 @@ const SalesReport = () => {
                             "Unknown Supplier"}
                         </td>
                         <td>{a.items?.length || 0}</td>
-                        <td>₱{a.totalAmount?.toLocaleString()}</td>
+                        <td>₱{a.totalAmount?.toFixed(2)}</td>
                         <td>{a.paymentMethod}</td>
                         <td>
                           {new Date(a.createdAt).toLocaleDateString("en-PH", {
