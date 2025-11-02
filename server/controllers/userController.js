@@ -146,45 +146,49 @@ const createStaffUser = async (req, res) => {
 
     await newUser.save();
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
-      port: Number(process.env.EMAIL_PORT),
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `"Hunnys Crémerie Baking Supplies" <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: "Your New Staff Account",
-      text: `Hello ${username},\n\nYour account has been created.\nTemporary password: ${tempPassword}\n\nPlease log in and change your password immediately. \n\n*DO NOT REPLY TO THIS EMAIL*`,
-    });
-
-    await createLog({
-      action: "Staff Account Created",
-      module: "User Management",
-      description: `A new staff account was created by admin.`,
-      userId: req.user.id,
-    });
-
-    await createNotification({
-      message: `A new staff account for ${username} was created successfully.`,
-      type: "success",
-      roles: ["admin", "owner", "manager"],
-    });
-
     res.status(201).json({
       message:
-        "Staff account created successfully. Temporary password sent via email.",
+        "Staff account created successfully. Temporary password will be sent via email.",
     });
+
+    Promise.allSettled([
+      sendStaffEmail(email, username, tempPassword),
+      createLog({
+        action: "Staff Account Created",
+        module: "User Management",
+        description: `A new staff account was created by admin.`,
+        userId: req.user.id,
+      }),
+      createNotification({
+        message: `A new staff account for ${username} was created successfully.`,
+        type: "success",
+        roles: ["admin", "owner", "manager"],
+      }),
+    ]).catch((err) => console.error("Post-response task error:", err.message));
   } catch (error) {
     console.error("Error creating staff user:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+async function sendStaffEmail(email, username, tempPassword) {
+  const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: Number(process.env.EMAIL_PORT),
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  });
+
+  await transporter.sendMail({
+    from: `"Hunnys Crémerie Baking Supplies" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: "Your New Staff Account",
+    text: `Hello ${username},\n\nYour account has been created.\nTemporary password: ${tempPassword}\n\nPlease log in and change your password immediately.\n\n*DO NOT REPLY TO THIS EMAIL*`,
+  });
+}
 
 module.exports = {
   getAllUsers,
