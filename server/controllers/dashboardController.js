@@ -1,5 +1,6 @@
 const Inventory = require("../models/InventoryItem.js");
 const Sales = require("../models/Sale.js");
+const Acquisition = require("../models/Acquisition.js");
 const ActivityLog = require("../models/ActivityLog.js");
 
 const getTodayRange = () => {
@@ -93,7 +94,11 @@ const getDashboardStats = async (req, res) => {
 
 const getRevenueCostByDay = async (req, res) => {
   try {
-    // Aggregate revenue
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 6); // last 7 days
+
+    // Aggregate revenue from sales
     const revenueData = await Sales.aggregate([
       {
         $group: {
@@ -101,38 +106,61 @@ const getRevenueCostByDay = async (req, res) => {
           totalRevenue: { $sum: "$totalAmount" },
         },
       },
-      { $sort: { _id: 1 } },
     ]);
 
-    // Aggregate cost
-    const costData = await Sales.aggregate([
+    // Aggregate cost from sales
+    const salesCostData = await Sales.aggregate([
       { $unwind: "$items" },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-          totalCost: { $sum: { $multiply: ["$items.purchasePrice", "$items.quantity"] } },
+          totalCost: {
+            $sum: { $multiply: ["$items.purchasePrice", "$items.quantity"] },
+          },
+        },
+      },
+    ]);
+
+    // Aggregate cost from acquisitions
+    const acquisitionCostData = await Acquisition.aggregate([
+      { $match: { status: "Delivered" } },
+      { $unwind: "$items" },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          totalAcquisitionCost: {
+            $sum: { $multiply: ["$items.unitCost", "$items.quantity"] },
+          },
         },
       },
       { $sort: { _id: 1 } },
     ]);
 
-    // Define a fixed start date (e.g., 7 days ago)
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 6); // last 7 days
+    // Map for quick lookup
+    const revenueMap = new Map(revenueData.map((d) => [d._id, d.totalRevenue]));
+    const salesCostMap = new Map(
+      salesCostData.map((d) => [d._id, d.totalCost])
+    );
+    const acquisitionCostMap = new Map(
+      acquisitionCostData.map((d) => [d._id, d.totalAcquisitionCost])
+    );
 
-    // Map existing data for quick lookup
-    const revenueMap = new Map(revenueData.map(d => [d._id, d.totalRevenue]));
-    const costMap = new Map(costData.map(d => [d._id, d.totalCost]));
-
-    // Fill in all dates in the range
+    // Fill in all dates in range
     const filledData = [];
-    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    for (
+      let d = new Date(startDate);
+      d <= endDate;
+      d.setDate(d.getDate() + 1)
+    ) {
       const key = d.toISOString().split("T")[0];
+      const revenue = revenueMap.get(key) || 0;
+      const salesCost = salesCostMap.get(key) || 0;
+      const acquisitionCost = acquisitionCostMap.get(key) || 0;
+
       filledData.push({
         date: key,
-        revenue: revenueMap.get(key) || 0,
-        cost: costMap.get(key) || 0,
+        revenue,
+        cost: salesCost + acquisitionCost,
       });
     }
 

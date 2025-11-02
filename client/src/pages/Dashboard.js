@@ -114,7 +114,7 @@ const Dashboard = () => {
         if (!res.ok) throw new Error("Failed to fetch dashboard stats");
 
         const data = await res.json();
-        
+
         setStats(data);
       } catch (err) {
         console.error("Error fetching dashboard stats:", err);
@@ -171,8 +171,8 @@ const Dashboard = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={lineData}>
                     <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
+                    <YAxis tickFormatter={(value) => `₱${value.toFixed(2)}`} />
+                    <Tooltip formatter={(value) => `₱${value.toFixed(2)}`} />
                     <Legend />
                     <Line
                       type="monotone"
