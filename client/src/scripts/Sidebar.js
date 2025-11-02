@@ -73,7 +73,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     {
       label: "Report",
       icon: <FaClipboard />,
-      path: "/dashboard",
+      path: "/report",
       roles: ["admin", "owner"],
     },/* 
     {

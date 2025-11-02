@@ -18,6 +18,7 @@ import SupplierManagement from "../pages/SupplierManagement";
 import CustomerManagement from "../pages/CustomerManagement";
 import SalesManagement from "../pages/SalesManagement";
 import SalesReport from "../pages/SalesReport";
+import Report from "../pages/Report";
 import Notifications from "../pages/Notifications";
 import BackupRestore from "../pages/BackupRestore";
 import Settings from "../pages/Settings";
@@ -106,6 +107,18 @@ function App() {
               <ProtectedRoute>
                 <DashboardHeader />
                 <SalesReport />
+              </ProtectedRoute>
+            </>
+          }
+        />
+
+        <Route //Sales Report route
+          path="/report"
+          element={
+            <>
+              <ProtectedRoute>
+                <DashboardHeader />
+                <Report />
               </ProtectedRoute>
             </>
           }

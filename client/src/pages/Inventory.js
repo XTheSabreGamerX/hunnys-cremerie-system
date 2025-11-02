@@ -277,15 +277,15 @@ const Inventory = () => {
     const params = new URLSearchParams(location.search);
     const status = params.get("status") || "";
     const statusMap = {
-      "low-stock": "Low-Stock",
-      "out-of-stock": "Out Of Stock",
+      "low-stock": "Low-stock",
+      "out-of-stock": "Out of stock",
       "expired": "Expired",
     };
 
-    setSearchQuery(statusMap[status] || "");
-
-    fetchItems({ status });
-  }, [fetchItems, location.search]);
+    if (status) {
+      setSearchQuery(statusMap[status]);
+    }
+  }, [location.search]);
 
   const fetchSuppliers = useCallback(async () => {
     try {
@@ -365,7 +365,7 @@ const Inventory = () => {
   useEffect(() => {
     fetchItems();
     fetchSuppliers();
-  }, [page, searchQuery, columnFilter, fetchItems, fetchSuppliers]);
+  }, [searchQuery, columnFilter, fetchItems, fetchSuppliers]);
 
   /*  const handleInventoryToggle = (type) => {
     setInventoryType(type);
