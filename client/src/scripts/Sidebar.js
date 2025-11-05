@@ -7,7 +7,7 @@ import { ImHome, ImUsers, ImList } from "react-icons/im";
 import { CgBox } from "react-icons/cg";
 import {
   FaCashRegister,
-  FaMoneyBillWave,
+  /* FaMoneyBillWave, */
   FaChartLine,
   /* FaCalculator, */
   FaTruck,
@@ -94,12 +94,12 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
       path: "/customer-management",
       roles: ["admin", "owner", "manager", "staff"],
     },
-    {
+    /* {
       label: "Pricing Management",
       icon: <FaMoneyBillWave />,
       path: "/dashboard",
       roles: ["admin", "owner", "manager"],
-    },
+    }, */
     {
       label: "Backup and Restore",
       icon: <FaDownload />,
