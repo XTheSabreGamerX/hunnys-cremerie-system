@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
 import { customAlphabet } from "nanoid/non-secure";
+import { FaEye } from "react-icons/fa";
+import { FaPencil } from "react-icons/fa6";
 import DashboardLayout from "../scripts/DashboardLayout";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
@@ -392,13 +394,13 @@ const CustomerManagement = () => {
                           onClick={() => handleEditClick(customer)}
                           className="module-action-btn module-edit-btn"
                         >
-                          Edit
+                          <FaPencil />
                         </button>
                         <button
                           onClick={() => handleViewClick(customer)}
                           className="module-action-btn module-view-btn"
                         >
-                          View
+                          <FaEye />
                         </button>
                       </td>
                     </tr>
