@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { customAlphabet } from "nanoid";
 import DashboardLayout from "../scripts/DashboardLayout";
+import { FaEye } from "react-icons/fa";
+import { FaPencil } from "react-icons/fa6";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
 import PopupMessage from "../components/PopupMessage";
@@ -30,6 +33,8 @@ const SupplierManagement = () => {
   const [sortField, setSortField] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
 
+  const nanoid = customAlphabet("0123456789", 6);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,8 +42,8 @@ const SupplierManagement = () => {
     if (!token) navigate("/login");
   }, [navigate]);
 
-  const supplierFields = [
-    { label: "Supplier ID", name: "supplierId", required: "true" },
+  const supplierFields = [/* 
+    { label: "Supplier ID", name: "supplierId", required: "true" }, */
     { label: "Name", name: "name", required: "true" },
     { label: "Contact", name: "contact" },
     { label: "Company", name: "company" },
@@ -80,7 +85,7 @@ const SupplierManagement = () => {
   }, [fetchSuppliers]);
 
   const validateFormData = (data) => {
-    if (!data.supplierId?.trim() || !data.name?.trim()) {
+    if (!data.name?.trim()) {
       showPopup("Please fill out required fields.", "error");
       return false;
     }
@@ -94,6 +99,10 @@ const SupplierManagement = () => {
         modalMode === "add"
           ? `${API_BASE}/api/suppliers`
           : `${API_BASE}/api/suppliers/${data._id}`;
+
+      if (modalMode === "add") {
+        data.supplierId = `SUP-${nanoid()}`;
+      }
 
       await authFetch(url, {
         method,
@@ -254,7 +263,7 @@ const SupplierManagement = () => {
           </div>
 
           <div className="module-actions-container">
-            <select
+            {/* <select
               className="module-filter-dropdown"
               value={searchField}
               onChange={(e) => setSearchField(e.target.value)}
@@ -263,7 +272,7 @@ const SupplierManagement = () => {
               <option value="name">Name</option>
               <option value="contact">Contact</option>
               <option value="company">Company</option>
-            </select>
+            </select> */}
 
             <input
               type="text"
@@ -338,7 +347,7 @@ const SupplierManagement = () => {
                             setSelectedSupplier(supplier);
                           }}
                         >
-                          Edit
+                          <FaPencil />
                         </button>
                         <button
                           className="module-action-btn module-view-btn"
@@ -347,7 +356,7 @@ const SupplierManagement = () => {
                             setIsViewOpen(true);
                           }}
                         >
-                          View
+                          <FaEye />
                         </button>
                       </td>
                     </tr>
