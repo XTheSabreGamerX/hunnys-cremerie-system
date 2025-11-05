@@ -457,7 +457,7 @@ const UserManagement = () => {
               <table>
                 <thead>
                   <tr>
-                    <th>Username</th>
+                    <th>Name</th>
                     <th>Email</th>
                     <th>Role</th>
                     <th>Status</th>
