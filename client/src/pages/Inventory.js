@@ -10,6 +10,7 @@ import PopupMessage from "../components/PopupMessage";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { showToast } from "../components/ToastContainer";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
+import { FaEye } from 'react-icons/fa';
 /* import DateRangeFilter from "../components/DateRangeFilter"; */
 import "../styles/App.css";
 import "../styles/Inventory.css";
@@ -61,12 +62,12 @@ const Inventory = () => {
 
   const inventoryFields = [
     { label: "Item Name", name: "name", required: true },
-    {
+  /*   {
       label: "Stock",
       name: "stock",
       type: "number",
       placeholder: "Leave blank if none...",
-    },
+    }, */
     {
       label: "Category",
       name: "category",
@@ -1102,7 +1103,7 @@ const Inventory = () => {
                         </td>
                         <td>{item.status}</td>
                         <td>
-                          <button
+                          {/* <button
                             className="module-action-btn module-edit-btn"
                             onClick={() => {
                               const categoryId =
@@ -1133,15 +1134,16 @@ const Inventory = () => {
                             }}
                           >
                             Edit
-                          </button>
+                          </button> */}
                           <button
                             className="module-action-btn module-view-btn"
                             onClick={() => {
                               setViewedItem(item);
                               setIsViewOpen(true);
                             }}
+                            title="View Item"
                           >
-                            View
+                            <FaEye/>
                           </button>
                         </td>
                       </tr>
