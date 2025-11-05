@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
+import { customAlphabet } from "nanoid/non-secure";
 import DashboardLayout from "../scripts/DashboardLayout";
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
@@ -25,6 +26,8 @@ const CustomerManagement = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [columnFilter, setColumnFilter] = useState({ field: "", order: "" });
+
+  const nanoid = customAlphabet("0123456789", 6);
 
   const navigate = useNavigate();
 
@@ -60,21 +63,10 @@ const CustomerManagement = () => {
   }, [page, searchQuery, columnFilter, fetchCustomers]);
 
   const validateCustomerData = (data) => {
-    const { customerId, name } = data;
+    const { name } = data;
 
-    if (!customerId?.trim() || !name?.trim()) {
-      setPopupMessage("Please fill in all required fields.");
-      setPopupType("error");
-      return false;
-    }
-
-    if (
-      modalMode === "add" &&
-      (customers || []).some(
-        (c) => c.customerId.toLowerCase() === customerId.trim().toLowerCase()
-      )
-    ) {
-      setPopupMessage("Customer ID already exists. Please choose a unique ID.");
+    if (!name?.trim()) {
+      setPopupMessage("Please fill in the required fields.");
       setPopupType("error");
       return false;
     }
@@ -86,9 +78,16 @@ const CustomerManagement = () => {
     if (!validateCustomerData(newCustomer)) return;
 
     try {
+      const generatedId = `CUST-${nanoid()}`;
+
+      const customerWithId = {
+        ...newCustomer,
+        customerId: generatedId,
+      };
+
       const response = await authFetch(`${API_BASE}/api/customers`, {
         method: "POST",
-        body: JSON.stringify(newCustomer),
+        body: JSON.stringify(customerWithId),
       });
 
       if (!response.ok) throw new Error("Add failed");
@@ -232,10 +231,10 @@ const CustomerManagement = () => {
           <EditModal
             item={modalMode === "edit" ? selectedItem : {}}
             fields={[
-              { name: "customerId", label: "Customer ID", required: "true" },
+              /* { name: "customerId", label: "Customer ID", required: "true" }, */
               { name: "name", label: "Name", required: "true" },
               { name: "email", label: "Email" },
-              { name: "phoneNumber", label: "Phone Number" },
+              { name: "phoneNumber", label: "Contact" },
               { name: "address", label: "Address" },
             ]}
             onSave={modalMode === "add" ? handleAddCustomer : handleSaveChanges}
@@ -255,7 +254,7 @@ const CustomerManagement = () => {
               { name: "customerId", label: "Customer ID" },
               { name: "name", label: "Name" },
               { name: "email", label: "Email" },
-              { name: "phoneNumber", label: "Phone Number" },
+              { name: "phoneNumber", label: "Contact" },
               { name: "address", label: "Address" },
               {
                 name: "createdAt",
@@ -333,7 +332,7 @@ const CustomerManagement = () => {
                     { key: "customerId", label: "ID" },
                     { key: "name", label: "Name" },
                     { key: "email", label: "Email" },
-                    { key: "phoneNumber", label: "Number" },
+                    { key: "phoneNumber", label: "Contact" },
                     { key: "address", label: "Address" },
                     { key: "createdAt", label: "Created" },
                     { key: "updatedAt", label: "Updated" },
