@@ -15,7 +15,6 @@ import "../styles/SupplierManagement.css";
 const SupplierManagement = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchField, setSearchField] = useState("supplierId");
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [modalMode, setModalMode] = useState(null);
   const [pendingEditData, setPendingEditData] = useState(null);
