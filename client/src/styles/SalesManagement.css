@@ -63,6 +63,7 @@
   border-bottom: 1px solid #eee;
   word-wrap: break-word;
   height: 100px;
+  user-select: none;
 }
 
 .sales-products-table th {
