@@ -10,7 +10,7 @@ import PopupMessage from "../components/PopupMessage";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { showToast } from "../components/ToastContainer";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
-import { FaEye } from 'react-icons/fa';
+import { FaEye, FaPencilAlt } from 'react-icons/fa';
 /* import DateRangeFilter from "../components/DateRangeFilter"; */
 import "../styles/App.css";
 import "../styles/Inventory.css";
@@ -1103,7 +1103,7 @@ const Inventory = () => {
                         </td>
                         <td>{item.status}</td>
                         <td>
-                          {/* <button
+                          <button
                             className="module-action-btn module-edit-btn"
                             onClick={() => {
                               const categoryId =
@@ -1133,8 +1133,8 @@ const Inventory = () => {
                               setModalMode("edit");
                             }}
                           >
-                            Edit
-                          </button> */}
+                            <FaPencilAlt />
+                          </button>
                           <button
                             className="module-action-btn module-view-btn"
                             onClick={() => {
