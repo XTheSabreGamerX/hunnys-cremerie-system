@@ -5,7 +5,7 @@ const User = require("../models/User");
 const { createLog } = require("../controllers/activityLogController");
 const { createNotification } = require("../controllers/notificationController");
 
-// Create a new reset password request
+// Create a new reset password request (auto-approve for Owner/Admin)
 const createResetRequest = async (req, res) => {
   try {
     const { email } = req.body;
@@ -30,13 +30,72 @@ const createResetRequest = async (req, res) => {
       });
     }
 
+    if (["owner", "admin"].includes(existingUser.role?.toLowerCase())) {
+      // Generate temp password
+      const tempPassword = Math.random().toString(36).slice(-10);
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(tempPassword, salt);
+
+      existingUser.password = hashedPassword;
+      existingUser.needsPasswordReset = true;
+      await existingUser.save();
+
+      const approvedRequest = new ResetRequest({
+        email,
+        status: "approved",
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+        isUsed: false,
+      });
+      await approvedRequest.save();
+
+      const transporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST,
+        port: Number(process.env.EMAIL_PORT),
+        secure: false,
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASSWORD,
+        },
+      });
+
+      await transporter.sendMail({
+        from: `"Hunnys Crémerie Baking Supplies" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: "Password Reset (Temporary Password)",
+        text: `Hello ${
+          existingUser.username || "User"
+        },\n\nYour temporary password is: ${tempPassword}\n\nThis will expire in 15 minutes. Please log in and change it immediately.\n\nDo not reply to this email.`,
+      });
+
+      await createLog({
+        action: "Password Reset Auto-Approved",
+        module: "Login",
+        description: `Auto-approved reset request for privileged user: ${
+          existingUser.username || email
+        }`,
+        userId: req.user ? req.user.id : existingUser._id,
+      });
+
+      await createNotification({
+        message: `A password reset for privileged account "${
+          existingUser.username || email
+        }" was auto-approved and emailed.`,
+        type: "success",
+        roles: ["admin", "owner", "manager"],
+      });
+
+      return res.status(200).json({
+        message: "Password reset approved and temporary password emailed.",
+      });
+    }
+
     const newRequest = new ResetRequest({ email, status: "pending" });
     await newRequest.save();
 
     await createLog({
       action: "Password Reset Request",
       module: "Login",
-      description: `A password request was created.`,
+      description: `A password reset request was created.`,
       userId: req.user ? req.user.id : null,
     });
 
@@ -46,11 +105,14 @@ const createResetRequest = async (req, res) => {
       roles: ["admin", "owner", "manager"],
     });
 
-    res
+    return res
       .status(201)
       .json({ message: "Password reset request created successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("Error creating reset request:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
 };
 

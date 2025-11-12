@@ -180,16 +180,29 @@ const Login = () => {
       .then(async (res) => {
         const data = await res.json();
         if (res.status >= 200 && res.status < 300) {
-          return data; // success
+          return data;
         } else {
           throw new Error(data.message || "Failed to send reset request");
         }
       })
       .then((data) => {
         setResetError("");
-        setResetSuccess(
-          "Password reset request sent. Please wait for admin approval."
-        );
+
+        if (
+          data.message &&
+          data.message
+            .toLowerCase()
+            .includes("password reset approved and temporary password emailed")
+        ) {
+          setResetSuccess(
+            "Password reset approved. Please check your email for your temporary password."
+          );
+        } else {
+          setResetSuccess(
+            "Password reset request sent. Please wait for admin approval."
+          );
+        }
+
         setResetEmail("");
       })
       .catch((error) => {
@@ -254,8 +267,8 @@ const Login = () => {
         )}
 
         <form onSubmit={handleLogin} autoComplete="off">
-          <input type="password" style={{ display: 'none' }} />
-          
+          <input type="password" style={{ display: "none" }} />
+
           <input
             type="email"
             placeholder="Email"
@@ -292,7 +305,7 @@ const Login = () => {
           Forgot Password?
         </p>
 
-       {/*  <div className="register-link">
+        {/*  <div className="register-link">
           <p>Don't have an account?</p>
           <button onClick={() => setShowRegister(true)}>
             Request Registration
