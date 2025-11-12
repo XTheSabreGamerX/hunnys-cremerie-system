@@ -23,6 +23,7 @@ const loginUser = async (req, res) => {
         type: "warning",
         roles: ["admin", "owner", "manager"],
       });
+
       return res.status(400).json({ message: "User not found" });
     }
 
@@ -33,8 +34,41 @@ const loginUser = async (req, res) => {
       });
     }
 
+    // Initialize failed login attempts and lastFailedLogin
+    if (typeof user.failedLoginAttempts !== "number")
+      user.failedLoginAttempts = 0;
+    if (!user.lastFailedLogin) user.lastFailedLogin = null;
+
+    // Calculate cooldown
+    const maxCooldown = 120;
+    let cooldownSeconds = 0;
+
+    if (user.failedLoginAttempts >= 3 && user.lastFailedLogin) {
+      const lastAttempt = user.lastFailedLogin || new Date();
+      const elapsedSeconds = (new Date() - user.lastFailedLogin) / 1000;
+      const calculatedCooldown = Math.min(
+        (user.failedLoginAttempts - 2) * 15,
+        maxCooldown
+      );
+      cooldownSeconds = Math.max(calculatedCooldown - elapsedSeconds, 0);
+    }
+
+    if (cooldownSeconds > 0) {
+      return res.status(429).json({
+        message: `Too many failed attempts. Please wait ${Math.ceil(
+          cooldownSeconds
+        )} seconds before trying again.`,
+        cooldownSeconds: Math.ceil(cooldownSeconds),
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch) {
+      user.failedLoginAttempts += 1;
+      user.lastFailedLogin = new Date();
+      await user.save();
+
       await createLog({
         action: "Failed login attempt",
         module: "Login",
@@ -47,8 +81,25 @@ const loginUser = async (req, res) => {
         type: "warning",
         roles: ["admin", "owner", "manager"],
       });
-      return res.status(400).json({ message: "Invalid credentials" });
+
+      let remainingCooldown = 0;
+      if (user.failedLoginAttempts >= 3) {
+        remainingCooldown = Math.min(
+          (user.failedLoginAttempts - 2) * 15,
+          maxCooldown
+        );
+      }
+
+      return res.status(400).json({
+        message: "Invalid credentials",
+        cooldownSeconds: remainingCooldown,
+      });
     }
+
+    // Successful login → reset failed attempts and lastFailedLogin
+    user.failedLoginAttempts = 0;
+    user.lastFailedLogin = null;
+    await user.save();
 
     const accessToken = jwt.sign(
       {

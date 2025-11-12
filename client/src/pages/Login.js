@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import PopupMessage from "../components/PopupMessage";
 import ResetPasswordModal from "../components/ResetPasswordModal";
@@ -13,6 +13,8 @@ const Login = () => {
   const [emailError, setEmailError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const cooldownTimer = useRef(null);
 
   //Register States
   const [showRegister, setShowRegister] = useState(false);
@@ -36,7 +38,17 @@ const Login = () => {
   const navigate = useNavigate();
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
-  //Handles Login
+  const showPopup = (message, type, duration = 3000) => {
+    setPopupMessage(message);
+    setPopupType(type);
+
+    setTimeout(() => {
+      setPopupMessage("");
+      setPopupType("");
+    }, duration);
+  };
+
+  // Handles Login
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMessage("");
@@ -56,6 +68,14 @@ const Login = () => {
     }
 
     if (hasError) return;
+
+    // If cooldown active, prevent login
+    if (cooldownSeconds > 0) {
+      showPopup(
+        `Please wait ${cooldownSeconds} seconds before trying again.`, "error"
+      );
+      return;
+    }
 
     setLoading(true);
 
@@ -81,14 +101,38 @@ const Login = () => {
         } else {
           setPopupMessage("Login successful! Redirecting to dashboard...");
           setPopupType("success");
-          setTimeout(() => {
-            navigate("/dashboard");
-          }, 2000);
+          setTimeout(() => navigate("/dashboard"), 2000);
+        }
+
+        // Reset cooldown if login was successful
+        setCooldownSeconds(0);
+        if (cooldownTimer.current) {
+          clearInterval(cooldownTimer.current);
+          cooldownTimer.current = null;
         }
       } else {
         const message = data.message || "Invalid email or password";
-        setPopupMessage(message);
-        setPopupType("error");
+        showPopup(message, "error");
+
+        // Check if backend sent cooldownSeconds
+        if (data.cooldownSeconds && data.cooldownSeconds > 0) {
+          setCooldownSeconds(data.cooldownSeconds);
+
+          // Clear any existing timer
+          if (cooldownTimer.current) clearInterval(cooldownTimer.current);
+
+          // Start countdown timer
+          cooldownTimer.current = setInterval(() => {
+            setCooldownSeconds((prev) => {
+              if (prev <= 1) {
+                clearInterval(cooldownTimer.current);
+                cooldownTimer.current = null;
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+        }
       }
     } catch (err) {
       console.error("Error logging in:", err);
@@ -294,7 +338,9 @@ const Login = () => {
               Show Password
             </label>
           </div>
-          <button type="submit">Login</button>
+          <button type="submit" disabled={loading || cooldownSeconds > 0}>
+            {cooldownSeconds > 0 ? `Wait ${cooldownSeconds}s` : "Login"}
+          </button>
         </form>
 
         {/* Reset Password Link */}

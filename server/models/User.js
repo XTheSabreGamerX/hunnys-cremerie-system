@@ -34,6 +34,8 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
     refreshToken: { type: String, default: null },
+    failedLoginAttempts: { type: Number, default: 0 },
+    lastFailedLogin: { type: Date, default: null },
   },
   { timestamps: true }
 );
