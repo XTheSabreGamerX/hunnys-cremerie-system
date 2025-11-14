@@ -16,7 +16,7 @@ const SalesManagement = () => {
   const [orderType, setOrderType] = useState("Walk-in");
   const [isUnregistered, setIsUnregistered] = useState(false);
   const [customerName, setCustomerName] = useState("");
-  const [taxRate, setTaxRate] = useState(12);
+  const [taxRate, /* setTaxRate */] = useState(12);
   const [paymentMethod, setPaymentMethod] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [popupMessage, setPopupMessage] = useState("");
@@ -268,6 +268,7 @@ const SalesManagement = () => {
 
     setLoading(true);
 
+    const taxRatePercent = Number(taxRate) || 0;
     try {
       // Shared subtotal + totals
       const subtotal = cartItems.reduce(
@@ -277,7 +278,7 @@ const SalesManagement = () => {
             i.quantity,
         0
       );
-      const taxAmount = taxRate > 0 ? (subtotal * taxRate) / 100 : 0;
+      const taxAmount = (subtotal * taxRatePercent) / 100;
       const totalAmount = subtotal + taxAmount;
 
       if (mode === "Sales") {
@@ -296,7 +297,7 @@ const SalesManagement = () => {
             purchasePrice: i.purchasePrice || 0,
           })),
           subtotal,
-          taxRate: taxRate || 0,
+          taxRate: taxRatePercent,
           taxAmount,
           totalAmount,
           paymentMethod,
@@ -352,7 +353,6 @@ const SalesManagement = () => {
       setOrderType("Walk-in");
       setCustomerName("");
       setIsUnregistered(false);
-      setTaxRate(0);
       setPaymentMethod("");
     } catch (err) {
       showPopup(err.message || "Something went wrong.", "error");
