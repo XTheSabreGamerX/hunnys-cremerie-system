@@ -1,12 +1,12 @@
 const Supplier = require("../models/Supplier");
-const Fuse = require('fuse.js');
+const Fuse = require("fuse.js");
 const { createLog } = require("../controllers/activityLogController");
 const { createNotification } = require("../controllers/notificationController");
 
 // GET /api/suppliers
 const getAllSuppliers = async (req, res) => {
   try {
-    const suppliers = await Supplier.find();
+    const suppliers = await Supplier.find().populate("itemsSupplied.inventoryItem");
     res.json(suppliers);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -24,7 +24,7 @@ const getPaginatedSuppliers = async (req, res) => {
     const order = req.query.order === "desc" ? -1 : 1;
     const fetchAll = req.query.all === "true";
 
-    const allSuppliers = await Supplier.find().sort(field ? { [field]: order } : { supplierId: 1 });
+    const allSuppliers = await Supplier.find().populate("itemsSupplied.inventoryItem").sort(field ? { [field]: order } : { supplierId: 1 });
 
     if (!search) {
       const totalItems = allSuppliers.length;
@@ -48,7 +48,8 @@ const getPaginatedSuppliers = async (req, res) => {
       fuseKeys = [
         { name: "supplierId", getFn: (item) => normalizeFn(item.supplierId) },
         { name: "name", getFn: (item) => normalizeFn(item.name) },
-        { name: "contact", getFn: (item) => normalizeFn(item.contact) },
+        { name: "contactPerson", getFn: (item) => normalizeFn(item.contactPerson) },
+        { name: "contactNumber", getFn: (item) => normalizeFn(item.contactNumber) },
         { name: "company", getFn: (item) => normalizeFn(item.company) },
       ];
     }
@@ -87,9 +88,7 @@ const createSupplier = async (req, res) => {
       await createLog({
         action: "Created Supplier",
         module: "Supplier Management",
-        description: `User ${req.user.username} created a supplier: ${
-          savedSupplier.name || "Unknown"
-        }`,
+        description: `User ${req.user.username} created a supplier: ${savedSupplier.name || "Unknown"}`,
         userId: req.user.id,
       });
 
@@ -99,10 +98,7 @@ const createSupplier = async (req, res) => {
         roles: ["admin", "owner", "manager"],
       });
     } catch (logErr) {
-      console.error(
-        "[Activity Log] Failed to log supplier creation:",
-        logErr.message
-      );
+      console.error("[Activity Log] Failed to log supplier creation:", logErr.message);
     }
 
     res.status(201).json(savedSupplier);
@@ -114,21 +110,15 @@ const createSupplier = async (req, res) => {
 // PUT /api/suppliers/:id
 const updateSupplier = async (req, res) => {
   try {
-    const updated = await Supplier.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
+    const updated = await Supplier.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate("itemsSupplied.inventoryItem");
 
-    if (!updated) {
-      return res.status(404).json({ message: "Supplier not found" });
-    }
+    if (!updated) return res.status(404).json({ message: "Supplier not found" });
 
     try {
       await createLog({
         action: "Updated Supplier",
         module: "Supplier Management",
-        description: `User ${req.user.username} updated a supplier: ${
-          updated.name || "Unknown"
-        }`,
+        description: `User ${req.user.username} updated a supplier: ${updated.name || "Unknown"}`,
         userId: req.user.id,
       });
 
@@ -138,10 +128,7 @@ const updateSupplier = async (req, res) => {
         roles: ["admin", "owner", "manager"],
       });
     } catch (logErr) {
-      console.error(
-        "[Activity Log] Failed to log supplier creation:",
-        logErr.message
-      );
+      console.error("[Activity Log] Failed to log supplier update:", logErr.message);
     }
 
     res.json(updated);
@@ -155,9 +142,7 @@ const deleteSupplier = async (req, res) => {
   try {
     const deletedSupplier = await Supplier.findByIdAndDelete(req.params.id);
 
-    if (!deletedSupplier) {
-      return res.status(404).json({ message: "Supplier not found" });
-    }
+    if (!deletedSupplier) return res.status(404).json({ message: "Supplier not found" });
 
     try {
       await createLog({
@@ -173,10 +158,7 @@ const deleteSupplier = async (req, res) => {
         roles: ["admin", "owner", "manager"],
       });
     } catch (logErr) {
-      console.error(
-        "[Activity Log] Failed to log supplier deletion:",
-        logErr.message
-      );
+      console.error("[Activity Log] Failed to log supplier deletion:", logErr.message);
     }
 
     res.json({ message: "Supplier deleted successfully." });

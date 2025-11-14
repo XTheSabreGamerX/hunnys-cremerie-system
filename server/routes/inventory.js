@@ -6,6 +6,7 @@ const {
   addInventoryItem,
   updateInventoryItem,
   deleteInventoryItem,
+  repackInventoryItem,
   batchUpdateStatuses,
 } = require('../controllers/inventoryController');
 
@@ -17,6 +18,8 @@ router.post('/', authenticateToken, addInventoryItem);
 router.put('/:id', authenticateToken, updateInventoryItem);
 
 router.delete('/:id', authenticateToken, deleteInventoryItem);
+
+router.post('/repack', authenticateToken, repackInventoryItem);
 
 router.post('/inventory/check-status', batchUpdateStatuses);
 
