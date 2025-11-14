@@ -17,7 +17,7 @@ const SalesManagement = () => {
   const [isUnregistered, setIsUnregistered] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [taxRate, /* setTaxRate */] = useState(12);
-  const [paymentMethod, setPaymentMethod] = useState("");
+ /*  const [paymentMethod, setPaymentMethod] = useState(""); */
   const [searchQuery, setSearchQuery] = useState("");
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("");
@@ -237,16 +237,16 @@ const SalesManagement = () => {
         showPopup("Please select an order type.", "error");
         return;
       }
+      /* if (!paymentMethod) {
+        showPopup("Please select a payment method.", "error");
+        return;
+      } */
+    }/*  else if (mode === "Product Acquisition") {
       if (!paymentMethod) {
         showPopup("Please select a payment method.", "error");
         return;
       }
-    } else if (mode === "Product Acquisition") {
-      if (!paymentMethod) {
-        showPopup("Please select a payment method.", "error");
-        return;
-      }
-    }
+    } */
 
     if (mode === "Product Acquisition") {
       const suppliers = [...new Set(cartItems.map((i) => i.supplier))];
@@ -300,7 +300,7 @@ const SalesManagement = () => {
           taxRate: taxRatePercent,
           taxAmount,
           totalAmount,
-          paymentMethod,
+         /*  paymentMethod, */
         };
 
         const res = await authFetch(`${API_BASE}/api/sales`, {
@@ -332,7 +332,7 @@ const SalesManagement = () => {
           })),
           subtotal,
           totalAmount,
-          paymentMethod,
+          /* paymentMethod, */
         };
 
         console.log(JSON.stringify(acquisitionToSend, null, 2));
@@ -353,7 +353,7 @@ const SalesManagement = () => {
       setOrderType("Walk-in");
       setCustomerName("");
       setIsUnregistered(false);
-      setPaymentMethod("");
+      /* setPaymentMethod(""); */
     } catch (err) {
       showPopup(err.message || "Something went wrong.", "error");
     } finally {
@@ -622,7 +622,7 @@ const SalesManagement = () => {
                 Apply 12% VAT
               </label> */}
 
-              <label>
+             {/*  <label>
                 Payment Method
                 <select
                   value={paymentMethod}
@@ -635,7 +635,7 @@ const SalesManagement = () => {
                   <option value="PayMaya">PayMaya</option>
                   <option value="Others">Others</option>
                 </select>
-              </label>
+              </label> */}
             </div>
 
             <div className="pos-cart-items">

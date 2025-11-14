@@ -415,7 +415,7 @@ const SalesReport = () => {
                 )) ?? <li>No data</li>}
               </ul>
             </div>
-            <div className="sales-card">
+            {/* <div className="sales-card">
               <h3>Payment Breakdown</h3>
               <ul>
                 {analytics?.paymentBreakdown?.map((p) => (
@@ -424,7 +424,7 @@ const SalesReport = () => {
                   </li>
                 )) ?? <li>No data</li>}
               </ul>
-            </div>
+            </div> */}
           </section>
 
           <section className="sales-report-records">
@@ -437,14 +437,14 @@ const SalesReport = () => {
                     <th>Customer</th>
                     <th>Order Type</th>
                     <th>Total Amount</th>
-                    <th>Payment Method</th>
+                    {/* <th>Payment Method</th> */}
                     <th>Date</th>
                   </tr>
                 </thead>
                 <tbody>
                   {records.length === 0 && !isLoading ? (
                     <tr>
-                      <td colSpan="6">No sales records found.</td>
+                      <td colSpan="5">No sales records found.</td>
                     </tr>
                   ) : (
                     records.map((r) => (
@@ -457,7 +457,7 @@ const SalesReport = () => {
                         <td>{r.customerName}</td>
                         <td>{r.orderType}</td>
                         <td>₱{r.totalAmount.toFixed(2)}</td>
-                        <td>{r.paymentMethod}</td>
+                        {/* <td>{r.paymentMethod}</td> */}
                         <td>
                           {new Date(r.createdAt).toLocaleDateString("en-PH", {
                             timeZone: "Asia/Manila",
@@ -468,7 +468,7 @@ const SalesReport = () => {
                   )}
                   {isLoading && (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: "center" }}>
+                      <td colSpan="5" style={{ textAlign: "center" }}>
                         Loading...
                       </td>
                     </tr>
@@ -500,7 +500,7 @@ const SalesReport = () => {
                     <th>Supplier</th>
                     <th>Item Count</th>
                     <th>Total Cost</th>
-                    <th>Payment Method</th>
+                    {/* <th>Payment Method</th> */}
                     <th>Date</th>
                     <th>Status</th>
                   </tr>
@@ -508,7 +508,7 @@ const SalesReport = () => {
                 <tbody>
                   {acquisitions.length === 0 && !isLoading ? (
                     <tr>
-                      <td colSpan="7">No acquisition records found.</td>
+                      <td colSpan="6">No acquisition records found.</td>
                     </tr>
                   ) : (
                     acquisitions.map((a) => (
@@ -525,7 +525,7 @@ const SalesReport = () => {
                         </td>
                         <td>{a.items?.length || 0}</td>
                         <td>₱{a.totalAmount?.toFixed(2)}</td>
-                        <td>{a.paymentMethod}</td>
+                        {/* <td>{a.paymentMethod}</td> */}
                         <td>
                           {new Date(a.createdAt).toLocaleDateString("en-PH", {
                             timeZone: "Asia/Manila",

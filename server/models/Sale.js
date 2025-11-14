@@ -23,7 +23,6 @@ const saleSchema = new mongoose.Schema(
     taxRate: { type: Number },
     taxAmount: { type: Number },
     totalAmount: { type: Number, required: true },
-    paymentMethod: { type: String, required: true },
   },
   { timestamps: true }
 );
