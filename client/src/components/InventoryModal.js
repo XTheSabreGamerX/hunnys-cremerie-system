@@ -101,26 +101,26 @@ const InventoryModal = ({
   };
 
   useEffect(() => {
-    if (mode === "add") {
-      const generateItemCode = (name, categoryName) => {
-        const namePart = (name?.substring(0, 3) || "XXX").toUpperCase();
-        const categoryPart = (
-          categoryName?.substring(0, 3) || "XXX"
-        ).toUpperCase();
-        const randomPart = nanoid();
-        return `${namePart}-${categoryPart}-${randomPart}`;
-      };
-
+    if (mode === "add" && formData.name) {
       const categoryName =
         categories.find((c) => c._id === formData.category)?.name || "";
-      if (formData.name && categoryName) {
+      if (!formData.itemId && categoryName) {
+        const generateItemCode = (name, categoryName) => {
+          const namePart = (name?.substring(0, 3) || "XXX").toUpperCase();
+          const categoryPart = (
+            categoryName?.substring(0, 3) || "XXX"
+          ).toUpperCase();
+          const randomPart = nanoid();
+          return `${namePart}-${categoryPart}-${randomPart}`;
+        };
+
         setFormData((prev) => ({
           ...prev,
           itemId: generateItemCode(prev.name, categoryName),
         }));
       }
     }
-  }, [formData.name, formData.category, categories, mode, nanoid]);
+  }, [formData.name, formData.category, formData.itemId, categories, mode, nanoid]);
 
   useEffect(() => {
     if (!isOpen) {

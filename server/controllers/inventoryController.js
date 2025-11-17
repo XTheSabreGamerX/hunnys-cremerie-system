@@ -39,17 +39,24 @@ const getAllInventoryItems = async (req, res) => {
       });
     }
 
-    const normalizeFn = (value) => (value?.toString() || "").replace(/\s+/g, "");
+    const normalizeFn = (value) =>
+      (value?.toString() || "").replace(/\s+/g, "");
     let fuseKeys = [];
 
     if (field) {
       if (["sellingPrice", "initialStock", "maxStock"].includes(field)) {
         fuseKeys = [{ name: field, getFn: (item) => normalizeFn(item[field]) }];
       } else if (field === "unit.name") {
-        fuseKeys = [{ name: "unit.name", getFn: (item) => normalizeFn(item.unit?.name) }];
+        fuseKeys = [
+          { name: "unit.name", getFn: (item) => normalizeFn(item.unit?.name) },
+        ];
       } else if (field === "suppliers") {
         fuseKeys = [
-          { name: "suppliers", getFn: (item) => item.suppliers.map((s) => s.supplier?.name).join(" ") },
+          {
+            name: "suppliers",
+            getFn: (item) =>
+              item.suppliers.map((s) => s.supplier?.name).join(" "),
+          },
         ];
       } else {
         fuseKeys = [field];
@@ -60,15 +67,29 @@ const getAllInventoryItems = async (req, res) => {
         { name: "name", getFn: (item) => normalizeFn(item.name) },
         { name: "category", getFn: (item) => normalizeFn(item.category) },
         { name: "status", getFn: (item) => normalizeFn(item.status) },
-        { name: "sellingPrice", getFn: (item) => normalizeFn(item.sellingPrice) },
-        { name: "initialStock", getFn: (item) => normalizeFn(item.initialStock) },
+        {
+          name: "sellingPrice",
+          getFn: (item) => normalizeFn(item.sellingPrice),
+        },
+        {
+          name: "initialStock",
+          getFn: (item) => normalizeFn(item.initialStock),
+        },
         { name: "maxStock", getFn: (item) => normalizeFn(item.maxStock) },
         { name: "unit.name", getFn: (item) => normalizeFn(item.unit?.name) },
-        { name: "suppliers", getFn: (item) => item.suppliers.map((s) => s.supplier?.name).join(" ") },
+        {
+          name: "suppliers",
+          getFn: (item) =>
+            item.suppliers.map((s) => s.supplier?.name).join(" "),
+        },
       ];
     }
 
-    const fuse = new Fuse(allItems, { keys: fuseKeys, threshold: 0.4, ignoreLocation: true });
+    const fuse = new Fuse(allItems, {
+      keys: fuseKeys,
+      threshold: 0.4,
+      ignoreLocation: true,
+    });
     const fuseResults = fuse.search(normalizedSearch).map((r) => r.item);
 
     const totalItems = fuseResults.length;
@@ -77,7 +98,12 @@ const getAllInventoryItems = async (req, res) => {
       ? fuseResults
       : fuseResults.slice((page - 1) * limit, page * limit);
 
-    res.json({ items: paginatedResults, currentPage: page, totalPages, totalItems });
+    res.json({
+      items: paginatedResults,
+      currentPage: page,
+      totalPages,
+      totalItems,
+    });
   } catch (err) {
     console.error("[GET INVENTORY] Server error:", err);
     res.status(500).json({ message: "Server error while fetching inventory" });
@@ -89,7 +115,8 @@ const addInventoryItem = async (req, res) => {
   try {
     if (req.body.category) {
       const categoryDoc = await Category.findById(req.body.category);
-      if (!categoryDoc) return res.status(400).json({ message: "Invalid category" });
+      if (!categoryDoc)
+        return res.status(400).json({ message: "Invalid category" });
       req.body.category = categoryDoc.name;
     }
 
@@ -97,12 +124,34 @@ const addInventoryItem = async (req, res) => {
     const validSuppliers = [];
     for (const s of suppliersInput) {
       const supplierDoc = await Supplier.findById(s.supplier);
-      if (!supplierDoc) return res.status(400).json({ message: `Supplier not found: ${s.supplier}` });
-      validSuppliers.push({ supplier: supplierDoc._id, purchasePrice: s.purchasePrice });
+      if (!supplierDoc)
+        return res
+          .status(400)
+          .json({ message: `Supplier not found: ${s.supplier}` });
+      validSuppliers.push({
+        supplier: supplierDoc._id,
+        purchasePrice: s.purchasePrice,
+      });
     }
 
-    const item = new InventoryItem({ ...req.body, suppliers: validSuppliers, createdBy: req.user.id });
+    const item = new InventoryItem({
+      ...req.body,
+      suppliers: validSuppliers,
+      createdBy: req.user.id,
+    });
     await item.save();
+
+    // Add this inventory item to each supplier's itemsSupplied
+    for (const s of item.suppliers) {
+      await Supplier.findByIdAndUpdate(s.supplier, {
+        $push: {
+          itemsSupplied: {
+            inventoryItem: item._id,
+            purchasePrice: s.purchasePrice,
+          },
+        },
+      });
+    }
 
     try {
       await createLog({
@@ -138,13 +187,19 @@ const updateInventoryItem = async (req, res) => {
     const item = await InventoryItem.findById(req.params.id);
     if (!item) return res.status(404).json({ message: "Item not found" });
 
-    if (req.user.role === "staff" && item.createdBy.toString() !== req.user.id) {
+    if (
+      req.user.role === "staff" &&
+      item.createdBy.toString() !== req.user.id
+    ) {
       await ActionRequest.create({
         module: "Inventory",
         moduleRef: "InventoryItem",
         targetId: item._id.toString(),
         requestType: "edit",
-        details: { ...item.toObject(), note: "Staff requested to edit this item" },
+        details: {
+          ...item.toObject(),
+          note: "Staff requested to edit this item",
+        },
         requestedBy: req.user.id,
       });
 
@@ -169,12 +224,15 @@ const updateInventoryItem = async (req, res) => {
         isGlobal: false,
       });
 
-      return res.status(200).json({ message: "Your update request has been sent for approval." });
+      return res
+        .status(200)
+        .json({ message: "Your update request has been sent for approval." });
     }
 
     if (req.body.category) {
       const categoryDoc = await Category.findById(req.body.category);
-      if (!categoryDoc) return res.status(400).json({ message: "Invalid category" });
+      if (!categoryDoc)
+        return res.status(400).json({ message: "Invalid category" });
       req.body.category = categoryDoc.name;
     }
 
@@ -183,8 +241,14 @@ const updateInventoryItem = async (req, res) => {
       const validSuppliers = [];
       for (const s of suppliersInput) {
         const supplierDoc = await Supplier.findById(s.supplier);
-        if (!supplierDoc) return res.status(400).json({ message: `Supplier not found: ${s.supplier}` });
-        validSuppliers.push({ supplier: supplierDoc._id, purchasePrice: s.purchasePrice });
+        if (!supplierDoc)
+          return res
+            .status(400)
+            .json({ message: `Supplier not found: ${s.supplier}` });
+        validSuppliers.push({
+          supplier: supplierDoc._id,
+          purchasePrice: s.purchasePrice,
+        });
       }
       req.body.suppliers = validSuppliers;
     }
@@ -192,6 +256,33 @@ const updateInventoryItem = async (req, res) => {
     req.body.updatedBy = req.user.id;
     Object.assign(item, req.body);
     await item.save();
+
+    // Sync suppliers
+    const oldSuppliers = item.suppliers.map((s) => s.supplier.toString());
+    const newSuppliers = req.body.suppliers.map((s) => s.supplier);
+
+    // Remove inventory from suppliers no longer assigned
+    for (const supId of oldSuppliers) {
+      if (!newSuppliers.includes(supId)) {
+        await Supplier.findByIdAndUpdate(supId, {
+          $pull: { itemsSupplied: { inventoryItem: item._id } },
+        });
+      }
+    }
+
+    // Add inventory to new suppliers
+    for (const s of req.body.suppliers) {
+      if (!oldSuppliers.includes(s.supplier)) {
+        await Supplier.findByIdAndUpdate(s.supplier, {
+          $addToSet: {
+            itemsSupplied: {
+              inventoryItem: item._id,
+              purchasePrice: s.purchasePrice,
+            },
+          },
+        });
+      }
+    }
 
     /* try {
       await createLog({
@@ -227,7 +318,10 @@ const deleteInventoryItem = async (req, res) => {
     const item = await InventoryItem.findById(req.params.id);
     if (!item) return res.status(404).json({ message: "Item not found" });
 
-    if (req.user.role === "staff" && item.createdBy.toString() !== req.user.id) {
+    if (
+      req.user.role === "staff" &&
+      item.createdBy.toString() !== req.user.id
+    ) {
       await ActionRequest.create({
         module: "Inventory",
         moduleRef: "InventoryItem",
@@ -258,7 +352,9 @@ const deleteInventoryItem = async (req, res) => {
         isGlobal: false,
       });
 
-      return res.status(200).json({ message: "Your archive request has been sent for approval." });
+      return res
+        .status(200)
+        .json({ message: "Your archive request has been sent for approval." });
     }
 
     item.archived = true;
@@ -287,17 +383,30 @@ const deleteInventoryItem = async (req, res) => {
 // Repack inventory item
 const repackInventoryItem = async (req, res) => {
   try {
-    const { parentItemId, stockToUse, childName, unit, itemId, childStock } = req.body;
+    const { parentItemId, stockToUse, childName, unit, itemId, childStock } =
+      req.body;
 
-    if (!parentItemId || !stockToUse || !childName || !unit || !itemId || !childStock) {
+    if (
+      !parentItemId ||
+      !stockToUse ||
+      !childName ||
+      !unit ||
+      !itemId ||
+      !childStock
+    ) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
     const parentItem = await InventoryItem.findById(parentItemId);
-    if (!parentItem || parentItem.archived) return res.status(404).json({ message: "Parent item not found or archived" });
+    if (!parentItem || parentItem.archived)
+      return res
+        .status(404)
+        .json({ message: "Parent item not found or archived" });
 
     if (stockToUse > parentItem.initialStock) {
-      return res.status(400).json({ message: "Insufficient stock in parent item" });
+      return res
+        .status(400)
+        .json({ message: "Insufficient stock in parent item" });
     }
 
     parentItem.initialStock -= stockToUse;
