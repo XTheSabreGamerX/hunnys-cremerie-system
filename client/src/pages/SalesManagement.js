@@ -378,13 +378,13 @@ const SalesManagement = () => {
         <main className="pos-main">
           <section className="sales-products">
             <div className="sales-products-header">
-              <DateRangeFilter
+              {/* <DateRangeFilter
                 options={["Sales", "Product Acquisition"]}
                 onChange={(newMode) => {
                   setMode(newMode);
                   setCartItems([]);
                 }}
-              />
+              /> */}
 
               <input
                 type="text"
