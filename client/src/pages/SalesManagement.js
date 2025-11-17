@@ -4,7 +4,6 @@ import { customAlphabet } from "nanoid/non-secure";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
 import DashboardLayout from "../scripts/DashboardLayout";
 import PopupMessage from "../components/PopupMessage";
-import DateRangeFilter from "../components/DateRangeFilter";
 import { FiTrash2 } from "react-icons/fi";
 import "../styles/App.css";
 import "../styles/SalesManagement.css";
@@ -26,7 +25,7 @@ const SalesManagement = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [paginatedItems, setPaginatedItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState("Sales");
+  const [mode, /* setMode */] = useState("Sales");
   const [activeSupplier, setActiveSupplier] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
 
@@ -378,14 +377,6 @@ const SalesManagement = () => {
         <main className="pos-main">
           <section className="sales-products">
             <div className="sales-products-header">
-              {/* <DateRangeFilter
-                options={["Sales", "Product Acquisition"]}
-                onChange={(newMode) => {
-                  setMode(newMode);
-                  setCartItems([]);
-                }}
-              /> */}
-
               <input
                 type="text"
                 placeholder="Search products..."

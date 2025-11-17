@@ -41,11 +41,11 @@ const SupplierManagement = () => {
     if (!token) navigate("/login");
   }, [navigate]);
 
-  const supplierFields = [/* 
-    { label: "Supplier ID", name: "supplierId", required: "true" }, */
-    { label: "Name", name: "name", required: "true" },
-    { label: "Contact", name: "contact" },
-    { label: "Company", name: "company" },
+  const supplierFields = [
+    { label: "Name", name: "name", required: true },
+    { label: "Email", name: "email" },
+    { label: "Contact Person", name: "contactPerson" },
+    { label: "Contact Number", name: "contactNumber" },
   ];
 
   const showPopup = (message, type = "success") => {
@@ -88,6 +88,15 @@ const SupplierManagement = () => {
       showPopup("Please fill out required fields.", "error");
       return false;
     }
+
+    if (data.email) {
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(data.email)) {
+        showPopup("Please enter a valid email address.", "error");
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -103,11 +112,19 @@ const SupplierManagement = () => {
         data.supplierId = `SUP-${nanoid()}`;
       }
 
-      await authFetch(url, {
+      const res = await authFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        // API returned an error, show it
+        showPopup(result.message || "Save failed.", "error");
+        return; // stop execution
+      }
 
       await fetchSuppliers();
       setSelectedSupplier(null);
@@ -302,18 +319,16 @@ const SupplierManagement = () => {
                   {[
                     { key: "supplierId", label: "ID" },
                     { key: "name", label: "Name" },
-                    { key: "contact", label: "Contact" },
-                    { key: "company", label: "Company" },
+                    { key: "contactPerson", label: "Contact Person" },
+                    { key: "contactNumber", label: "Contact Number" },
+                    { key: "email", label: "Email" },
                     { key: "createdAt", label: "Created" },
                     { key: "updatedAt", label: "Updated" },
                   ].map(({ key, label }) => (
                     <th
                       key={key}
                       onClick={() => handleSort(key)}
-                      style={{
-                        cursor: "pointer",
-                        userSelect: "none",
-                      }}
+                      style={{ cursor: "pointer", userSelect: "none" }}
                     >
                       {label}{" "}
                       {sortField === key && (
@@ -327,15 +342,16 @@ const SupplierManagement = () => {
               <tbody>
                 {suppliers.length === 0 ? (
                   <tr>
-                    <td colSpan="7">No suppliers found.</td>
+                    <td colSpan="8">No suppliers found.</td>
                   </tr>
                 ) : (
                   suppliers.map((supplier) => (
                     <tr key={supplier._id}>
                       <td>{supplier.supplierId}</td>
                       <td>{supplier.name}</td>
-                      <td>{supplier.contact}</td>
-                      <td>{supplier.company}</td>
+                      <td>{supplier.contactPerson}</td>
+                      <td>{supplier.contactNumber}</td>
+                      <td>{supplier.email}</td>
                       <td>{new Date(supplier.createdAt).toLocaleString()}</td>
                       <td>{new Date(supplier.updatedAt).toLocaleString()}</td>
                       <td>
