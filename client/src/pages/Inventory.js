@@ -2,22 +2,22 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { customAlphabet } from "nanoid/non-secure";
 import DashboardLayout from "../scripts/DashboardLayout";
-import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
+import InventoryModal from "../components/InventoryModal";
 import CakeEditModal from "../components/CakeEditModal";
 import CakeViewModal from "../components/CakeViewModal";
 import PopupMessage from "../components/PopupMessage";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { showToast } from "../components/ToastContainer";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
-import { FaEye, FaPencilAlt } from 'react-icons/fa';
+import { FaEye, FaPencilAlt } from "react-icons/fa";
 /* import DateRangeFilter from "../components/DateRangeFilter"; */
 import "../styles/App.css";
 import "../styles/Inventory.css";
 
 const Inventory = () => {
   const [items, setItems] = useState([]);
-  const [cakeItems, setCakeItems] = useState([]);
+  const [cakeItems /* setCakeItems */] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [uoms, setUoms] = useState([]);
@@ -27,6 +27,7 @@ const Inventory = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedCake, setSelectedCake] = useState(null);
   const [modalMode, setModalMode] = useState("view");
+  const [modalOpen, setModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     unitPrice: "",
@@ -59,64 +60,6 @@ const Inventory = () => {
 
   const nanoid = customAlphabet("0123456789", 6);
   const containerRef = useRef(null);
-
-  const inventoryFields = [
-    { label: "Item Name", name: "name", required: true },
-  /*   {
-      label: "Stock",
-      name: "stock",
-      type: "number",
-      placeholder: "Leave blank if none...",
-    }, */
-    {
-      label: "Category",
-      name: "category",
-      type: "select",
-      options: (categories.inventory || []).map((c) => ({
-        value: c._id,
-        label: c.name,
-      })),
-      required: true,
-    },
-    {
-      label: "Purchase Price",
-      name: "purchasePrice",
-      type: "number",
-      placeholder: "How much the product was bought for.",
-      required: true,
-    },
-    {
-      label: "Unit Price",
-      name: "unitPrice",
-      type: "number",
-      required: true,
-      placeholder: "How much to sell the product each.",
-    },
-    { label: "Amount", name: "amount", type: "number", required: true },
-    {
-      label: "Unit of Measurement",
-      name: "unit",
-      type: "select",
-      options: uoms.map((u) => ({ value: u._id, label: u.name })),
-      required: true,
-    },
-    {
-      label: "Supplier",
-      name: "supplier",
-      type: "select",
-      options: suppliers.map((s) => ({
-        value: s._id,
-        label: s.name,
-      })),
-    },
-    {
-      label: "Restock Threshold",
-      name: "restockThreshold",
-      type: "number",
-      placeholder: "You will be notified once it reaches this amount.",
-    },
-    { label: "Expiration Date", name: "expirationDate", type: "date" },
-  ];
 
   const cakeFields = [
     {
@@ -224,54 +167,25 @@ const Inventory = () => {
   const fetchItems = useCallback(
     async (reset = false) => {
       try {
-        let url = "";
-        if (inventoryType === "Inventory") {
-          url = `${API_BASE}/api/inventory?page=${page}&limit=10&search=${encodeURIComponent(
-            searchQuery
-          )}`;
-
-          if (columnFilter.field) {
-            url += `&field=${columnFilter.field}&order=${columnFilter.order}`;
-          }
-        } else if (inventoryType === "Cake Inventory") {
-          url = `${API_BASE}/api/cake?page=${page}&limit=10&search=${encodeURIComponent(
-            searchQuery
-          )}`;
-        }
+        const url = `${API_BASE}/api/inventory?page=${page}&limit=10&search=${encodeURIComponent(
+          searchQuery
+        )}${
+          columnFilter.field
+            ? `&field=${columnFilter.field}&order=${columnFilter.order}`
+            : ""
+        }`;
 
         const res = await authFetch(url);
-
         const data = await res.json();
 
-        const wrappedData = Array.isArray(data)
-          ? inventoryType === "All Inventory"
-            ? {
-                items: data,
-                currentPage: 1,
-                totalPages: 1,
-                totalItems: data.length,
-              }
-            : {
-                cakes: data,
-                currentPage: 1,
-                totalPages: 1,
-                totalItems: data.length,
-              }
-          : data;
-
-        if (inventoryType === "Inventory") {
-          setItems(wrappedData.items || []);
-          setTotalPages(wrappedData.totalPages || 1);
-          setTotalItems(wrappedData.totalItems || 0);
-        } else {
-          setCakeItems(wrappedData.cakes || []);
-          setTotalPages(wrappedData.totalPages || 1);
-        }
+        setItems(data.items || []);
+        setTotalPages(data.totalPages || 1);
+        setTotalItems(data.totalItems || 0);
       } catch (err) {
         console.error("Error fetching inventory:", err);
       }
     },
-    [page, searchQuery, columnFilter, inventoryType]
+    [page, searchQuery, columnFilter]
   );
 
   useEffect(() => {
@@ -280,7 +194,7 @@ const Inventory = () => {
     const statusMap = {
       "low-stock": "Low-stock",
       "out-of-stock": "Out of stock",
-      "expired": "Expired",
+      expired: "Expired",
     };
 
     if (status) {
@@ -659,17 +573,6 @@ const Inventory = () => {
     }
   };
 
-  const handleAddOrEdit = async (data) => {
-    if (!validateFormData(data)) return;
-
-    if (modalMode === "edit") {
-      setPendingEditData(data);
-      setShowConfirmation(true);
-    } else {
-      await saveItem(data);
-    }
-  };
-
   const handleConfirmEdit = async () => {
     try {
       if (pendingEditData) {
@@ -826,10 +729,10 @@ const Inventory = () => {
     }
   };
 
-  const handleViewCake = (cake) => {
+  /*   const handleViewCake = (cake) => {
     setSelectedCake(cake);
     setIsViewOpen(true);
-  };
+  }; */
 
   const handleCloseCakeView = () => {
     setSelectedCake(null);
@@ -923,23 +826,31 @@ const Inventory = () => {
         />
       )}
 
-      {/* INVENTORY MODAL (Edit / Add inventory item) */}
-      {(modalMode === "edit" || modalMode === "add") && (
-        <EditModal
+      {/* INVENTORY MODAL (New Add/Edit InventoryModal) */}
+      {(modalMode === "add" || modalMode === "edit") && (
+        <InventoryModal
+          mode={modalMode}
           item={modalMode === "edit" ? selectedItem : null}
-          fields={inventoryFields}
-          onSave={handleAddOrEdit}
-          modalType="inventory"
+          isOpen={modalOpen}
           onClose={() => {
             setSelectedItem(null);
-            setModalMode("view");
+            setModalOpen(false);
+            setModalMode(null);
           }}
-          mode={modalMode}
-          formData={formData}
-          setFormData={setFormData}
+          onSuccess={() => {
+            fetchItems();
+            setSelectedItem(null);
+            setModalMode(null);
+          }}
           uoms={uoms}
+          categories={categories?.inventory || []}
+          suppliers={suppliers || []}
+          onItemAdded={(newItem) => {
+            fetchItems();
+          }}
         />
       )}
+
       {/* CAKE MODAL */}
       {(modalMode === "cake-add" || modalMode === "cake-edit") && (
         <CakeEditModal
@@ -999,6 +910,7 @@ const Inventory = () => {
               onClick={() => {
                 setSelectedItem(null);
                 setModalMode("add");
+                setModalOpen(true);
               }}
             >
               + Add Item
@@ -1020,34 +932,18 @@ const Inventory = () => {
             <table>
               <thead>
                 <tr>
-                  {(inventoryType === "Inventory"
-                    ? [
-                        { label: "ID", field: "itemId" },
-                        { label: "Item Name", field: "name" },
-                        { label: "Stock", field: "stock" },
-                        { label: "Category", field: "category" },
-                        { label: "Purchase Price", field: "purchasePrice" },
-                        { label: "Unit Price", field: "unitPrice" },
-                        { label: "Unit", field: "amount" },
-                        { label: "Supplier", field: "supplier" },
-                        { label: "Expiration Date", field: "expirationDate" },
-                        { label: "Status", field: "status" },
-                        { label: "Actions", field: null },
-                      ]
-                    : inventoryType === "Cake Inventory"
-                    ? [
-                        { label: "ID", field: "_id" },
-                        { label: "Cake Name", field: "name" },
-                        { label: "Category", field: "category" },
-                        { label: "Base Cost", field: "baseCost" },
-                        { label: "Price", field: "price" },
-                        { label: "Availability", field: "availability" },
-                        { label: "Ingredients", field: null },
-                        { label: "Status", field: "status" },
-                        { label: "Actions", field: null },
-                      ]
-                    : []
-                  ).map((col) => (
+                  {[
+                    { label: "ID", field: "itemId" },
+                    { label: "Item Name", field: "name" },
+                    { label: "Initial Stock", field: "initialStock" },
+                    { label: "Max Stock", field: "maxStock" },
+                    { label: "Unit", field: "unit.name" },
+                    { label: "Category", field: "category" },
+                    { label: "Unit Price", field: "sellingPrice" },
+                    { label: "Expiration Date", field: "expirationDate" },
+                    { label: "Status", field: "status" },
+                    { label: "Actions", field: null },
+                  ].map((col) => (
                     <th
                       key={col.label}
                       onClick={() => col.field && handleColumnClick(col.field)}
@@ -1062,131 +958,76 @@ const Inventory = () => {
                 </tr>
               </thead>
               <tbody>
-                {inventoryType === "Inventory" ? (
-                  items.length === 0 ? (
-                    <tr>
-                      <td colSpan="11">No items found.</td>
+                {items.length === 0 ? (
+                  <tr>
+                    <td colSpan="10">No items found.</td>
+                  </tr>
+                ) : (
+                  items.map((item) => (
+                    <tr key={item._id}>
+                      <td>{item.itemId}</td>
+                      <td>{item.name}</td>
+                      <td>{item.initialStock}</td>
+                      <td>{item.maxStock}</td>
+                      <td>{item.unit?.name || "—"}</td>
+                      <td>{item.category || "—"}</td>
+                      <td>₱{item.sellingPrice}</td>
+                      <td>
+                        {item.expirationDate
+                          ? new Date(item.expirationDate).toLocaleDateString(
+                              "en-PH",
+                              {
+                                timeZone: "Asia/Manila",
+                              }
+                            )
+                          : "N/A"}
+                      </td>
+                      <td>{item.status}</td>
+                      <td>
+                        <button
+                          className="module-action-btn module-edit-btn"
+                          onClick={() => {
+                            const categoryId =
+                              categories.inventory?.find(
+                                (c) =>
+                                  c._id === item.category ||
+                                  c.name === item.category
+                              )?._id || "";
+
+                            const unitId =
+                              uoms.find(
+                                (u) =>
+                                  u._id === item.unit?._id ||
+                                  u.name === item.unit?.name
+                              )?._id || "";
+
+                            const normalized = {
+                              ...item,
+                              category: categoryId,
+                              unit: unitId,
+                            };
+
+                            setSelectedItem(item);
+                            setFormData(normalized);
+                            setModalMode("edit");
+                          }}
+                        >
+                          <FaPencilAlt />
+                        </button>
+                        <button
+                          className="module-action-btn module-view-btn"
+                          onClick={() => {
+                            setViewedItem(item);
+                            setIsViewOpen(true);
+                          }}
+                          title="View Item"
+                        >
+                          <FaEye />
+                        </button>
+                      </td>
                     </tr>
-                  ) : (
-                    items.map((item) => (
-                      <tr key={item._id}>
-                        <td>{item.itemId}</td>
-                        <td>{item.name}</td>
-                        <td>{item.stock}</td>
-                        <td>
-                          {/* show category name if categories are loaded */}
-                          {(Array.isArray(categories.inventory) &&
-                            categories.inventory.find(
-                              (c) => c._id === item.category
-                            )?.name) ||
-                            item.category ||
-                            "—"}
-                        </td>
-                        <td>₱{item.purchasePrice}</td>
-                        <td>₱{item.unitPrice}</td>
-                        <td>
-                          {item.amount
-                            ? `${item.amount} ${item.unit?.name || ""}`
-                            : "—"}
-                        </td>
-                        <td>
-                          {suppliers.find((s) => s._id === item.supplier)
-                            ?.name || "—"}
-                        </td>
-                        <td>
-                          {item.expirationDate
-                            ? new Date(item.expirationDate).toLocaleDateString(
-                                "en-PH",
-                                { timeZone: "Asia/Manila" }
-                              )
-                            : "N/A"}
-                        </td>
-                        <td>{item.status}</td>
-                        <td>
-                          <button
-                            className="module-action-btn module-edit-btn"
-                            onClick={() => {
-                              const categoryId =
-                                categories.inventory?.find(
-                                  (c) =>
-                                    c._id === item.category ||
-                                    c._id === item.category?._id ||
-                                    c.name === item.category
-                                )?._id || "";
-
-                              const unitId =
-                                uoms.find(
-                                  (u) =>
-                                    u._id === item.unit ||
-                                    u._id === item.unit?._id ||
-                                    u.name === item.unit
-                                )?._id || "";
-
-                              const normalized = {
-                                ...item,
-                                category: categoryId,
-                                unit: unitId,
-                              };
-
-                              setSelectedItem(item);
-                              setFormData(normalized);
-                              setModalMode("edit");
-                            }}
-                          >
-                            <FaPencilAlt />
-                          </button>
-                          <button
-                            className="module-action-btn module-view-btn"
-                            onClick={() => {
-                              setViewedItem(item);
-                              setIsViewOpen(true);
-                            }}
-                            title="View Item"
-                          >
-                            <FaEye/>
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )
-                ) : inventoryType === "Cake Inventory" ? (
-                  cakeItems.length === 0 ? (
-                    <tr>
-                      <td colSpan="9">No cakes found.</td>
-                    </tr>
-                  ) : (
-                    cakeItems.map((cake) => (
-                      <tr key={cake._id}>
-                        <td>{cake._id}</td>
-                        <td>{cake.name}</td>
-                        <td>
-                          {/* cake category name if available */}
-                          {(Array.isArray(categories.cake) &&
-                            categories.cake.find((c) => c._id === cake.category)
-                              ?.name) ||
-                            cake.category ||
-                            "—"}
-                        </td>
-                        <td>₱{cake.baseCost || 0}</td>
-                        <td>₱{cake.price || 0}</td>
-                        <td>{cake.availability || "—"}</td>
-                        <td>{cake.ingredients?.length || 0}</td>
-                        <td>{cake.status || "—"}</td>
-                        <td>
-                          <button
-                            className="module-action-btn module-view-btn"
-                            onClick={() => {
-                              // Use selectedCake + handleViewCake so CakeViewModal receives the cake
-                              handleViewCake(cake);
-                            }}
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )
-                ) : null}
+                  ))
+                )}
               </tbody>
             </table>
           </div>
