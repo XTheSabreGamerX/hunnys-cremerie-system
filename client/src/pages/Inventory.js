@@ -41,7 +41,7 @@ const Inventory = () => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [popupMessage, setPopupMessage] = useState("");
-  const [popupType, setPopupType] = useState("success");
+  const [popupType, /* setPopupType */] = useState("success");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -155,14 +155,14 @@ const Inventory = () => {
     },
   ];
 
-  const showPopup = (message, type = "success") => {
+  /* const showPopup = (message, type = "success") => {
     setPopupMessage(message);
     setPopupType(type);
     setTimeout(() => {
       setPopupMessage("");
       setPopupType("success");
     }, 2000);
-  };
+  }; */
 
   const fetchItems = useCallback(
     async (reset = false) => {
@@ -296,7 +296,7 @@ const Inventory = () => {
     setPendingCakeData(null);
   }; */
 
-  const validateFormData = (data) => {
+  /*  const validateFormData = (data) => {
     if (modalMode === "cake-add" || modalMode === "cake-edit") {
       if (!data.name || !String(data.name).trim()) {
         showPopup("Please enter the cake name.", "error");
@@ -386,7 +386,7 @@ const Inventory = () => {
 
     return true;
   };
-
+ */
   const handleColumnClick = (field) => {
     if (columnFilter.field === field) {
       if (columnFilter.order === "asc") {
@@ -681,53 +681,35 @@ const Inventory = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  /* const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData) return;
+    setLoading(true);
+    setError("");
 
-    // Normalize ingredients for Cake Schema
-    const normalizedIngredients = Array.isArray(formData.ingredients)
-      ? formData.ingredients.map((ing) => ({
-          inventoryItem: ing._id || ing.value || ing.inventoryItem || null,
-          quantity: Number(ing.quantity) || 1,
-        }))
-      : [];
+    try {
+      const url =
+        mode === "edit"
+          ? `${API_BASE}/api/inventory/${selectedItem._id}`
+          : `${API_BASE}/api/inventory`;
 
-    const normalizedData = {
-      ...formData,
-      unitPrice: Number(formData.unitPrice) || 0,
-      amount: Number(formData.amount) || 0,
-      price: Number(formData.price) || 0,
-      // category should remain as selected value (id or object handled later in saveItem)
-      availability:
-        formData.availability === "Regular" ? "Always" : formData.availability,
-      seasonalPeriod:
-        formData.availability === "Seasonal"
-          ? {
-              startDate: formData.seasonalPeriod?.startDate || "",
-              endDate: formData.seasonalPeriod?.endDate || "",
-            }
-          : undefined,
-      ingredients: normalizedIngredients,
-    };
+      const method = mode === "edit" ? "PUT" : "POST";
 
-    if (!validateFormData(normalizedData)) return;
-
-    if (modalMode === "cake-edit") {
-      setPendingCakeData(normalizedData);
-      setShowConfirmation(true);
-    } else {
-      saveItem(normalizedData);
-      closeModal();
-      showToast({
-        message: `Cake ${
-          modalMode.includes("add") ? "added" : "updated"
-        } successfully!`,
-        type: "success",
-        duration: 3000,
+      const res = await authFetch(url, {
+        method,
+        body: JSON.stringify(formData),
       });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to save item");
+
+      onItemAdded(data);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-  };
+  }; */
 
   /*   const handleViewCake = (cake) => {
     setSelectedCake(cake);
@@ -863,7 +845,6 @@ const Inventory = () => {
           ingredientForm={ingredientForm}
           setIngredientForm={setIngredientForm}
           handleAddIngredient={handleAddIngredient}
-          handleSubmit={handleSubmit}
           handleChange={handleChange}
           handleSeasonalChange={handleSeasonalChange}
           onClose={closeModal}
@@ -933,7 +914,7 @@ const Inventory = () => {
               <thead>
                 <tr>
                   {[
-                    { label: "ID", field: "itemId" },
+                    { label: "Item Code", field: "itemId" },
                     { label: "Item Name", field: "name" },
                     { label: "Initial Stock", field: "initialStock" },
                     { label: "Max Stock", field: "maxStock" },
@@ -987,33 +968,47 @@ const Inventory = () => {
                         <button
                           className="module-action-btn module-edit-btn"
                           onClick={() => {
+                            // Normalize Category (backend sends category NAME)
                             const categoryId =
                               categories.inventory?.find(
-                                (c) =>
-                                  c._id === item.category ||
-                                  c.name === item.category
+                                (c) => c.name === item.category
                               )?._id || "";
 
                             const unitId =
-                              uoms.find(
-                                (u) =>
-                                  u._id === item.unit?._id ||
-                                  u.name === item.unit?.name
-                              )?._id || "";
+                              item.unit?._id ||
+                              item.unit?.$oid ||
+                              item.unit ||
+                              "";
+
+                            const normalizedSuppliers =
+                              item.suppliers?.map((s) => ({
+                                supplier:
+                                  s.supplier?._id ||
+                                  s.supplier?.$oid ||
+                                  s.supplier ||
+                                  "",
+                                purchasePrice: s.purchasePrice,
+                                _id: s._id?.$oid || s._id,
+                              })) || [];
 
                             const normalized = {
                               ...item,
                               category: categoryId,
                               unit: unitId,
+                              suppliers: normalizedSuppliers,
+                              expirationDate:
+                                item.expirationDate?.$date?.split("T")[0] || "",
                             };
 
                             setSelectedItem(item);
                             setFormData(normalized);
                             setModalMode("edit");
+                            setModalOpen(true);
                           }}
                         >
                           <FaPencilAlt />
                         </button>
+
                         <button
                           className="module-action-btn module-view-btn"
                           onClick={() => {

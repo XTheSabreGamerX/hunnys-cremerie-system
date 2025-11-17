@@ -193,7 +193,7 @@ const updateInventoryItem = async (req, res) => {
     Object.assign(item, req.body);
     await item.save();
 
-    try {
+    /* try {
       await createLog({
         action: "Updated Item",
         module: "Inventory",
@@ -208,7 +208,7 @@ const updateInventoryItem = async (req, res) => {
       });
     } catch (logErr) {
       console.error("[Activity Log] Failed to log update:", logErr.message);
-    }
+    } */
 
     res.json(item);
   } catch (err) {

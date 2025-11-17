@@ -11,6 +11,8 @@ const InventoryModal = ({
   uoms,
   suppliers,
   onItemAdded,
+  mode = "add",
+  item = null,
 }) => {
   const [formData, setFormData] = useState({
     itemId: "",
@@ -33,12 +35,41 @@ const InventoryModal = ({
 
   const nanoid = customAlphabet("0123456789", 6);
 
-  const generateItemCode = (name, categoryName) => {
-    const namePart = (name?.substring(0, 3) || "XXX").toUpperCase();
-    const categoryPart = (categoryName?.substring(0, 3) || "XXX").toUpperCase();
-    const randomPart = nanoid();
-    return `${namePart}-${categoryPart}-${randomPart}`;
-  };
+  useEffect(() => {
+    if (mode === "edit" && item) {
+      // Normalize Category
+      const categoryId =
+        typeof item.category === "object"
+          ? item.category?._id || ""
+          : categories.find((c) => c.name === item.category)?._id ||
+            item.category ||
+            "";
+
+      // Normalize Unit
+      const unitId = item.unit?._id || item.unit?.$oid || item.unit || "";
+
+      // Normalize Suppliers
+      const normalizedSuppliers =
+        item.suppliers?.map((s) => ({
+          supplier: s.supplier?._id || s.supplier?.$oid || s.supplier || "",
+          purchasePrice: s.purchasePrice,
+          _id: s._id?.$oid || s._id,
+        })) || [];
+
+      // Normalize expiration date
+      const expirationDate = item.expirationDate?.$date
+        ? item.expirationDate.$date.split("T")[0]
+        : item.expirationDate?.split?.("T")[0] || "";
+
+      setFormData({
+        ...item,
+        category: categoryId,
+        unit: unitId,
+        suppliers: normalizedSuppliers,
+        expirationDate,
+      });
+    }
+  }, [mode, item, categories]);
 
   const calculateStatus = (initialStock, maxStock, expirationDate) => {
     const now = new Date();
@@ -52,26 +83,44 @@ const InventoryModal = ({
   };
 
   const isFormValid = () => {
-    return (
-      formData.name.trim() &&
-      formData.category &&
-      formData.unit &&
-      formData.initialStock >= 0 &&
-      formData.maxStock > 0 &&
-      formData.sellingPrice >= 0
-    );
+    if (!formData.name.trim() || !formData.category || !formData.unit)
+      return false;
+    if (
+      formData.initialStock < 0 ||
+      formData.maxStock <= 0 ||
+      formData.sellingPrice < 0
+    )
+      return false;
+    if (formData.initialStock > formData.maxStock) return false;
+    if (formData.expirationDate) {
+      const expDate = new Date(formData.expirationDate);
+      const now = new Date();
+      if (expDate < now.setHours(0, 0, 0, 0)) return false;
+    }
+    return true;
   };
 
   useEffect(() => {
-    const categoryName =
-      categories.find((c) => c._id === formData.category)?.name || "";
-    if (formData.name && categoryName) {
-      setFormData((prev) => ({
-        ...prev,
-        itemId: generateItemCode(prev.name, categoryName),
-      }));
+    if (mode === "add") {
+      const generateItemCode = (name, categoryName) => {
+        const namePart = (name?.substring(0, 3) || "XXX").toUpperCase();
+        const categoryPart = (
+          categoryName?.substring(0, 3) || "XXX"
+        ).toUpperCase();
+        const randomPart = nanoid();
+        return `${namePart}-${categoryPart}-${randomPart}`;
+      };
+
+      const categoryName =
+        categories.find((c) => c._id === formData.category)?.name || "";
+      if (formData.name && categoryName) {
+        setFormData((prev) => ({
+          ...prev,
+          itemId: generateItemCode(prev.name, categoryName),
+        }));
+      }
     }
-  }, [formData.name, formData.category, categories]);
+  }, [formData.name, formData.category, categories, mode, nanoid]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -130,19 +179,23 @@ const InventoryModal = ({
     setError("");
 
     try {
-      const res = await authFetch(`${API_BASE}/api/inventory`, {
-        method: "POST",
+      const isEdit = mode === "edit";
+      const url = isEdit
+        ? `${API_BASE}/api/inventory/${item._id}`
+        : `${API_BASE}/api/inventory`;
+      const method = isEdit ? "PUT" : "POST";
+
+      const res = await authFetch(url, {
+        method,
         body: JSON.stringify(formData),
       });
 
       const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to save item");
 
-      if (!res.ok) throw new Error(data.message || "Failed to add item");
-
-      onItemAdded(data);
-      onClose();
+      onItemAdded?.(data);
+      onClose?.();
     } catch (err) {
-      console.error(err);
       setError(err.message);
     } finally {
       setLoading(false);
