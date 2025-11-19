@@ -7,6 +7,7 @@ const createNotification = async ({
   roles = [],
   userId = null,
   isGlobal = null,
+  eventType = "general",
 }) => {
   if (!message) throw new Error("Message is required");
 
@@ -18,6 +19,7 @@ const createNotification = async ({
     roles,
     userId: userId || null,
     isGlobal: finalIsGlobal,
+    eventType,
   });
 
   return await notification.save();
@@ -29,7 +31,7 @@ const getUserNotifications = async (req, res) => {
     const user = req.user;
     if (!user) return res.status(401).json({ message: "Unauthorized" });
 
-    const userId =req.user.id?.toString();
+    const userId = req.user.id?.toString();
     const userRole = user.role;
 
     const page = parseInt(req.query.page) || 1;

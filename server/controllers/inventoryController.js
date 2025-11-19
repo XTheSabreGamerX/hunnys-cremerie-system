@@ -1,6 +1,7 @@
 const Fuse = require("fuse.js");
 const InventoryItem = require("../models/InventoryItem");
 const Repack = require("../models/Repack");
+const User = require("../models/User");
 const Category = require("../models/Category");
 const Supplier = require("../models/Supplier");
 const { createNotification } = require("./notificationController");
@@ -657,6 +658,116 @@ const batchUpdateStatuses = async () => {
   }
 };
 
+// ---------------------------- DAILY INVENTORY UPDATE ----------------------------
+const generateInventoryTable = ({
+  criticalItems,
+  lowStockItems,
+  outOfStockItems,
+}) => {
+  let html = `<h2>Daily Inventory Summary</h2>`;
+  const sections = [
+    { title: "Critical", items: criticalItems },
+    { title: "Low Stock", items: lowStockItems },
+    { title: "Out of Stock", items: outOfStockItems },
+  ];
+
+  for (const sec of sections) {
+    if (sec.items.length > 0) {
+      html += `<h3>${sec.title} (${sec.items.length})</h3>`;
+      html += `<table border="1" cellpadding="5" cellspacing="0">
+        <tr>
+          <th>Item ID</th>
+          <th>Name</th>
+          <th>Current Stock</th>
+          <th>Threshold</th>
+          <th>Status</th>
+        </tr>`;
+      for (const item of sec.items) {
+        html += `<tr>
+          <td>${item.itemId}</td>
+          <td>${item.name}</td>
+          <td>${item.currentStock}</td>
+          <td>${item.threshold}</td>
+          <td>${item.status}</td>
+        </tr>`;
+      }
+      html += `</table><br/>`;
+    }
+  }
+
+  return html;
+};
+
+const sendDailyInventoryNotifications = async () => {
+  try {
+    const today = new Date().toDateString();
+
+    // Check if a notification was already sent today
+    const existing = await Notification.findOne({
+      type: "InventoryDailySummary",
+    }).sort({ createdAt: -1 });
+
+    if (existing && new Date(existing.createdAt).toDateString() === today) {
+      console.log("Daily inventory notification already sent today.");
+      return;
+    }
+
+    // Run batch update and get classified items
+    const { criticalItems, lowStockItems, outOfStockItems } =
+      await batchUpdateStatuses();
+
+    if (
+      criticalItems.length === 0 &&
+      lowStockItems.length === 0 &&
+      outOfStockItems.length === 0
+    ) {
+      console.log("No inventory issues today.");
+      return;
+    }
+
+    // Create summary message
+    let message = "Daily Inventory Summary:\n";
+    if (criticalItems.length > 0)
+      message += `• Critical: ${criticalItems.length}\n`;
+    if (lowStockItems.length > 0)
+      message += `• Low Stock: ${lowStockItems.length}\n`;
+    if (outOfStockItems.length > 0)
+      message += `• Out of Stock: ${outOfStockItems.length}\n`;
+
+    // Save a single summary notification in DB
+    await Notification.create({
+      title: "Inventory Status Alert",
+      message,
+      type: "general",
+      isGlobal: true,
+    });
+
+    // Generate HTML table for email
+    const htmlTable = generateInventoryTable({
+      criticalItems,
+      lowStockItems,
+      outOfStockItems,
+    });
+
+    // Send email
+    const recipients = await User.find({
+      role: { $in: ["admin", "owner", "manager"] },
+      email: { $exists: true, $ne: "" },
+    });
+    const adminEmails = recipients.map((u) => u.email);
+    await transporter.sendMail({
+      from: `"Hunny's Cremerie" <${process.env.EMAIL_USER}>`,
+      to: adminEmails.join(","),
+      subject: "Daily Inventory Summary",
+      html: htmlTable,
+    });
+
+    console.log("Daily inventory notification & email sent.");
+  } catch (err) {
+    console.error("[DAILY NOTIFICATION] Error:", err);
+  }
+};
+
 module.exports = {
   getAllInventoryItems,
   addInventoryItem,
@@ -664,4 +775,5 @@ module.exports = {
   deleteInventoryItem,
   repackInventoryItem,
   batchUpdateStatuses,
+  sendDailyInventoryNotifications,
 };

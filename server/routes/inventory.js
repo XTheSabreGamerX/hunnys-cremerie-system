@@ -8,6 +8,7 @@ const {
   deleteInventoryItem,
   repackInventoryItem,
   batchUpdateStatuses,
+  sendDailyInventoryNotifications,
 } = require('../controllers/inventoryController');
 
 // Routes for Inventory
@@ -22,5 +23,7 @@ router.delete('/:id', authenticateToken, deleteInventoryItem);
 router.post('/repack', authenticateToken, repackInventoryItem);
 
 router.post('/inventory/check-status', batchUpdateStatuses);
+
+router.post('/inventory/daily-update', sendDailyInventoryNotifications);
 
 module.exports = router;

@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cron = require("node-cron");
 const cors = require("cors");
+const nodemailer = require('nodemailer');
 require("dotenv").config();
 
 const authRoutes = require("./routes/auth");
@@ -25,7 +26,10 @@ const backupRoutes = require("./routes/backup");
 const settingsRoutes = require("./routes/settings");
 const app = express();
 
-const { batchUpdateStatuses } = require("./controllers/inventoryController");
+const {
+  batchUpdateStatuses,
+  sendDailyInventoryNotifications,
+} = require("./controllers/inventoryController");
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI =
@@ -96,6 +100,17 @@ app.use("/api/cake", cakeRoutes);
 app.use("/api/backup", backupRoutes);
 app.use("/api/settings", settingsRoutes);
 
+// Nodemailer
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST,
+  port: Number(process.env.EMAIL_PORT),
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+});
+
 // Cron scheduler. Runs every 15 minutes to update inventory item status.
 cron.schedule("*/15 * * * *", async () => {
   console.log("Running inventory status batch update...");
@@ -106,6 +121,24 @@ cron.schedule("*/15 * * * *", async () => {
     console.error("Error updating inventory status: An error occurred.");
   }
 });
+
+// Runs every day at 12:00 AM PH time
+cron.schedule(
+  "0 0 * * *",
+  async () => {
+    console.log("Running inventory status batch update...");
+    try {
+      await sendDailyInventoryNotifications();
+
+      console.log("Inventory status updated successfully!");
+    } catch (error) {
+      console.error("Error updating inventory status:", error);
+    }
+  },
+  {
+    timezone: "Asia/Manila",
+  }
+);
 
 if (!MONGO_URI) {
   console.error("MONGO_URI is not defined. Please check your .env file.");
