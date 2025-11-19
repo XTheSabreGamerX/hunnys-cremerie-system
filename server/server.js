@@ -2,7 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cron = require("node-cron");
 const cors = require("cors");
-const nodemailer = require('nodemailer');
+/* const nodemailer = require('nodemailer'); */
 require("dotenv").config();
 
 const authRoutes = require("./routes/auth");
@@ -100,7 +100,7 @@ app.use("/api/cake", cakeRoutes);
 app.use("/api/backup", backupRoutes);
 app.use("/api/settings", settingsRoutes);
 
-// Nodemailer
+/* // Nodemailer
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
   port: Number(process.env.EMAIL_PORT),
@@ -109,7 +109,7 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,
   },
-});
+}); */
 
 // Cron scheduler. Runs every 15 minutes to update inventory item status.
 cron.schedule("*/15 * * * *", async () => {
