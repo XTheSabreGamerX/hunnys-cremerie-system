@@ -8,9 +8,10 @@ const inventoryItemSchema = new mongoose.Schema(
     name: { type: String, required: true },
 
     // Stock fields
-    initialStock: { type: Number, min: 0, default: 0 },
-    maxStock: { type: Number, min: 1, default: 1 },
+    currentStock: { type: Number, min: 0, default: 0 },
+    threshold: { type: Number, min: 0, default: 0 }, // low-stock warning
 
+    markup: { type: Number, min: 0, default: 0 },
     sellingPrice: { type: Number, required: true, min: 0 },
 
     category: { type: String },
@@ -20,6 +21,7 @@ const inventoryItemSchema = new mongoose.Schema(
       {
         supplier: { type: mongoose.Schema.Types.ObjectId, ref: "Supplier" },
         purchasePrice: { type: Number, min: 0 },
+        isPreferred: { type: Boolean, default: false },
       },
     ],
 
@@ -43,6 +45,22 @@ const inventoryItemSchema = new mongoose.Schema(
     },
 
     repackedItems: [{ type: mongoose.Schema.Types.ObjectId, ref: "Repack" }],
+
+    stockHistory: [
+      {
+        type: {
+          type: String,
+          enum: ["Restock", "Sale", "Adjustment", "Refund", "Created"],
+          required: true,
+        },
+        quantity: { type: Number, required: true },
+        previousStock: { type: Number, required: true },
+        newStock: { type: Number, required: true },
+        date: { type: Date, default: Date.now },
+        note: { type: String },
+      },
+    ],
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -53,20 +71,20 @@ const inventoryItemSchema = new mongoose.Schema(
 );
 
 // Status calculation function
-function calculateStatus(initialStock, maxStock, expirationDate) {
+function calculateStatus(currentStock, threshold, expirationDate) {
   const now = new Date();
   if (expirationDate && expirationDate < now) return "Expired";
-  if (initialStock <= 0) return "Out of stock";
-  if (initialStock <= maxStock * 0.1) return "Critical";
-  if (initialStock <= maxStock * 0.2) return "Low-stock";
+  if (currentStock <= 0) return "Out of stock";
+  if (currentStock <= threshold / 4) return "Critical";
+  if (currentStock <= threshold / 3) return "Low-stock";
   return "Well-stocked";
 }
 
 // Pre-save hook
 inventoryItemSchema.pre("save", function (next) {
   this.status = calculateStatus(
-    this.initialStock,
-    this.maxStock,
+    this.currentStock,
+    this.threshold,
     this.expirationDate
   );
   next();
@@ -79,16 +97,16 @@ inventoryItemSchema.pre("findOneAndUpdate", async function (next) {
     const currentDoc = await this.model.findOne(this.getQuery());
 
     const initialStock =
-      update.initialStock ??
-      (update.$set ? update.$set.initialStock : currentDoc.initialStock);
+      update.currentStock ??
+      (update.$set ? update.$set.currentStock : currentDoc.currentStock);
     const maxStock =
-      update.maxStock ??
-      (update.$set ? update.$set.maxStock : currentDoc.maxStock);
+      update.threshold ??
+      (update.$set ? update.$set.threshold : currentDoc.threshold);
     const expirationDate =
       update.expirationDate ??
       (update.$set ? update.$set.expirationDate : currentDoc.expirationDate);
 
-    update.status = calculateStatus(initialStock, maxStock, expirationDate);
+    update.status = calculateStatus(currentStock, threshold, expirationDate);
     this.setUpdate(update);
     next();
   } catch (err) {

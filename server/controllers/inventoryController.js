@@ -3,11 +3,28 @@ const InventoryItem = require("../models/InventoryItem");
 const Repack = require("../models/Repack");
 const Category = require("../models/Category");
 const Supplier = require("../models/Supplier");
-const { createNotification } = require("../controllers/notificationController");
-const { createLog } = require("../controllers/activityLogController");
+const { createNotification } = require("./notificationController");
+const { createLog } = require("./activityLogController");
 const ActionRequest = require("../models/ActionRequest");
 
-// GET all inventory items (with search + pagination + fuzzy search)
+// Helper: compute selling price based on preferred supplier and markup
+const computeSellingPrice = (suppliers, markup) => {
+  const preferred = suppliers.find((s) => s.isPreferred);
+  if (!preferred) return 0;
+  return preferred.purchasePrice * (1 + markup / 100);
+};
+
+// Helper: calculate status based on currentStock, threshold, expirationDate
+const calculateStatus = (currentStock, threshold, expirationDate) => {
+  const now = new Date();
+  if (expirationDate && expirationDate < now) return "Expired";
+  if (currentStock <= 0) return "Out of stock";
+  if (currentStock <= threshold / 4) return "Critical";
+  if (currentStock <= threshold / 3) return "Low-stock";
+  return "Well-stocked";
+};
+
+// ---------------------------- GET INVENTORY ----------------------------
 const getAllInventoryItems = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -44,7 +61,7 @@ const getAllInventoryItems = async (req, res) => {
     let fuseKeys = [];
 
     if (field) {
-      if (["sellingPrice", "initialStock", "maxStock"].includes(field)) {
+      if (["sellingPrice", "currentStock", "threshold"].includes(field)) {
         fuseKeys = [{ name: field, getFn: (item) => normalizeFn(item[field]) }];
       } else if (field === "unit.name") {
         fuseKeys = [
@@ -72,10 +89,10 @@ const getAllInventoryItems = async (req, res) => {
           getFn: (item) => normalizeFn(item.sellingPrice),
         },
         {
-          name: "initialStock",
-          getFn: (item) => normalizeFn(item.initialStock),
+          name: "currentStock",
+          getFn: (item) => normalizeFn(item.currentStock),
         },
-        { name: "maxStock", getFn: (item) => normalizeFn(item.maxStock) },
+        { name: "threshold", getFn: (item) => normalizeFn(item.threshold) },
         { name: "unit.name", getFn: (item) => normalizeFn(item.unit?.name) },
         {
           name: "suppliers",
@@ -110,9 +127,10 @@ const getAllInventoryItems = async (req, res) => {
   }
 };
 
-// Adding a new inventory item
+// ---------------------------- ADD INVENTORY ----------------------------
 const addInventoryItem = async (req, res) => {
   try {
+    // Category
     if (req.body.category) {
       const categoryDoc = await Category.findById(req.body.category);
       if (!categoryDoc)
@@ -120,6 +138,7 @@ const addInventoryItem = async (req, res) => {
       req.body.category = categoryDoc.name;
     }
 
+    // Suppliers
     const suppliersInput = req.body.suppliers || [];
     const validSuppliers = [];
     for (const s of suppliersInput) {
@@ -131,20 +150,64 @@ const addInventoryItem = async (req, res) => {
       validSuppliers.push({
         supplier: supplierDoc._id,
         purchasePrice: s.purchasePrice,
+        isPreferred: !!s.isPreferred,
       });
     }
+
+    // Ensure one preferred supplier
+    if (
+      !validSuppliers.some((s) => s.isPreferred) &&
+      validSuppliers.length > 0
+    ) {
+      validSuppliers[0].isPreferred = true;
+    }
+
+    // Selling Price Calculation
+    let sellingPrice;
+    if (validSuppliers.length > 0) {
+      sellingPrice = computeSellingPrice(validSuppliers, req.body.markup || 0);
+    } else if (req.body.sellingPrice != null) {
+      // apply markup to manual input
+      const markup = Number(req.body.markup || 0);
+      sellingPrice =
+        Math.round(req.body.sellingPrice * (1 + markup / 100) * 100) / 100;
+    } else {
+      sellingPrice = 0;
+    }
+
+    const { currentStock = 0 } = req.body;
 
     const item = new InventoryItem({
       ...req.body,
       suppliers: validSuppliers,
+      sellingPrice,
+      status: calculateStatus(
+        currentStock,
+        req.body.threshold || 0,
+        req.body.expirationDate
+      ),
+      stockHistory:
+        currentStock > 0
+          ? [
+              {
+                type: "Created",
+                quantity: currentStock,
+                previousStock: 0,
+                newStock: currentStock,
+                date: new Date(),
+                note: "Initial item creation.",
+              },
+            ]
+          : [],
       createdBy: req.user.id,
     });
+
     await item.save();
 
-    // Add this inventory item to each supplier's itemsSupplied
+    // Add item to supplier records
     for (const s of item.suppliers) {
       await Supplier.findByIdAndUpdate(s.supplier, {
-        $push: {
+        $addToSet: {
           itemsSupplied: {
             inventoryItem: item._id,
             purchasePrice: s.purchasePrice,
@@ -153,22 +216,18 @@ const addInventoryItem = async (req, res) => {
       });
     }
 
-    try {
-      await createLog({
-        action: "Added Item",
-        module: "Inventory",
-        description: `An inventory item was added: ${item.name}`,
-        userId: req.user.id,
-      });
+    await createLog({
+      action: "Added Item",
+      module: "Inventory",
+      description: `Inventory item "${item.name}" was added.`,
+      userId: req.user.id,
+    });
 
-      await createNotification({
-        message: `An inventory item "${item.name}" was created.`,
-        type: "success",
-        roles: ["admin", "owner", "manager"],
-      });
-    } catch (logErr) {
-      console.error("[Activity Log] Failed to log addition:", logErr.message);
-    }
+    await createNotification({
+      message: `Inventory item "${item.name}" was created.`,
+      type: "success",
+      roles: ["admin", "owner", "manager"],
+    });
 
     res.status(201).json(item);
   } catch (err) {
@@ -181,12 +240,13 @@ const addInventoryItem = async (req, res) => {
   }
 };
 
-// Updating an inventory item
+// ---------------------------- UPDATE INVENTORY ----------------------------
 const updateInventoryItem = async (req, res) => {
   try {
     const item = await InventoryItem.findById(req.params.id);
     if (!item) return res.status(404).json({ message: "Item not found" });
 
+    // Staff request logic
     if (
       req.user.role === "staff" &&
       item.createdBy.toString() !== req.user.id
@@ -211,7 +271,7 @@ const updateInventoryItem = async (req, res) => {
       });
 
       await createNotification({
-        message: `An update request for inventory item: "${item.name}" is pending for approval.`,
+        message: `An update request for inventory item: "${item.name}" is pending approval.`,
         type: "warning",
         roles: ["admin", "owner", "manager"],
       });
@@ -229,6 +289,7 @@ const updateInventoryItem = async (req, res) => {
         .json({ message: "Your update request has been sent for approval." });
     }
 
+    // Category
     if (req.body.category) {
       const categoryDoc = await Category.findById(req.body.category);
       if (!categoryDoc)
@@ -236,43 +297,133 @@ const updateInventoryItem = async (req, res) => {
       req.body.category = categoryDoc.name;
     }
 
+    // Suppliers
+    let finalSuppliers = item.suppliers; // default to existing suppliers
     if (req.body.suppliers) {
       const suppliersInput = req.body.suppliers;
-      const validSuppliers = [];
+      finalSuppliers = [];
       for (const s of suppliersInput) {
         const supplierDoc = await Supplier.findById(s.supplier);
         if (!supplierDoc)
           return res
             .status(400)
             .json({ message: `Supplier not found: ${s.supplier}` });
-        validSuppliers.push({
+        finalSuppliers.push({
           supplier: supplierDoc._id,
           purchasePrice: s.purchasePrice,
+          isPreferred: !!s.isPreferred,
         });
       }
-      req.body.suppliers = validSuppliers;
+      // Ensure at least one preferred supplier
+      if (
+        !finalSuppliers.some((s) => s.isPreferred) &&
+        finalSuppliers.length > 0
+      ) {
+        finalSuppliers[0].isPreferred = true;
+      }
+      req.body.suppliers = finalSuppliers;
     }
 
-    req.body.updatedBy = req.user.id;
+    // Selling price calculation
+    if (req.body.sellingPrice != null) {
+      // If user manually set sellingPrice, optionally apply markup
+      const markupPercent = req.body.markup ?? item.markup ?? 0;
+      req.body.sellingPrice = Math.max(
+        0,
+        parseFloat(req.body.sellingPrice) * (1 + markupPercent / 100)
+      );
+    } else if (finalSuppliers.length > 0) {
+      // Compute selling price from suppliers + markup
+      req.body.sellingPrice = computeSellingPrice(
+        finalSuppliers,
+        req.body.markup ?? item.markup ?? 0
+      );
+    } else {
+      // fallback
+      req.body.sellingPrice = item.sellingPrice ?? 0;
+    }
+
+    const previousStock = item.currentStock;
+
+    // Apply incoming updates
     Object.assign(item, req.body);
+
+    // Stock history / adjustment log
+    if (
+      previousStock !== item.currentStock ||
+      req.body.sellingPrice !== undefined ||
+      req.body.threshold !== undefined ||
+      req.body.unit !== undefined ||
+      req.body.expirationDate !== undefined
+    ) {
+      const changes = [];
+
+      if (previousStock !== item.currentStock) {
+        changes.push(
+          `Stock changed from ${previousStock} to ${item.currentStock}`
+        );
+      }
+
+      if (
+        req.body.sellingPrice !== undefined &&
+        req.body.sellingPrice !== item.sellingPrice
+      ) {
+        changes.push(`Selling price updated to ${item.sellingPrice}`);
+      }
+
+      if (
+        req.body.threshold !== undefined &&
+        req.body.threshold !== item.threshold
+      ) {
+        changes.push(`Threshold updated to ${item.threshold}`);
+      }
+
+      const noteText = req.body.note
+        ? `${req.user.username}: ${req.body.note}${
+            changes.length > 0 ? " | " + changes.join("; ") : ""
+          }`
+        : `${req.user.username} updated inventory${
+            changes.length > 0 ? ": " + changes.join("; ") : ""
+          }`;
+
+      item.stockHistory.push({
+        type: "Adjustment",
+        quantity: Math.abs(item.currentStock - previousStock),
+        previousStock,
+        newStock: item.currentStock,
+        date: new Date(),
+        note: noteText,
+      });
+    }
+
+    // Update status
+    item.status = calculateStatus(
+      item.currentStock,
+      item.threshold,
+      item.expirationDate
+    );
+
+    item.updatedBy = req.user.id;
     await item.save();
 
-    // Sync suppliers
-    const oldSuppliers = item.suppliers.map((s) => s.supplier.toString());
-    const newSuppliers = req.body.suppliers.map((s) => s.supplier);
+    // Sync suppliers (add/remove)
+    const oldSupplierIds = item.suppliers.map((s) => s.supplier.toString());
+    const newSupplierIds = (req.body.suppliers || []).map((s) =>
+      s.supplier.toString()
+    );
 
-    // Remove inventory from suppliers no longer assigned
-    for (const supId of oldSuppliers) {
-      if (!newSuppliers.includes(supId)) {
+    // Remove old
+    for (const supId of oldSupplierIds) {
+      if (!newSupplierIds.includes(supId)) {
         await Supplier.findByIdAndUpdate(supId, {
           $pull: { itemsSupplied: { inventoryItem: item._id } },
         });
       }
     }
 
-    // Add inventory to new suppliers
-    for (const s of req.body.suppliers) {
-      if (!oldSuppliers.includes(s.supplier)) {
+    // Add new
+    for (const s of req.body.suppliers || []) {
+      if (!oldSupplierIds.includes(s.supplier.toString())) {
         await Supplier.findByIdAndUpdate(s.supplier, {
           $addToSet: {
             itemsSupplied: {
@@ -283,23 +434,6 @@ const updateInventoryItem = async (req, res) => {
         });
       }
     }
-
-    /* try {
-      await createLog({
-        action: "Updated Item",
-        module: "Inventory",
-        description: `Inventory item "${item.name}" was updated.`,
-        userId: req.user.id,
-      });
-
-      await createNotification({
-        message: `Inventory item "${item.name}" was updated.`,
-        type: "info",
-        roles: ["admin", "owner", "manager"],
-      });
-    } catch (logErr) {
-      console.error("[Activity Log] Failed to log update:", logErr.message);
-    } */
 
     res.json(item);
   } catch (err) {
@@ -312,12 +446,13 @@ const updateInventoryItem = async (req, res) => {
   }
 };
 
-// Soft-delete / archive inventory item
+// ---------------------------- DELETE / ARCHIVE INVENTORY ----------------------------
 const deleteInventoryItem = async (req, res) => {
   try {
     const item = await InventoryItem.findById(req.params.id);
     if (!item) return res.status(404).json({ message: "Item not found" });
 
+    // Staff approval logic
     if (
       req.user.role === "staff" &&
       item.createdBy.toString() !== req.user.id
@@ -327,7 +462,10 @@ const deleteInventoryItem = async (req, res) => {
         moduleRef: "InventoryItem",
         targetId: item._id.toString(),
         requestType: "archive",
-        details: { ...item.toObject(), note: "Staff requested archiving" },
+        details: {
+          ...item.toObject(),
+          note: req.body.note || "Staff requested archiving",
+        },
         requestedBy: req.user.id,
       });
 
@@ -339,7 +477,7 @@ const deleteInventoryItem = async (req, res) => {
       });
 
       await createNotification({
-        message: `An archive request for inventory item: "${item.name}" is pending for approval.`,
+        message: `An archive request for inventory item: "${item.name}" is pending approval.`,
         type: "warning",
         roles: ["admin", "owner", "manager"],
       });
@@ -357,13 +495,29 @@ const deleteInventoryItem = async (req, res) => {
         .json({ message: "Your archive request has been sent for approval." });
     }
 
+    // ---------------------------------------
+    // Archive the item
+    // ---------------------------------------
     item.archived = true;
+
+    // Add stock history entry
+    item.stockHistory.push({
+      type: "Adjustment",
+      quantity: 0,
+      previousStock: item.currentStock,
+      newStock: item.currentStock,
+      date: new Date(),
+      note: `${req.user.username} archived the item${
+        req.body.note ? `: ${req.body.note}` : ""
+      }`,
+    });
+
     await item.save();
 
     await createLog({
       action: "Archived Item",
       module: "Inventory",
-      description: `User ${req.user.username} archived an item: ${item.name}`,
+      description: `User ${req.user.username} archived item: ${item.name}`,
       userId: req.user.id,
     });
 
@@ -380,7 +534,7 @@ const deleteInventoryItem = async (req, res) => {
   }
 };
 
-// Repack inventory item
+// ---------------------------- REPACK INVENTORY ----------------------------
 const repackInventoryItem = async (req, res) => {
   try {
     const { parentItemId, stockToUse, childName, unit, itemId, childStock } =
@@ -403,25 +557,46 @@ const repackInventoryItem = async (req, res) => {
         .status(404)
         .json({ message: "Parent item not found or archived" });
 
-    if (stockToUse > parentItem.initialStock) {
+    if (stockToUse > parentItem.currentStock) {
       return res
         .status(400)
         .json({ message: "Insufficient stock in parent item" });
     }
 
-    parentItem.initialStock -= stockToUse;
+    // Deduct from parent
+    const previousStock = parentItem.currentStock;
+    parentItem.currentStock -= stockToUse;
+    parentItem.status = calculateStatus(
+      parentItem.currentStock,
+      parentItem.threshold,
+      parentItem.expirationDate
+    );
+    parentItem.stockHistory.push({
+      type: "Adjustment",
+      quantity: -stockToUse,
+      previousStock,
+      newStock: parentItem.currentStock,
+      note: `Used for repacking into "${childName}"`,
+    });
     await parentItem.save();
 
+    // Create child item
     const childItem = new InventoryItem({
       itemId,
       name: childName,
       category: parentItem.category,
-      initialStock: childStock,
-      maxStock: childStock,
+      currentStock: childStock,
+      threshold: parentItem.threshold,
       unit,
       suppliers: parentItem.suppliers,
-      createdBy: req.user.id,
+      markup: parentItem.markup,
       sellingPrice: parentItem.sellingPrice,
+      createdBy: req.user.id,
+      status: calculateStatus(
+        childStock,
+        parentItem.threshold,
+        parentItem.expirationDate
+      ),
     });
 
     await childItem.save();
@@ -440,22 +615,18 @@ const repackInventoryItem = async (req, res) => {
     parentItem.repackedItems.push(repackRecord._id);
     await parentItem.save();
 
-    try {
-      await createLog({
-        action: "Repacked Item",
-        module: "Inventory",
-        description: `User ${req.user.username} repacked "${parentItem.name}" into "${childItem.name}"`,
-        userId: req.user.id,
-      });
+    await createLog({
+      action: "Repacked Item",
+      module: "Inventory",
+      description: `User ${req.user.username} repacked "${parentItem.name}" into "${childItem.name}"`,
+      userId: req.user.id,
+    });
 
-      await createNotification({
-        message: `Repacked "${parentItem.name}" into "${childItem.name}" successfully.`,
-        type: "success",
-        roles: ["admin", "owner", "manager"],
-      });
-    } catch (logErr) {
-      console.error("[Activity Log] Failed to log repack:", logErr.message);
-    }
+    await createNotification({
+      message: `Repacked "${parentItem.name}" into "${childItem.name}" successfully.`,
+      type: "success",
+      roles: ["admin", "owner", "manager"],
+    });
 
     res.status(201).json({ parentItem, childItem, repackRecord });
   } catch (err) {
@@ -464,13 +635,18 @@ const repackInventoryItem = async (req, res) => {
   }
 };
 
-// Batch update statuses
+// ---------------------------- BATCH STATUS UPDATE ----------------------------
 const batchUpdateStatuses = async () => {
   try {
     const items = await InventoryItem.find({ archived: false });
     const systemUserId = "6891c3c178b2ff675c9cdfd7";
 
     for (const item of items) {
+      item.status = calculateStatus(
+        item.currentStock,
+        item.threshold,
+        item.expirationDate
+      );
       item.updatedBy = item.updatedBy || systemUserId;
       await item.save();
     }

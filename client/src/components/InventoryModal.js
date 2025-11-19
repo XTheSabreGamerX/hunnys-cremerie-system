@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { customAlphabet } from "nanoid/non-secure";
-import { FaPlus, FaTrash } from "react-icons/fa";
+import { FaPlus, FaTrash, FaStar, FaRegStar } from "react-icons/fa";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
 import "../styles/InventoryModal.css";
 
@@ -17,13 +17,14 @@ const InventoryModal = ({
   const [formData, setFormData] = useState({
     itemId: "",
     name: "",
-    initialStock: 0,
-    maxStock: 1,
+    currentStock: 0,
+    markup: 0,
     sellingPrice: 0,
     category: "",
     unit: "",
     expirationDate: "",
     suppliers: [],
+    note: "",
   });
 
   const [tempSupplier, setTempSupplier] = useState({
@@ -71,32 +72,35 @@ const InventoryModal = ({
     }
   }, [mode, item, categories]);
 
-  const calculateStatus = (initialStock, maxStock, expirationDate) => {
+  /* const calculateStatus = (currentStock, threshold, expirationDate) => {
     const now = new Date();
     const expDate = expirationDate ? new Date(expirationDate) : null;
 
     if (expDate && expDate < now) return "Expired";
-    if (initialStock <= 0) return "Out of stock";
-    if (initialStock <= maxStock * 0.1) return "Critical";
-    if (initialStock <= maxStock * 0.2) return "Low-stock";
+    if (currentStock <= 0) return "Out of stock";
+    if (currentStock <= threshold * 0.1) return "Critical";
+    if (currentStock <= threshold * 0.2) return "Low-stock";
     return "Well-stocked";
-  };
+  }; */
 
   const isFormValid = () => {
+    // Required fields
     if (!formData.name.trim() || !formData.category || !formData.unit)
       return false;
-    if (
-      formData.initialStock < 0 ||
-      formData.maxStock <= 0 ||
-      formData.sellingPrice < 0
-    )
-      return false;
-    if (formData.initialStock > formData.maxStock) return false;
+
+    // Stock & price checks
+    if (formData.currentStock < 0 || formData.sellingPrice < 0) return false;
+
+    if (formData.markup > 100) return false;
+
+    // Expiration date validation
     if (formData.expirationDate) {
       const expDate = new Date(formData.expirationDate);
       const now = new Date();
-      if (expDate < now.setHours(0, 0, 0, 0)) return false;
+      now.setHours(0, 0, 0, 0);
+      if (expDate < now) return false;
     }
+
     return true;
   };
 
@@ -120,20 +124,28 @@ const InventoryModal = ({
         }));
       }
     }
-  }, [formData.name, formData.category, formData.itemId, categories, mode, nanoid]);
+  }, [
+    formData.name,
+    formData.category,
+    formData.itemId,
+    categories,
+    mode,
+    nanoid,
+  ]);
 
   useEffect(() => {
     if (!isOpen) {
       setFormData({
         itemId: "",
         name: "",
-        initialStock: 0,
-        maxStock: 1,
+        currentStock: 0,
+        markup: 0,
         sellingPrice: 0,
         category: "",
         unit: "",
         expirationDate: "",
         suppliers: [],
+        note: "",
       });
       setTempSupplier({ supplier: "", purchasePrice: 0 });
       setError("");
@@ -144,11 +156,43 @@ const InventoryModal = ({
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: ["initialStock", "maxStock", "sellingPrice"].includes(name)
+      [name]: ["currentStock", "sellingPrice"].includes(name)
         ? Math.max(0, Number(value))
         : value,
     }));
   };
+
+  const calculateSellingPrice = (suppliers, markup) => {
+    if (!suppliers || suppliers.length === 0) return 0;
+
+    const preferred = suppliers.find((s) => s.isPreferred) || suppliers[0];
+    if (!preferred) return 0;
+
+    return Math.round(preferred.purchasePrice * (1 + markup / 100) * 100) / 100;
+  };
+
+  const handleSetPreferredSupplier = (index) => {
+    setFormData((prev) => {
+      const updatedSuppliers = prev.suppliers.map((s, i) => ({
+        ...s,
+        isPreferred: i === index,
+      }));
+
+      return {
+        ...prev,
+        suppliers: updatedSuppliers,
+        sellingPrice: calculateSellingPrice(updatedSuppliers, prev.markup),
+      };
+    });
+  };
+
+  useEffect(() => {
+    const newPrice = calculateSellingPrice(formData.suppliers, formData.markup);
+    setFormData((prev) => ({
+      ...prev,
+      sellingPrice: newPrice,
+    }));
+  }, [formData.markup, formData.suppliers]);
 
   const handleAddSupplier = () => {
     if (!tempSupplier.supplier) return;
@@ -185,9 +229,15 @@ const InventoryModal = ({
         : `${API_BASE}/api/inventory`;
       const method = isEdit ? "PUT" : "POST";
 
+      const payload = {
+        ...formData,
+        note: formData.note || "",
+        threshold: formData.currentStock,
+      };
+
       const res = await authFetch(url, {
         method,
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -207,146 +257,147 @@ const InventoryModal = ({
   return (
     <div className="inventory-modal-overlay">
       <div className="inventory-modal">
-        <h2 className="inventory-modal-title">Add Inventory Item</h2>
+        <h2 className="inventory-modal-title">
+          {mode === "edit" ? "Edit Inventory Item" : "Add Inventory Item"}
+        </h2>
         {error && <div className="inventory-modal-error">{error}</div>}
 
         <form onSubmit={handleSubmit} className="inventory-modal-form">
-          {/* Item Name */}
-          <div className="inventory-form-group">
-            <label htmlFor="name">
-              Item Name <span className="required">*</span>
-            </label>
-            <input
-              type="text"
-              name="name"
-              id="name"
-              placeholder="Item Name"
-              value={formData.name}
-              onChange={handleInputChange}
-              required
-              className="inventory-input"
-            />
-          </div>
+          <div className="inventory-top-fields">
+            {/* Item Name */}
+            <div className="inventory-form-group">
+              <label htmlFor="name">
+                Item Name <span className="required">*</span>
+              </label>
+              <input
+                type="text"
+                name="name"
+                id="name"
+                placeholder="Item Name"
+                value={formData.name}
+                onChange={handleInputChange}
+                required
+                className="inventory-input"
+              />
+            </div>
 
-          {/* Initial Stock */}
-          <div className="inventory-form-group">
-            <label htmlFor="initialStock">
-              Initial Stock <span className="required">*</span>
-            </label>
-            <input
-              type="number"
-              name="initialStock"
-              id="initialStock"
-              placeholder="Initial Stock"
-              min="0"
-              value={formData.initialStock}
-              onChange={handleInputChange}
-              required
-              className="inventory-input"
-            />
-          </div>
+            {/* Markup */}
+            <div className="inventory-form-group">
+              <label htmlFor="markup">Markup (%)</label>
+              <input
+                type="number"
+                name="markup"
+                id="markup"
+                min="0"
+                max="100"
+                value={formData.markup}
+                onChange={handleInputChange}
+                className="inventory-input"
+              />
+            </div>
 
-          {/* Max Stock */}
-          <div className="inventory-form-group">
-            <label htmlFor="maxStock">
-              Max Stock <span className="required">*</span>
-            </label>
-            <input
-              type="number"
-              name="maxStock"
-              id="maxStock"
-              placeholder="Max Stock"
-              min="1"
-              value={formData.maxStock}
-              onChange={handleInputChange}
-              required
-              className="inventory-input"
-            />
-          </div>
-
-          <p className="inventory-stock-status">
+            {/*  <p className="inventory-stock-status">
             Based on the initial stock and max stock, status is calculated.
             Status:{" "}
             {calculateStatus(
-              formData.initialStock,
+              formData.currentStock,
               formData.maxStock,
               formData.expirationDate
             )}
-          </p>
+          </p> */}
 
-          {/* Selling Price */}
-          <div className="inventory-form-group">
-            <label htmlFor="sellingPrice">
-              Selling Price <span className="required">*</span>
-            </label>
-            <input
-              type="number"
-              name="sellingPrice"
-              id="sellingPrice"
-              placeholder="Selling Price"
-              min="0"
-              value={formData.sellingPrice}
-              onChange={handleInputChange}
-              required
-              className="inventory-input"
-            />
-          </div>
+            {/* Current Stock */}
+            <div className="inventory-form-group">
+              <label htmlFor="currentStock">
+                Current Stock <span className="required">*</span>
+              </label>
+              <input
+                type="number"
+                name="currentStock"
+                id="currentStock"
+                placeholder="How many stocks is currently available"
+                min="0"
+                value={formData.currentStock}
+                onChange={handleInputChange}
+                required
+                className="inventory-input"
+              />
+            </div>
 
-          {/* Category */}
-          <div className="inventory-form-group">
-            <label htmlFor="category">
-              Category <span className="required">*</span>
-            </label>
-            <select
-              name="category"
-              id="category"
-              value={formData.category}
-              onChange={handleInputChange}
-              required
-              className="inventory-select"
-            >
-              <option value="">Select Category</option>
-              {categories.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Selling Price */}
+            <div className="inventory-form-group">
+              <label htmlFor="sellingPrice">
+                Selling Price ₱ <span className="required">*</span>
+              </label>
+              <input
+                type="number"
+                name="sellingPrice"
+                id="sellingPrice"
+                placeholder="How much the item sells for"
+                min="0"
+                value={formData.sellingPrice}
+                onChange={handleInputChange}
+                required
+                className="inventory-input"
+              />
+            </div>
 
-          {/* Unit */}
-          <div className="inventory-form-group">
-            <label htmlFor="unit">
-              Unit <span className="required">*</span>
-            </label>
-            <select
-              name="unit"
-              id="unit"
-              value={formData.unit}
-              onChange={handleInputChange}
-              required
-              className="inventory-select"
-            >
-              <option value="">Select Unit</option>
-              {uoms.map((u) => (
-                <option key={u._id} value={u._id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Category */}
+            <div className="inventory-form-group">
+              <label htmlFor="category">
+                Category <span className="required">*</span>
+              </label>
+              <select
+                name="category"
+                id="category"
+                value={formData.category}
+                onChange={handleInputChange}
+                required
+                className="inventory-select"
+              >
+                <option value="">Select Category</option>
+                {categories.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Expiration Date */}
-          <div className="inventory-form-group">
-            <label htmlFor="expirationDate">Expiration Date</label>
-            <input
-              type="date"
-              name="expirationDate"
-              id="expirationDate"
-              value={formData.expirationDate}
-              onChange={handleInputChange}
-              className="inventory-input"
-            />
+            {/* Unit */}
+            <div className="inventory-form-group">
+              <label htmlFor="unit">
+                Unit <span className="required">*</span>
+              </label>
+              <select
+                name="unit"
+                id="unit"
+                value={formData.unit}
+                onChange={handleInputChange}
+                required
+                className="inventory-select"
+              >
+                <option value="">Select Unit</option>
+                {uoms.map((u) => (
+                  <option key={u._id} value={u._id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Expiration Date */}
+            <div className="inventory-form-group">
+              <label htmlFor="expirationDate">Expiration Date</label>
+              <input
+                type="date"
+                name="expirationDate"
+                id="expirationDate"
+                value={formData.expirationDate}
+                onChange={handleInputChange}
+                className="inventory-input"
+              />
+            </div>
           </div>
 
           {/* Suppliers Section */}
@@ -392,39 +443,75 @@ const InventoryModal = ({
               </button>
             </div>
             <ul className="inventory-suppliers-list">
-              {formData.suppliers.map((s, index) => (
-                <li key={index} className="inventory-supplier-item">
-                  {suppliers.find((sup) => sup._id === s.supplier)?.name ||
-                    "Unknown"}{" "}
-                  - ₱{s.purchasePrice}{" "}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSupplier(index)}
-                    className="inventory-remove-btn"
-                  >
-                    <FaTrash />
-                  </button>
-                </li>
-              ))}
+              {formData.suppliers.map((s, index) => {
+                const supplierName =
+                  suppliers.find((sup) => sup._id === s.supplier)?.name ||
+                  "Unknown";
+                const isPreferred = s.isPreferred;
+
+                return (
+                  <li key={index} className="inventory-supplier-item">
+                    <button
+                      type="button"
+                      onClick={() => handleSetPreferredSupplier(index)}
+                      className="inventory-preferred-btn"
+                    >
+                      {isPreferred ? <FaStar color="#FFD700" /> : <FaRegStar />}
+                    </button>
+                    {supplierName} - ₱{s.purchasePrice}{" "}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSupplier(index)}
+                      className="inventory-remove-btn"
+                    >
+                      <FaTrash />
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
+          {mode === "edit" && (
+            <div className="inventory-note-group">
+              <label htmlFor="note">Edit Note (optional)</label>
+              <textarea
+                name="note"
+                id="note"
+                placeholder="Reason for editing this item..."
+                value={formData.note || ""}
+                onChange={handleInputChange}
+                className="inventory-input"
+                rows="4"
+                style={{ width: "100%" }}
+              />
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="inventory-modal-actions">
-            <button
-              type="submit"
-              disabled={loading || !isFormValid()}
-              className="inventory-submit-btn"
-            >
-              {loading ? "Adding..." : "Add Item"}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inventory-cancel-btn"
-            >
-              Cancel
-            </button>
+            <div className="inventory-modal-actions">
+              <button
+                type="submit"
+                disabled={loading || !isFormValid()}
+                className="inventory-submit-btn"
+              >
+                {loading
+                  ? mode === "edit"
+                    ? "Saving..."
+                    : "Adding..."
+                  : mode === "edit"
+                  ? "Save Changes"
+                  : "Add Item"}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="inventory-cancel-btn"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </form>
       </div>

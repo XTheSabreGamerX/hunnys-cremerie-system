@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { customAlphabet } from "nanoid/non-secure";
 import DashboardLayout from "../scripts/DashboardLayout";
-import ViewModal from "../components/ViewModal";
 import InventoryModal from "../components/InventoryModal";
 import CakeEditModal from "../components/CakeEditModal";
 import CakeViewModal from "../components/CakeViewModal";
@@ -37,7 +36,7 @@ const Inventory = () => {
   const [pendingCakeData, setPendingCakeData] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [viewedItem, setViewedItem] = useState(null);
+  const [/* viewedItem */, setViewedItem] = useState(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [popupMessage, setPopupMessage] = useState("");
@@ -593,14 +592,14 @@ const Inventory = () => {
     }
   };
 
-  const handleDelete = (itemId) => {
+  /* const handleDelete = (itemId) => {
     const item =
       items.find((i) => i._id === itemId) ||
       cakeItems.find((c) => c._id === itemId) ||
       null;
     setItemToDelete(item);
     setIsConfirmOpen(true);
-  };
+  }; */
 
   const confirmDelete = async () => {
     try {
@@ -738,7 +737,7 @@ const Inventory = () => {
         />
       )}
       {/* Inventory view modal (only for Inventory items) */}
-      {isViewOpen && inventoryType === "Inventory" && viewedItem && (
+      {/* {isViewOpen && inventoryType === "Inventory" && viewedItem && (
         <ViewModal
           item={viewedItem}
           fields={[
@@ -785,7 +784,7 @@ const Inventory = () => {
           }}
           onDelete={() => handleDelete(viewedItem._id)}
         />
-      )}
+      )} */}
       {/* Cake view modal (only for Cake Inventory) */}
       {isViewOpen && inventoryType === "Cake Inventory" && selectedCake && (
         <CakeViewModal
@@ -916,11 +915,10 @@ const Inventory = () => {
                   {[
                     { label: "Item Code", field: "itemId" },
                     { label: "Item Name", field: "name" },
-                    { label: "Initial Stock", field: "initialStock" },
-                    { label: "Max Stock", field: "maxStock" },
+                    { label: "Stock", field: "currentStock" },
                     { label: "Unit", field: "unit.name" },
                     { label: "Category", field: "category" },
-                    { label: "Unit Price", field: "sellingPrice" },
+                    { label: "Price", field: "sellingPrice" },
                     { label: "Expiration Date", field: "expirationDate" },
                     { label: "Status", field: "status" },
                     { label: "Actions", field: null },
@@ -948,11 +946,10 @@ const Inventory = () => {
                     <tr key={item._id}>
                       <td>{item.itemId}</td>
                       <td>{item.name}</td>
-                      <td>{item.initialStock}</td>
-                      <td>{item.maxStock}</td>
+                      <td>{item.currentStock}</td>
                       <td>{item.unit?.name || "—"}</td>
                       <td>{item.category || "—"}</td>
-                      <td>₱{item.sellingPrice}</td>
+                      <td>₱{item.sellingPrice.toFixed(2)}</td>
                       <td>
                         {item.expirationDate
                           ? new Date(item.expirationDate).toLocaleDateString(
