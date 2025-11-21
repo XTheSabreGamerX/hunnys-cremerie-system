@@ -10,6 +10,7 @@ import {
   /* FaMoneyBillWave, */
   FaChartLine,
   /* FaCalculator, */
+  FaBox,
   FaTruck,
   FaUserTag,
   FaDownload,
@@ -69,6 +70,12 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
       icon: <FaChartLine />,
       path: "/sales-report",
       roles: ["admin", "owner"],
+    },
+    {
+      label: "Purchase Order",
+      icon: <FaBox />,
+      path: "/purchase-order",
+      roles: ["admin", "owner", "manager"],
     },
     {
       label: "Report",

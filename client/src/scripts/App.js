@@ -18,6 +18,7 @@ import SupplierManagement from "../pages/SupplierManagement";
 import CustomerManagement from "../pages/CustomerManagement";
 import SalesManagement from "../pages/SalesManagement";
 import SalesReport from "../pages/SalesReport";
+import PurchaseOrder from "../pages/PurchaseOrder";
 import Report from "../pages/Report";
 import Notifications from "../pages/Notifications";
 import BackupRestore from "../pages/BackupRestore";
@@ -112,7 +113,19 @@ function App() {
           }
         />
 
-        <Route //Sales Report route
+        <Route //Purchase Order route
+          path="/purchase-order"
+          element={
+            <>
+              <ProtectedRoute>
+                <DashboardHeader />
+                <PurchaseOrder />
+              </ProtectedRoute>
+            </>
+          }
+        />
+
+        <Route //Report route
           path="/report"
           element={
             <>

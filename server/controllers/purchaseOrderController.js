@@ -103,8 +103,8 @@ const getAllPurchaseOrders = async (req, res) => {
 // Create Purchase Order
 const createPurchaseOrder = async (req, res) => {
   try {
-    const { supplier, items, note } = req.body;
-    const createdBy = req.user._id; // assuming JWT auth sets req.user
+    const { supplier, items } = req.body;
+    const createdBy = req.user.id;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: "Items are required" });
@@ -135,12 +135,16 @@ const createPurchaseOrder = async (req, res) => {
       supplier: supplier || null,
       items,
       totalAmount,
-      note: note || null,
       createdBy,
     });
 
+    const savedPO = await newPO.save();
+
     // --- Activity Log: include all item names ---
-    const itemNames = items.map((i) => i.name || i.item).join(", "); // use 'name' if available, otherwise ObjectId
+    const poWithItems = await savedPO.populate("items.item", "name");
+    
+    const itemNames = poWithItems.items.map((i) => i.item.name).join(", ");
+
     await createLog({
       action: "Created PO",
       module: "Purchase Order",
@@ -148,14 +152,11 @@ const createPurchaseOrder = async (req, res) => {
       userId: req.user.id,
     });
 
-    // Optional notification (can also include item names)
     await createNotification({
       message: `Purchase Order created with items: ${itemNames}`,
       type: "success",
       roles: ["admin", "owner", "manager"],
     });
-
-    const savedPO = await newPO.save();
 
     return res
       .status(201)
