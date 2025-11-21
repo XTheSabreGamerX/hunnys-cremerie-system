@@ -1,216 +1,336 @@
 const PurchaseOrder = require("../models/PurchaseOrder");
 const InventoryItem = require("../models/InventoryItem");
-const Supplier = require("../models/Supplier");
-const crypto = require("crypto");
+const { createNotification } = require("../controllers/notificationController");
+const { createLog } = require("../controllers/activityLogController");
+const Fuse = require("fuse.js");
 
-// Create PO with validation
+// Gets all purchase orders
+const getAllPurchaseOrders = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search?.trim() || "";
+    const normalizedSearch = search.replace(/\s+/g, "");
+    const field = req.query.field;
+    const order = req.query.order === "desc" ? -1 : 1;
+    const fetchAll = req.query.all === "true";
+
+    // Fetch all POs (non-cancelled maybe optional filter)
+    const allPOs = await PurchaseOrder.find()
+      .sort(field ? { [field]: order } : { poNumber: 1 })
+      .populate("supplier", "name")
+      .populate("items.item", "name itemId category")
+      .populate("createdBy", "username");
+
+    // No search => pagination only
+    if (!search) {
+      const totalItems = allPOs.length;
+      const totalPages = Math.ceil(totalItems / limit);
+      const paginatedItems = fetchAll
+        ? allPOs
+        : allPOs.slice((page - 1) * limit, page * limit);
+
+      return res.json({
+        items: paginatedItems,
+        currentPage: page,
+        totalPages,
+        totalItems,
+      });
+    }
+
+    // Fuse search setup
+    const normalizeFn = (value) =>
+      (value?.toString() || "").replace(/\s+/g, "");
+    let fuseKeys = [];
+
+    if (field) {
+      if (["poNumber", "totalAmount"].includes(field)) {
+        fuseKeys = [{ name: field, getFn: (po) => normalizeFn(po[field]) }];
+      } else if (field === "supplier.name") {
+        fuseKeys = [
+          {
+            name: "supplier.name",
+            getFn: (po) => normalizeFn(po.supplier?.name),
+          },
+        ];
+      } else {
+        fuseKeys = [field];
+      }
+    } else {
+      fuseKeys = [
+        { name: "poNumber", getFn: (po) => normalizeFn(po.poNumber) },
+        { name: "status", getFn: (po) => normalizeFn(po.status) },
+        { name: "totalAmount", getFn: (po) => normalizeFn(po.totalAmount) },
+        {
+          name: "supplier.name",
+          getFn: (po) => normalizeFn(po.supplier?.name),
+        },
+        {
+          name: "items",
+          getFn: (po) => po.items.map((i) => i.item?.name).join(" "),
+        },
+      ];
+    }
+
+    const fuse = new Fuse(allPOs, {
+      keys: fuseKeys,
+      threshold: 0.4,
+      ignoreLocation: true,
+    });
+
+    const fuseResults = fuse.search(normalizedSearch).map((r) => r.item);
+
+    const totalItems = fuseResults.length;
+    const totalPages = Math.ceil(totalItems / limit);
+    const paginatedResults = fetchAll
+      ? fuseResults
+      : fuseResults.slice((page - 1) * limit, page * limit);
+
+    res.json({
+      items: paginatedResults,
+      currentPage: page,
+      totalPages,
+      totalItems,
+    });
+  } catch (err) {
+    console.error("[GET PURCHASE ORDERS] Server error:", err);
+    res
+      .status(500)
+      .json({ message: "Server error while fetching purchase orders" });
+  }
+};
+
+// Create Purchase Order
 const createPurchaseOrder = async (req, res) => {
   try {
-    const { supplierId, items, note, createdBy } = req.body;
+    const { supplier, items, note } = req.body;
+    const createdBy = req.user._id; // assuming JWT auth sets req.user
 
-    if (!supplierId || !items || !items.length) {
-      return res
-        .status(400)
-        .json({ message: "Supplier and items are required" });
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "Items are required" });
     }
 
-    // Validate supplier exists
-    const supplier = await Supplier.findById(supplierId);
-    if (!supplier)
-      return res.status(404).json({ message: "Supplier not found" });
+    // Validate each item
+    for (const item of items) {
+      if (!item.item || !item.orderedQty || !item.purchasePrice) {
+        return res.status(400).json({
+          message: "Each item must have itemId, orderedQty, and purchasePrice",
+        });
+      }
+    }
 
-    // Validate each item and get default purchase price
-    const validatedItems = await Promise.all(
-      items.map(async (item) => {
-        const inventoryItem = await InventoryItem.findById(item.inventoryItem);
-        if (!inventoryItem)
-          throw new Error(`Item ${item.inventoryItem} not found`);
+    // Generate PO number + increment each order number
+    const lastPO = await PurchaseOrder.findOne().sort({ poNumber: -1 }).exec();
+    const poNumber = lastPO ? lastPO.poNumber + 1 : 1;
 
-        // Check that the supplier actually supplies this item
-        const supplierData = inventoryItem.suppliers.find(
-          (s) => s.supplier.toString() === supplierId
-        );
-        if (!supplierData)
-          throw new Error(
-            `Supplier does not supply item ${inventoryItem.name}`
-          );
-
-        return {
-          inventoryItem: inventoryItem._id,
-          quantity: item.quantity,
-          proposedPrice: supplierData.purchasePrice, // default from InventoryItem
-          supplierPrice: item.supplierPrice ?? supplierData.purchasePrice, // user can override
-        };
-      })
+    // Calculate total amount
+    const totalAmount = items.reduce(
+      (sum, item) => sum + item.orderedQty * item.purchasePrice,
+      0
     );
 
-    // Create PO
-    const po = new PurchaseOrder({
-      supplier: supplierId,
-      items: validatedItems,
-      note,
+    // Create PO document
+    const newPO = new PurchaseOrder({
+      poNumber,
+      supplier: supplier || null,
+      items,
+      totalAmount,
+      note: note || null,
       createdBy,
-      status: "Pending",
     });
 
-    await po.save();
+    // --- Activity Log: include all item names ---
+    const itemNames = items.map((i) => i.name || i.item).join(", "); // use 'name' if available, otherwise ObjectId
+    await createLog({
+      action: "Created PO",
+      module: "Purchase Order",
+      description: `Purchase Order created with items: ${itemNames}`,
+      userId: req.user.id,
+    });
 
-    res.status(201).json({ message: "Purchase Order created", po });
+    // Optional notification (can also include item names)
+    await createNotification({
+      message: `Purchase Order created with items: ${itemNames}`,
+      type: "success",
+      roles: ["admin", "owner", "manager"],
+    });
+
+    const savedPO = await newPO.save();
+
+    return res
+      .status(201)
+      .json({ message: "Purchase Order created", purchaseOrder: savedPO });
   } catch (error) {
-    console.error(error);
-    if (
-      error.message.includes("not found") ||
-      error.message.includes("does not supply")
-    ) {
-      return res.status(400).json({ message: error.message });
+    console.error("Create PO Error:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
+  }
+};
+
+// Receive purchase order items
+const receivePurchaseOrder = async (req, res) => {
+  try {
+    const { poId } = req.params;
+    const { items } = req.body; // [{ itemId, receivedQty, expirationDate }]
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "Received items are required" });
     }
-    res.status(500).json({ message: "Server error" });
-  }
-};
 
-// 2. Get PO by ID
-const getPurchaseOrderById = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const po = await PurchaseOrder.findById(id)
-      .populate("supplier")
-      .populate("items.inventoryItem")
-      .populate("createdBy");
-
-    if (!po) return res.status(404).json({ message: "PO not found" });
-
-    res.json(po);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-// 3. Generate temporary supplier link
-const generateSupplierLink = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const po = await PurchaseOrder.findById(id);
-    if (!po) return res.status(404).json({ message: "PO not found" });
-
-    const token = crypto.randomBytes(16).toString("hex");
-    po.temporaryLinkToken = token;
-    po.temporaryLinkExpires = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
-    await po.save();
-
-    const link = `${process.env.SITE_URL}/purchase-orders/review/${token}`;
-    res.json({ message: "Temporary link generated", link });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-// 4. Supplier review
-const supplierReview = async (req, res) => {
-  try {
-    const { token } = req.params;
-    const { items, supplierNote } = req.body;
-
-    const po = await PurchaseOrder.findOne({
-      temporaryLinkToken: token,
-      temporaryLinkExpires: { $gt: Date.now() },
-    });
-
+    const po = await PurchaseOrder.findById(poId).populate("items.item");
     if (!po)
-      return res.status(404).json({ message: "Invalid or expired link" });
+      return res.status(404).json({ message: "Purchase Order not found" });
+    if (po.status === "Cancelled")
+      return res.status(400).json({ message: "Cannot receive a cancelled PO" });
 
-    // Update items
-    po.items.forEach((item) => {
-      const updated = items.find(
-        (i) => i.inventoryItem == item.inventoryItem.toString()
+    const receivedSummary = []; // For logging/notification
+
+    // Loop through each item in the PO
+    for (const poItem of po.items) {
+      const receivedData = items.find(
+        (i) => i.itemId === poItem.item._id.toString()
       );
-      if (updated) {
-        item.supplierPrice = updated.supplierPrice ?? item.supplierPrice;
-        item.isAvailable = updated.isAvailable ?? item.isAvailable;
-      }
-    });
 
-    po.supplierNote = supplierNote;
-    po.status = "Awaiting Approval";
-    await po.save();
+      if (!receivedData) continue; // no update for this item
 
-    res.json({ message: "Supplier review submitted", po });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
+      const receivedQty = Math.max(0, receivedData.receivedQty); // prevent negative
+      if (receivedQty === 0) continue;
 
-// 5. Approve/Reject PO
-const approvePurchaseOrder = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { action } = req.body; // 'approve' or 'reject'
+      // Update receivedQty (cannot exceed orderedQty)
+      poItem.receivedQty = Math.min(
+        poItem.orderedQty,
+        poItem.receivedQty + receivedQty
+      );
 
-    const po = await PurchaseOrder.findById(id);
-    if (!po) return res.status(404).json({ message: "PO not found" });
+      // Update Inventory
+      const inventoryItem = await InventoryItem.findById(poItem.item._id);
+      inventoryItem.currentStock += receivedQty;
 
-    if (action === "approve") {
-      po.status = "Approved";
-    } else if (action === "reject") {
-      po.status = "Rejected";
-    } else {
-      return res.status(400).json({ message: "Invalid action" });
+      // Add stockHistory entry
+      inventoryItem.stockHistory.push({
+        type: "Restock",
+        quantity: receivedQty,
+        previousStock: inventoryItem.currentStock - receivedQty,
+        newStock: inventoryItem.currentStock,
+        date: new Date(),
+        note: `PO#${po.poNumber} received. Expiration: ${
+          receivedData.expirationDate || "N/A"
+        }`,
+      });
+
+      await inventoryItem.save();
+
+      // Prepare summary for log/notification
+      receivedSummary.push(
+        `${inventoryItem.name}: ${receivedQty} unit(s)` +
+          (receivedData.expirationDate
+            ? ` (Exp: ${receivedData.expirationDate})`
+            : "")
+      );
     }
 
-    await po.save();
-    res.json({ message: `PO ${action}d`, po });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    // Update PO status
+    const allReceived = po.items.every(
+      (item) => item.receivedQty >= item.orderedQty
+    );
+    const anyReceived = po.items.some((item) => item.receivedQty > 0);
+
+    po.status = allReceived
+      ? "Completed"
+      : anyReceived
+      ? "Partially Delivered"
+      : "Pending";
+
+    const updatedPO = await po.save();
+
+    // --- Activity Log & Notification ---
+    if (receivedSummary.length > 0) {
+      const summaryText = receivedSummary.join(", ");
+
+      await createLog({
+        action: "Received PO Items",
+        module: "Purchase Order",
+        description: `Received items for PO#${po.poNumber}: ${summaryText}`,
+        userId: req.user.id,
+      });
+
+      await createNotification({
+        message: `PO#${po.poNumber} received items: ${summaryText}`,
+        type: "success",
+        roles: ["owner", "manager"],
+      });
+    }
+
+    res.json({
+      message: "Purchase Order updated successfully",
+      purchaseOrder: updatedPO,
+    });
+  } catch (err) {
+    console.error("[RECEIVE PO] Server error:", err);
+    res.status(500).json({
+      message: "Server error while receiving PO items",
+      error: err.message,
+    });
   }
 };
 
-// 6. Receive Stock
-const receiveStock = async (req, res) => {
+// Cancel Purchase Orders
+const cancelPurchaseOrder = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { receivedItems } = req.body; // [{ inventoryItem, quantityReceived }]
+    const { poId } = req.params;
+    const { note } = req.body;
 
-    const po = await PurchaseOrder.findById(id);
-    if (!po) return res.status(404).json({ message: "PO not found" });
+    const po = await PurchaseOrder.findById(poId);
+    if (!po)
+      return res.status(404).json({ message: "Purchase Order not found" });
 
-    receivedItems.forEach((r) => {
-      const poItem = po.items.find(
-        (i) => i.inventoryItem.toString() === r.inventoryItem
-      );
-      if (poItem) {
-        // Record received items
-        po.receivedItems.push({
-          inventoryItem: r.inventoryItem,
-          quantityReceived: r.quantityReceived,
-        });
+    if (po.status === "Cancelled") {
+      return res
+        .status(400)
+        .json({ message: "Purchase Order is already cancelled" });
+    }
 
-        // Reduce remaining quantity
-        poItem.quantity -= r.quantityReceived;
-      }
+    // Update status and note
+    po.status = "Cancelled";
+    po.note = note || po.note;
+
+    const updatedPO = await po.save();
+
+    // --- Activity Log & Notification ---
+    const descriptionText = note
+      ? `Cancelled PO#${po.poNumber}. Note: ${note}`
+      : `Cancelled PO#${po.poNumber}.`;
+
+    await createLog({
+      action: "Cancelled PO",
+      module: "Purchase Order",
+      description: descriptionText,
+      userId: req.user.id,
     });
 
-    // Determine status
-    const anyRemaining = po.items.some((i) => i.quantity > 0);
-    po.status = anyRemaining ? "Partial" : "Completed";
+    await createNotification({
+      message: descriptionText,
+      type: "alert",
+      roles: ["owner", "manager"],
+    });
 
-    await po.save();
-    res.json({ message: "Stock received", po });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    res.json({
+      message: "Purchase Order has been cancelled",
+      purchaseOrder: updatedPO,
+    });
+  } catch (err) {
+    console.error("[CANCEL PO] Server error:", err);
+    res.status(500).json({
+      message: "Server error while cancelling PO",
+      error: err.message,
+    });
   }
 };
 
 module.exports = {
+  getAllPurchaseOrders,
   createPurchaseOrder,
-  getPurchaseOrderById,
-  generateSupplierLink,
-  supplierReview,
-  approvePurchaseOrder,
-  receiveStock,
+  receivePurchaseOrder,
+  cancelPurchaseOrder,
 };

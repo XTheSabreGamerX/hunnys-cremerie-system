@@ -1,30 +1,24 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
+const authenticateToken = require('../middleware/auth');
+const roleCheck = require('../middleware/roleCheck');
 const {
   createPurchaseOrder,
-  getPurchaseOrderById,
-  generateSupplierLink,
-  supplierReview,
-  approvePurchaseOrder,
-  receiveStock,
-} = require("../controllers/purchaseOrderController");
-const authenticateToken = require("../middleware/auth");
+  getAllPurchaseOrders,
+  receivePurchaseOrder,
+  cancelPurchaseOrder,
+} = require('../controllers/purchaseOrderController');
 
-router.post("/", authenticateToken, createPurchaseOrder);
+// ---------------- CREATE PO ----------------
+router.post('/', authenticateToken, roleCheck(['admin', 'owner', 'manager']), createPurchaseOrder);
 
-router.get("/:id", authenticateToken, getPurchaseOrderById);
+// ---------------- GET POs ----------------
+router.get('/', authenticateToken, roleCheck(['admin', 'owner', 'manager']), getAllPurchaseOrders);
 
-router.post("/:id/generate-link", authenticateToken, generateSupplierLink);
+// ---------------- RECEIVE ITEMS ----------------
+router.put('/receive/:poId', authenticateToken, roleCheck(['admin', 'owner', 'manager']), receivePurchaseOrder);
 
-router.post("/:id/approve", authenticateToken, approvePurchaseOrder);
-
-router.post("/:id/receive-stock", authenticateToken, receiveStock);
-
-// ------------------------
-// Supplier Route via Temporary Link
-// ------------------------
-
-// Supplier reviews a PO using temporary token
-router.post("/review/:token", supplierReview);
+// ---------------- CANCEL PO ----------------
+router.put('/cancel/:poId', authenticateToken, roleCheck(['admin', 'owner', 'manager']), cancelPurchaseOrder);
 
 module.exports = router;

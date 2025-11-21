@@ -1,49 +1,73 @@
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
+const mongoose = require("mongoose");
 
-const PurchaseOrderSchema = new Schema(
+const PurchaseOrderItemSchema = new mongoose.Schema({
+  item: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Inventory",
+    required: true,
+  },
+
+  orderedQty: {
+    type: Number,
+    required: true,
+    min: 1,
+  },
+
+  receivedQty: {
+    type: Number,
+    default: 0,
+  },
+
+  purchasePrice: {
+    type: Number,
+    required: true,
+  },
+
+  expirationDate: {
+    type: Date,
+    default: null,
+  },
+});
+
+const PurchaseOrderSchema = new mongoose.Schema(
   {
-    supplier: {
-      type: Schema.Types.ObjectId,
-      ref: 'Supplier',
+    poNumber: {
+      type: Number,
+      unique: true,
       required: true,
     },
-    items: [
-      {
-        inventoryItem: {
-          type: Schema.Types.ObjectId,
-          ref: 'InventoryItem',
-          required: true,
-        },
-        quantity: { type: Number, required: true },
-        proposedPrice: { type: Number, required: true }, // Initial price from system
-        supplierPrice: { type: Number }, // Editable by supplier
-        isAvailable: { type: Boolean, default: true }, // Supplier marks availability
-      },
-    ],
-    note: { type: String },
-    supplierNote: { type: String }, // Optional note from supplier after review
+
+    supplier: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Supplier",
+      default: null,
+    },
+
+    items: [PurchaseOrderItemSchema],
+
     status: {
       type: String,
-      enum: ['Pending', 'Awaiting Approval', 'Approved', 'Partial', 'Completed', 'Rejected'],
-      default: 'Pending',
+      enum: ["Pending", "Partially Delivered", "Completed", "Cancelled"],
+      default: "Pending",
     },
+
+    totalAmount: {
+      type: Number,
+      default: 0,
+    },
+
+    note: {
+      type: String,
+      default: null,
+    },
+
     createdBy: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
     },
-    temporaryLinkToken: { type: String }, // Token for supplier review link
-    temporaryLinkExpires: { type: Date }, // Expiry of supplier link
-    receivedItems: [
-      {
-        inventoryItem: { type: Schema.Types.ObjectId, ref: 'InventoryItem' },
-        quantityReceived: { type: Number },
-        receivedAt: { type: Date, default: Date.now },
-      },
-    ],
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model('PurchaseOrder', PurchaseOrderSchema);
+module.exports = mongoose.model("PurchaseOrder", PurchaseOrderSchema);
