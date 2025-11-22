@@ -20,6 +20,7 @@ const InventoryModal = ({
     currentStock: 0,
     markup: 0,
     sellingPrice: 0,
+    lastManualPrice: 0,
     category: "",
     unit: "",
     expirationDate: "",
@@ -36,9 +37,9 @@ const InventoryModal = ({
 
   const nanoid = customAlphabet("0123456789", 6);
 
+  // ------------------------- EDIT MODE INITIALIZATION -------------------------
   useEffect(() => {
     if (mode === "edit" && item) {
-      // Normalize Category
       const categoryId =
         typeof item.category === "object"
           ? item.category?._id || ""
@@ -46,93 +47,34 @@ const InventoryModal = ({
             item.category ||
             "";
 
-      // Normalize Unit
       const unitId = item.unit?._id || item.unit?.$oid || item.unit || "";
 
-      // Normalize Suppliers
       const normalizedSuppliers =
         item.suppliers?.map((s) => ({
           supplier: s.supplier?._id || s.supplier?.$oid || s.supplier || "",
           purchasePrice: s.purchasePrice,
           _id: s._id?.$oid || s._id,
+          isPreferred: s.isPreferred || false,
         })) || [];
 
-      // Normalize expiration date
       const expirationDate = item.expirationDate?.$date
         ? item.expirationDate.$date.split("T")[0]
         : item.expirationDate?.split?.("T")[0] || "";
 
+      // Set form data
       setFormData({
         ...item,
         category: categoryId,
         unit: unitId,
         suppliers: normalizedSuppliers,
         expirationDate,
+        sellingPrice: item.lastManualPrice ?? item.sellingPrice,
+        lastManualPrice: item.lastManualPrice ?? item.sellingPrice,
       });
     }
   }, [mode, item, categories]);
 
-  /* const calculateStatus = (currentStock, threshold, expirationDate) => {
-    const now = new Date();
-    const expDate = expirationDate ? new Date(expirationDate) : null;
-
-    if (expDate && expDate < now) return "Expired";
-    if (currentStock <= 0) return "Out of stock";
-    if (currentStock <= threshold * 0.1) return "Critical";
-    if (currentStock <= threshold * 0.2) return "Low-stock";
-    return "Well-stocked";
-  }; */
-
-  const isFormValid = () => {
-    // Required fields
-    if (!formData.name.trim() || !formData.category || !formData.unit)
-      return false;
-
-    // Stock & price checks
-    if (formData.currentStock < 0 || formData.sellingPrice < 0) return false;
-
-    if (formData.markup > 100) return false;
-
-    // Expiration date validation
-    if (formData.expirationDate) {
-      const expDate = new Date(formData.expirationDate);
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      if (expDate < now) return false;
-    }
-
-    return true;
-  };
-
-  useEffect(() => {
-    if (mode === "add" && formData.name) {
-      const categoryName =
-        categories.find((c) => c._id === formData.category)?.name || "";
-      if (!formData.itemId && categoryName) {
-        const generateItemCode = (name, categoryName) => {
-          const namePart = (name?.substring(0, 3) || "XXX").toUpperCase();
-          const categoryPart = (
-            categoryName?.substring(0, 3) || "XXX"
-          ).toUpperCase();
-          const randomPart = nanoid();
-          return `${namePart}-${categoryPart}-${randomPart}`;
-        };
-
-        setFormData((prev) => ({
-          ...prev,
-          itemId: generateItemCode(prev.name, categoryName),
-        }));
-      }
-    }
-  }, [
-    formData.name,
-    formData.category,
-    formData.itemId,
-    categories,
-    mode,
-    nanoid,
-  ]);
-
+  // ------------------------- RESET MODAL -------------------------
   useEffect(() => {
     if (!isOpen) {
       setFormData({
@@ -141,6 +83,7 @@ const InventoryModal = ({
         currentStock: 0,
         markup: 0,
         sellingPrice: 0,
+        lastManualPrice: 0,
         category: "",
         unit: "",
         expirationDate: "",
@@ -152,23 +95,107 @@ const InventoryModal = ({
     }
   }, [isOpen]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: ["currentStock", "sellingPrice"].includes(name)
-        ? Math.max(0, Number(value))
-        : value,
-    }));
+  // ------------------------- ITEM ID GENERATION -------------------------
+  useEffect(() => {
+    if (mode === "add" && formData.name && formData.category) {
+      const generateItemCode = (name, categoryName) => {
+        const namePart = (name?.substring(0, 3) || "XXX").toUpperCase();
+        const categoryPart = (
+          categoryName?.substring(0, 3) || "XXX"
+        ).toUpperCase();
+        const randomPart = nanoid();
+        return `${namePart}-${categoryPart}-${randomPart}`;
+      };
+      const categoryName =
+        categories.find((c) => c._id === formData.category)?.name || "";
+      setFormData((prev) => ({
+        ...prev,
+        itemId: generateItemCode(prev.name, categoryName),
+      }));
+    }
+  }, [formData.name, formData.category, mode, categories, nanoid]);
+
+  // ------------------------- FORM VALIDATION -------------------------
+  const isFormValid = () => {
+    if (!formData.name.trim() || !formData.category || !formData.unit)
+      return false;
+    if (formData.currentStock < 0 || formData.sellingPrice < 0) return false;
+    if (formData.markup > 100) return false;
+    if (formData.expirationDate) {
+      const expDate = new Date(formData.expirationDate);
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      if (expDate < now) return false;
+    }
+    return true;
   };
 
-  const calculateSellingPrice = (suppliers, markup) => {
-    if (!suppliers || suppliers.length === 0) return 0;
+  // ------------------------- INPUT CHANGE -------------------------
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
 
-    const preferred = suppliers.find((s) => s.isPreferred) || suppliers[0];
-    if (!preferred) return 0;
+    setFormData((prev) => {
+      let updated = { ...prev, [name]: value };
 
-    return Math.round(preferred.purchasePrice * (1 + markup / 100) * 100) / 100;
+      if (name === "sellingPrice") {
+        const typedPrice = parseFloat(value) || 0;
+        updated.lastManualPrice = typedPrice;
+      }
+
+      if (name === "markup") {
+        updated.markup = parseFloat(value) || 0;
+        const preferred = prev.suppliers.find((s) => s.isPreferred);
+        if (preferred) {
+          updated.sellingPrice =
+            preferred.purchasePrice * (1 + updated.markup / 100);
+        }
+      }
+
+      return updated;
+    });
+  };
+
+  // ------------------------- ADD / REMOVE SUPPLIER -------------------------
+  const handleAddSupplier = () => {
+    if (!tempSupplier.supplier || tempSupplier.purchasePrice === 0) return;
+    if (formData.suppliers.some((s) => s.supplier === tempSupplier.supplier)) {
+      setError("Supplier already added.");
+      return;
+    }
+    setFormData((prev) => {
+      const updatedSuppliers = [
+        ...prev.suppliers,
+        { ...tempSupplier, isPreferred: prev.suppliers.length === 0 },
+      ];
+      const preferred = updatedSuppliers.find((s) => s.isPreferred);
+      return {
+        ...prev,
+        suppliers: updatedSuppliers,
+        sellingPrice: preferred.purchasePrice * (1 + prev.markup / 100),
+      };
+    });
+    setTempSupplier({ supplier: "", purchasePrice: 0 });
+    setError("");
+  };
+
+  const handleRemoveSupplier = (index) => {
+    setFormData((prev) => {
+      const updatedSuppliers = prev.suppliers.filter((_, i) => i !== index);
+      if (
+        !updatedSuppliers.some((s) => s.isPreferred) &&
+        updatedSuppliers.length > 0
+      ) {
+        updatedSuppliers[0].isPreferred = true;
+      }
+      const preferred = updatedSuppliers.find((s) => s.isPreferred);
+      return {
+        ...prev,
+        suppliers: updatedSuppliers,
+        sellingPrice: preferred
+          ? preferred.purchasePrice * (1 + prev.markup / 100)
+          : prev.sellingPrice,
+      };
+    });
   };
 
   const handleSetPreferredSupplier = (index) => {
@@ -177,46 +204,16 @@ const InventoryModal = ({
         ...s,
         isPreferred: i === index,
       }));
-
+      const preferred = updatedSuppliers.find((s) => s.isPreferred);
       return {
         ...prev,
         suppliers: updatedSuppliers,
-        sellingPrice: calculateSellingPrice(updatedSuppliers, prev.markup),
+        sellingPrice: preferred.purchasePrice * (1 + prev.markup / 100),
       };
     });
   };
 
-  useEffect(() => {
-    const newPrice = calculateSellingPrice(formData.suppliers, formData.markup);
-    setFormData((prev) => ({
-      ...prev,
-      sellingPrice: newPrice,
-    }));
-  }, [formData.markup, formData.suppliers]);
-
-  const handleAddSupplier = () => {
-    if (!tempSupplier.supplier) return;
-
-    if (formData.suppliers.some((s) => s.supplier === tempSupplier.supplier)) {
-      setError("Supplier already added.");
-      return;
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      suppliers: [...prev.suppliers, tempSupplier],
-    }));
-    setTempSupplier({ supplier: "", purchasePrice: 0 });
-    setError("");
-  };
-
-  const handleRemoveSupplier = (index) => {
-    setFormData((prev) => ({
-      ...prev,
-      suppliers: prev.suppliers.filter((_, i) => i !== index),
-    }));
-  };
-
+  // ------------------------- SUBMIT -------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -229,10 +226,16 @@ const InventoryModal = ({
         : `${API_BASE}/api/inventory`;
       const method = isEdit ? "PUT" : "POST";
 
+      const categoryName =
+        categories.find((c) => c._id === formData.category)?.name || "";
+
       const payload = {
         ...formData,
-        note: formData.note || "",
+        category: categoryName,
         threshold: formData.currentStock,
+        note: formData.note || "",
+        sellingPrice: parseFloat(formData.sellingPrice.toFixed(2)),
+        lastManualPrice: parseFloat(formData.lastManualPrice.toFixed(2)),
       };
 
       const res = await authFetch(url, {
@@ -273,7 +276,6 @@ const InventoryModal = ({
                 type="text"
                 name="name"
                 id="name"
-                placeholder="Item Name"
                 value={formData.name}
                 onChange={handleInputChange}
                 required
@@ -296,16 +298,6 @@ const InventoryModal = ({
               />
             </div>
 
-            {/*  <p className="inventory-stock-status">
-            Based on the initial stock and max stock, status is calculated.
-            Status:{" "}
-            {calculateStatus(
-              formData.currentStock,
-              formData.maxStock,
-              formData.expirationDate
-            )}
-          </p> */}
-
             {/* Current Stock */}
             <div className="inventory-form-group">
               <label htmlFor="currentStock">
@@ -315,7 +307,6 @@ const InventoryModal = ({
                 type="number"
                 name="currentStock"
                 id="currentStock"
-                placeholder="How many stocks is currently available"
                 min="0"
                 value={formData.currentStock}
                 onChange={handleInputChange}
@@ -333,8 +324,8 @@ const InventoryModal = ({
                 type="number"
                 name="sellingPrice"
                 id="sellingPrice"
-                placeholder="How much the item sells for"
                 min="0"
+                step="0.01"
                 value={formData.sellingPrice}
                 onChange={handleInputChange}
                 required
@@ -429,7 +420,7 @@ const InventoryModal = ({
                 onChange={(e) =>
                   setTempSupplier((prev) => ({
                     ...prev,
-                    purchasePrice: e.target.value,
+                    purchasePrice: Number(e.target.value),
                   }))
                 }
                 className="inventory-input"
@@ -447,8 +438,6 @@ const InventoryModal = ({
                 const supplierName =
                   suppliers.find((sup) => sup._id === s.supplier)?.name ||
                   "Unknown";
-                const isPreferred = s.isPreferred;
-
                 return (
                   <li key={index} className="inventory-supplier-item">
                     <button
@@ -456,9 +445,13 @@ const InventoryModal = ({
                       onClick={() => handleSetPreferredSupplier(index)}
                       className="inventory-preferred-btn"
                     >
-                      {isPreferred ? <FaStar color="#FFD700" /> : <FaRegStar />}
+                      {s.isPreferred ? (
+                        <FaStar color="#FFD700" />
+                      ) : (
+                        <FaRegStar />
+                      )}
                     </button>
-                    {supplierName} - ₱{s.purchasePrice}{" "}
+                    {supplierName} - ₱{s.purchasePrice}
                     <button
                       type="button"
                       onClick={() => handleRemoveSupplier(index)}
@@ -472,46 +465,44 @@ const InventoryModal = ({
             </ul>
           </div>
 
+          {/* Edit Note */}
           {mode === "edit" && (
             <div className="inventory-note-group">
               <label htmlFor="note">Edit Note (optional)</label>
               <textarea
                 name="note"
                 id="note"
-                placeholder="Reason for editing this item..."
-                value={formData.note || ""}
+                placeholder="Reason for editing..."
+                value={formData.note}
                 onChange={handleInputChange}
                 className="inventory-input"
                 rows="4"
-                style={{ width: "100%" }}
               />
             </div>
           )}
 
           {/* Action Buttons */}
           <div className="inventory-modal-actions">
-            <div className="inventory-modal-actions">
-              <button
-                type="submit"
-                disabled={loading || !isFormValid()}
-                className="inventory-submit-btn"
-              >
-                {loading
-                  ? mode === "edit"
-                    ? "Saving..."
-                    : "Adding..."
-                  : mode === "edit"
-                  ? "Save Changes"
-                  : "Add Item"}
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="inventory-cancel-btn"
-              >
-                Cancel
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading || !isFormValid()}
+              className="inventory-submit-btn"
+            >
+              {loading
+                ? mode === "edit"
+                  ? "Saving..."
+                  : "Adding..."
+                : mode === "edit"
+                ? "Save Changes"
+                : "Add Item"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inventory-cancel-btn"
+            >
+              Cancel
+            </button>
           </div>
         </form>
       </div>

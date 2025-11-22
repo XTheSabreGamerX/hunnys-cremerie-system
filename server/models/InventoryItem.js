@@ -13,6 +13,7 @@ const inventoryItemSchema = new mongoose.Schema(
 
     markup: { type: Number, min: 0, default: 0 },
     sellingPrice: { type: Number, required: true, min: 0 },
+    lastManualPrice: { type: Number, default: 0},
 
     category: { type: String },
     unit: { type: mongoose.Schema.Types.ObjectId, ref: "UnitOfMeasurement" },

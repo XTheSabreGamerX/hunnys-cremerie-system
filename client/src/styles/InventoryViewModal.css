@@ -1,0 +1,90 @@
+.inv-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 6000;
+}
+
+.inv-modal-container {
+    background: #fff;
+    border-radius: 10px;
+    width: 700px;
+    max-height: 90%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.inv-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.inv-modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.inv-modal-content {
+    margin-bottom: 20px;
+}
+
+.inv-modal-details-table td {
+    padding: 6px 12px;
+}
+
+.inv-modal-footer {
+    border-top: 1px solid #ccc;
+    padding-top: 10px;
+}
+
+.inv-stock-history {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.inv-stock-entry {
+    margin-bottom: 10px;
+    padding-bottom: 4px;
+    border-bottom: 1px dotted #ccc;
+}
+
+.inv-supplier-entry {
+    margin-bottom: 4px;
+}
+
+.inv-stock-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 0.9rem;
+}
+
+.inv-stock-history-table th,
+.inv-stock-history-table td {
+    border: 1px solid #ccc;
+    padding: 6px 8px;
+    text-align: left;
+}
+
+.inv-stock-history-table th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+}
+
+.inv-stock-history-table tbody tr:nth-child(even) {
+    background-color: #fafafa;
+}

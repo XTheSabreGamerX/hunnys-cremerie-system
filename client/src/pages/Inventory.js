@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { customAlphabet } from "nanoid/non-secure";
 import DashboardLayout from "../scripts/DashboardLayout";
 import InventoryModal from "../components/InventoryModal";
+import InventoryViewModal from "../components/InventoryViewModal";
 import CakeEditModal from "../components/CakeEditModal";
 import CakeViewModal from "../components/CakeViewModal";
 import PopupMessage from "../components/PopupMessage";
@@ -36,11 +37,11 @@ const Inventory = () => {
   const [pendingCakeData, setPendingCakeData] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [/* viewedItem */, setViewedItem] = useState(null);
+  const [viewedItem, setViewedItem] = useState(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [popupMessage, setPopupMessage] = useState("");
-  const [popupType, /* setPopupType */] = useState("success");
+  const [popupType /* setPopupType */] = useState("success");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -737,54 +738,12 @@ const Inventory = () => {
         />
       )}
       {/* Inventory view modal (only for Inventory items) */}
-      {/* {isViewOpen && inventoryType === "Inventory" && viewedItem && (
-        <ViewModal
-          item={viewedItem}
-          fields={[
-            { name: "name", label: "Item Name" },
-            { name: "category", label: "Category" },
-            { name: "stock", label: "Stock" },
-            { name: "purchasePrice", label: "Purchase Price" },
-            { name: "unitPrice", label: "Price" },
-            {
-              name: "amount",
-              label: "Unit",
-              render: (val) =>
-                viewedItem?.unit
-                  ? `${val} ${viewedItem.unit.name}`
-                  : `${val || "—"}`,
-            },
-            {
-              name: "supplier",
-              label: "Supplier",
-              render: (val) =>
-                suppliers.find((s) => s._id === val)?.name || "—",
-            },
-            { name: "restockThreshold", label: "Restock Threshold" },
-            {
-              name: "expirationDate",
-              label: "Expiration Date",
-              render: (val) =>
-                val
-                  ? new Date(val).toLocaleDateString("en-PH", {
-                      timeZone: "Asia/Manila",
-                    })
-                  : "N/A",
-            },
-            { name: "status", label: "Status" },
-            {
-              name: "createdBy",
-              label: "Created By",
-              render: (val) => val?.username || "—",
-            },
-          ]}
-          onClose={() => {
-            setIsViewOpen(false);
-            setViewedItem(null);
-          }}
-          onDelete={() => handleDelete(viewedItem._id)}
-        />
-      )} */}
+      <InventoryViewModal
+        isOpen={!!viewedItem}
+        onClose={() => setViewedItem(null)}
+        item={viewedItem}
+      />
+
       {/* Cake view modal (only for Cake Inventory) */}
       {isViewOpen && inventoryType === "Cake Inventory" && selectedCake && (
         <CakeViewModal

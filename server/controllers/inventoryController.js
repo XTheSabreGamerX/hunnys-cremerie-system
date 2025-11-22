@@ -144,112 +144,83 @@ const getAllInventoryItems = async (req, res) => {
 // ---------------------------- ADD INVENTORY ----------------------------
 const addInventoryItem = async (req, res) => {
   try {
-    // Category
-    if (req.body.category) {
-      const categoryDoc = await Category.findById(req.body.category);
-      if (!categoryDoc)
-        return res.status(400).json({ message: "Invalid category" });
-      req.body.category = categoryDoc.name;
+    // Destructure incoming body
+    const {
+      itemId,
+      name,
+      currentStock = 0,
+      threshold = 0,
+      markup = 0,
+      sellingPrice: frontEndPrice,
+      category,
+      unit,
+      suppliers: incomingSuppliers = [],
+      expirationDate,
+      isSplit = false,
+    } = req.body;
+
+    // -------------------- SUPPLIERS --------------------
+    let finalSuppliers = [];
+    if (incomingSuppliers.length > 0) {
+      for (const s of incomingSuppliers) {
+        const supplierDoc = await Supplier.findById(s.supplier);
+        if (!supplierDoc)
+          return res
+            .status(400)
+            .json({ message: `Supplier not found: ${s.supplier}` });
+        finalSuppliers.push({
+          supplier: supplierDoc._id,
+          purchasePrice: s.purchasePrice,
+          isPreferred: !!s.isPreferred,
+        });
+      }
+
+      // Ensure exactly one preferred supplier
+      if (!finalSuppliers.some((s) => s.isPreferred)) {
+        finalSuppliers[0].isPreferred = true;
+      }
     }
 
-    // Suppliers
-    const suppliersInput = req.body.suppliers || [];
-    const validSuppliers = [];
-    for (const s of suppliersInput) {
-      const supplierDoc = await Supplier.findById(s.supplier);
-      if (!supplierDoc)
-        return res
-          .status(400)
-          .json({ message: `Supplier not found: ${s.supplier}` });
-      validSuppliers.push({
-        supplier: supplierDoc._id,
-        purchasePrice: s.purchasePrice,
-        isPreferred: !!s.isPreferred,
-      });
-    }
+    // -------------------- PRICING --------------------
+    let lastManualPrice = frontEndPrice != null ? parseFloat(frontEndPrice) : 0;
+    let sellingPrice = 0;
 
-    // Ensure one preferred supplier
-    if (
-      !validSuppliers.some((s) => s.isPreferred) &&
-      validSuppliers.length > 0
-    ) {
-      validSuppliers[0].isPreferred = true;
-    }
-
-    // Selling Price Calculation
-    let sellingPrice;
-    if (validSuppliers.length > 0) {
-      sellingPrice = computeSellingPrice(validSuppliers, req.body.markup || 0);
-    } else if (req.body.sellingPrice != null) {
-      // apply markup to manual input
-      const markup = Number(req.body.markup || 0);
-      sellingPrice =
-        Math.round(req.body.sellingPrice * (1 + markup / 100) * 100) / 100;
+    const preferredSupplier = finalSuppliers.find((s) => s.isPreferred);
+    if (preferredSupplier) {
+      sellingPrice = preferredSupplier.purchasePrice * (1 + markup / 100);
     } else {
-      sellingPrice = 0;
+      sellingPrice = lastManualPrice * (1 + markup / 100);
     }
 
-    const { currentStock = 0 } = req.body;
-
-    const item = new InventoryItem({
-      ...req.body,
-      suppliers: validSuppliers,
+    // -------------------- CREATE ITEM --------------------
+    const newItem = await InventoryItem.create({
+      itemId,
+      name,
+      currentStock,
+      threshold,
+      markup,
       sellingPrice,
-      status: calculateStatus(
-        currentStock,
-        req.body.threshold || 0,
-        req.body.expirationDate
-      ),
-      stockHistory:
-        currentStock > 0
-          ? [
-              {
-                type: "Created",
-                quantity: currentStock,
-                previousStock: 0,
-                newStock: currentStock,
-                date: new Date(),
-                note: "Initial item creation.",
-              },
-            ]
-          : [],
+      lastManualPrice,
+      category,
+      unit,
+      suppliers: finalSuppliers,
+      expirationDate,
+      isSplit,
       createdBy: req.user.id,
-    });
-
-    await item.save();
-
-    // Add item to supplier records
-    for (const s of item.suppliers) {
-      await Supplier.findByIdAndUpdate(s.supplier, {
-        $addToSet: {
-          itemsSupplied: {
-            inventoryItem: item._id,
-            purchasePrice: s.purchasePrice,
-          },
+      stockHistory: [
+        {
+          type: "Created",
+          quantity: currentStock,
+          previousStock: 0,
+          newStock: currentStock,
+          note: "Initial item creation.",
         },
-      });
-    }
-
-    await createLog({
-      action: "Added Item",
-      module: "Inventory",
-      description: `Inventory item "${item.name}" was added.`,
-      userId: req.user.id,
+      ],
     });
 
-    await createNotification({
-      message: `Inventory item "${item.name}" was created.`,
-      type: "success",
-      roles: ["admin", "owner", "manager"],
-    });
-
-    res.status(201).json(item);
+    res.json(newItem);
   } catch (err) {
-    console.error("[ADD INVENTORY] Error:", err);
-    if (err.name === "ValidationError") {
-      const messages = Object.values(err.errors).map((e) => e.message);
-      return res.status(400).json({ message: messages.join(", ") });
-    }
+    console.error("[ADD INVENTORY] Server error:", err);
     res.status(500).json({ message: err.message || "Failed to add item." });
   }
 };
@@ -260,7 +231,7 @@ const updateInventoryItem = async (req, res) => {
     const item = await InventoryItem.findById(req.params.id);
     if (!item) return res.status(404).json({ message: "Item not found" });
 
-    // Staff request logic
+    // -------------------- STAFF REQUEST --------------------
     if (
       req.user.role === "staff" &&
       item.createdBy.toString() !== req.user.id
@@ -277,19 +248,6 @@ const updateInventoryItem = async (req, res) => {
         requestedBy: req.user.id,
       });
 
-      await createLog({
-        action: "Update Item Request",
-        module: "Inventory",
-        description: `User ${req.user.username} requested to update item: ${item.name}`,
-        userId: req.user.id,
-      });
-
-      await createNotification({
-        message: `An update request for inventory item: "${item.name}" is pending approval.`,
-        type: "warning",
-        roles: ["admin", "owner", "manager"],
-      });
-
       await createNotification({
         message: `Your update request for "${item.name}" is pending approval.`,
         type: "info",
@@ -303,20 +261,24 @@ const updateInventoryItem = async (req, res) => {
         .json({ message: "Your update request has been sent for approval." });
     }
 
-    // Category
-    if (req.body.category) {
-      const categoryDoc = await Category.findById(req.body.category);
-      if (!categoryDoc)
-        return res.status(400).json({ message: "Invalid category" });
-      req.body.category = categoryDoc.name;
-    }
+    const {
+      name,
+      currentStock,
+      threshold,
+      markup,
+      sellingPrice: frontEndPrice,
+      category,
+      unit,
+      suppliers: incomingSuppliers = [],
+      expirationDate,
+      isSplit,
+    } = req.body;
 
-    // Suppliers
-    let finalSuppliers = item.suppliers; // default to existing suppliers
-    if (req.body.suppliers) {
-      const suppliersInput = req.body.suppliers;
+    // -------------------- SUPPLIERS --------------------
+    let finalSuppliers = item.suppliers;
+    if (incomingSuppliers.length > 0) {
       finalSuppliers = [];
-      for (const s of suppliersInput) {
+      for (const s of incomingSuppliers) {
         const supplierDoc = await Supplier.findById(s.supplier);
         if (!supplierDoc)
           return res
@@ -328,134 +290,76 @@ const updateInventoryItem = async (req, res) => {
           isPreferred: !!s.isPreferred,
         });
       }
-      // Ensure at least one preferred supplier
-      if (
-        !finalSuppliers.some((s) => s.isPreferred) &&
-        finalSuppliers.length > 0
-      ) {
+
+      if (!finalSuppliers.some((s) => s.isPreferred))
         finalSuppliers[0].isPreferred = true;
-      }
-      req.body.suppliers = finalSuppliers;
     }
 
-    // Selling price calculation
-    if (req.body.sellingPrice != null) {
-      // If user manually set sellingPrice, optionally apply markup
-      const markupPercent = req.body.markup ?? item.markup ?? 0;
-      req.body.sellingPrice = Math.max(
-        0,
-        parseFloat(req.body.sellingPrice) * (1 + markupPercent / 100)
-      );
-    } else if (finalSuppliers.length > 0) {
-      // Compute selling price from suppliers + markup
-      req.body.sellingPrice = computeSellingPrice(
-        finalSuppliers,
-        req.body.markup ?? item.markup ?? 0
-      );
+    // -------------------- PRICING --------------------
+    let lastManualPrice =
+      frontEndPrice != null ? parseFloat(frontEndPrice) : item.lastManualPrice;
+    let sellingPrice = 0;
+
+    const preferredSupplier = finalSuppliers.find((s) => s.isPreferred);
+    const effectiveMarkup = markup != null ? markup : item.markup ?? 0;
+
+    if (preferredSupplier) {
+      sellingPrice =
+        preferredSupplier.purchasePrice * (1 + effectiveMarkup / 100);
     } else {
-      // fallback
-      req.body.sellingPrice = item.sellingPrice ?? 0;
+      sellingPrice = lastManualPrice * (1 + effectiveMarkup / 100);
     }
 
+    // -------------------- APPLY UPDATES --------------------
     const previousStock = item.currentStock;
 
-    // Apply incoming updates
-    Object.assign(item, req.body);
+    Object.assign(item, {
+      name: name ?? item.name,
+      currentStock: currentStock ?? item.currentStock,
+      threshold: threshold ?? item.threshold,
+      markup: markup ?? item.markup,
+      lastManualPrice,
+      sellingPrice,
+      category: category ?? item.category,
+      unit: unit ?? item.unit,
+      suppliers: finalSuppliers,
+      expirationDate: expirationDate ?? item.expirationDate,
+      isSplit: isSplit ?? item.isSplit,
+      updatedBy: req.user.id,
+    });
 
-    // Stock history / adjustment log
-    if (
-      previousStock !== item.currentStock ||
-      req.body.sellingPrice !== undefined ||
-      req.body.threshold !== undefined ||
-      req.body.unit !== undefined ||
-      req.body.expirationDate !== undefined
-    ) {
-      const changes = [];
+    // -------------------- STOCK HISTORY --------------------
+    const changes = [];
+    if (previousStock !== item.currentStock)
+      changes.push(
+        `Stock changed from ${previousStock} to ${item.currentStock}`
+      );
+    if (frontEndPrice != null)
+      changes.push(`Selling price updated to ${item.sellingPrice}`);
+    if (threshold != null && threshold !== item.threshold)
+      changes.push(`Threshold updated to ${item.threshold}`);
 
-      if (previousStock !== item.currentStock) {
-        changes.push(
-          `Stock changed from ${previousStock} to ${item.currentStock}`
-        );
-      }
-
-      if (
-        req.body.sellingPrice !== undefined &&
-        req.body.sellingPrice !== item.sellingPrice
-      ) {
-        changes.push(`Selling price updated to ${item.sellingPrice}`);
-      }
-
-      if (
-        req.body.threshold !== undefined &&
-        req.body.threshold !== item.threshold
-      ) {
-        changes.push(`Threshold updated to ${item.threshold}`);
-      }
-
-      const noteText = req.body.note
-        ? `${req.user.username}: ${req.body.note}${
-            changes.length > 0 ? " | " + changes.join("; ") : ""
-          }`
-        : `${req.user.username} updated inventory${
-            changes.length > 0 ? ": " + changes.join("; ") : ""
-          }`;
-
+    if (changes.length > 0) {
       item.stockHistory.push({
         type: "Adjustment",
         quantity: Math.abs(item.currentStock - previousStock),
         previousStock,
         newStock: item.currentStock,
-        date: new Date(),
-        note: noteText,
+        note: `${req.user.username} updated inventory: ${changes.join("; ")}`,
       });
     }
 
-    // Update status
+    // -------------------- STATUS & SAVE --------------------
     item.status = calculateStatus(
       item.currentStock,
       item.threshold,
       item.expirationDate
     );
-
-    item.updatedBy = req.user.id;
     await item.save();
-
-    // Sync suppliers (add/remove)
-    const oldSupplierIds = item.suppliers.map((s) => s.supplier.toString());
-    const newSupplierIds = (req.body.suppliers || []).map((s) =>
-      s.supplier.toString()
-    );
-
-    // Remove old
-    for (const supId of oldSupplierIds) {
-      if (!newSupplierIds.includes(supId)) {
-        await Supplier.findByIdAndUpdate(supId, {
-          $pull: { itemsSupplied: { inventoryItem: item._id } },
-        });
-      }
-    }
-
-    // Add new
-    for (const s of req.body.suppliers || []) {
-      if (!oldSupplierIds.includes(s.supplier.toString())) {
-        await Supplier.findByIdAndUpdate(s.supplier, {
-          $addToSet: {
-            itemsSupplied: {
-              inventoryItem: item._id,
-              purchasePrice: s.purchasePrice,
-            },
-          },
-        });
-      }
-    }
 
     res.json(item);
   } catch (err) {
     console.error("[UPDATE INVENTORY] Server error:", err);
-    if (err.name === "ValidationError") {
-      const messages = Object.values(err.errors).map((e) => e.message);
-      return res.status(400).json({ message: messages.join(", ") });
-    }
     res.status(500).json({ message: err.message || "Failed to update item." });
   }
 };
@@ -605,6 +509,7 @@ const repackInventoryItem = async (req, res) => {
       suppliers: parentItem.suppliers,
       markup: parentItem.markup,
       sellingPrice: parentItem.sellingPrice,
+      lastManualPrice: parentItem.lastManualPrice,
       createdBy: req.user.id,
       status: calculateStatus(
         childStock,
@@ -661,7 +566,12 @@ const batchUpdateStatuses = async () => {
         item.threshold,
         item.expirationDate
       );
+
       item.updatedBy = item.updatedBy || systemUserId;
+
+      item.$locals = item.$locals || {};
+      item.$locals.skipLog = true;
+
       await item.save();
     }
 
