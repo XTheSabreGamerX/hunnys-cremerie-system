@@ -55,44 +55,71 @@ const getSaleById = async (req, res) => {
 // POST function to create a new sale
 const createSale = async (req, res) => {
   try {
-    const saleItemsWithCost = await Promise.all(
+    // Validate inventory items exist and prepare sale items
+    const saleItems = await Promise.all(
       req.body.items.map(async (item) => {
         const inventoryItem = await Inventory.findById(item.itemId);
-        if (!inventoryItem) {
+        if (!inventoryItem)
           throw new Error(`Inventory item not found: ${item.itemId}`);
-        }
+
         return {
-          ...item,
-          purchasePrice: inventoryItem.purchasePrice,
+          itemId: inventoryItem._id,
+          name: inventoryItem.name,
+          quantity: Number(item.quantity),
+          sellingPrice: Number(item.sellingPrice),
         };
       })
     );
 
+    // Generate incrementing invoice number
+    const lastSale = await Sale.findOne().sort({ invoiceNumber: -1 }).exec();
+    const nextInvoice = lastSale ? lastSale.invoiceNumber + 1 : 1;
+
+    // Create new sale
     const newSale = new Sale({
-      ...req.body,
-      items: saleItemsWithCost,
+      invoiceNumber: nextInvoice,
+      customerName: req.body.customerName,
+      orderType: req.body.orderType || "Online",
+      items: saleItems,
+      subtotal: req.body.subtotal,
+      taxRate: req.body.taxRate,
+      taxAmount: req.body.taxAmount,
+      totalAmount: req.body.totalAmount,
     });
 
     await newSale.save();
 
-    for (const soldItem of newSale.items) {
+    // Update inventory stock and push to stockHistory
+    for (const soldItem of saleItems) {
       const inventoryItem = await Inventory.findById(soldItem.itemId);
       if (!inventoryItem) continue;
 
-      inventoryItem.stock -= soldItem.quantity;
-      if (inventoryItem.stock < 0) inventoryItem.stock = 0;
+      const previousStock = inventoryItem.currentStock;
+      inventoryItem.currentStock -= soldItem.quantity;
+      if (inventoryItem.currentStock < 0) inventoryItem.currentStock = 0;
 
-      inventoryItem.$locals = { skipLog: true }
+      inventoryItem.stockHistory = inventoryItem.stockHistory || [];
+      inventoryItem.stockHistory.push({
+        type: "Sale",
+        quantity: soldItem.quantity,
+        previousStock,
+        newStock: inventoryItem.currentStock,
+        date: new Date(),
+        note: `Invoice #: ${newSale.invoiceNumber}`,
+      });
+
+      inventoryItem.$locals = { skipLog: true };
 
       await inventoryItem.save();
     }
 
+    // Create activity log and notification
     try {
       await createLog({
         action: "Created Sale",
         module: "Sales Management",
-        description: `User ${req.user.username} created a sale with: ${
-          newSale.items.length
+        description: `User ${req.user.username} created a sale with ${
+          saleItems.length
         } item(s) for customer: ${req.body.customerName || "Unknown"}`,
         userId: req.user.id,
       });
@@ -121,59 +148,6 @@ const createSale = async (req, res) => {
     });
   }
 };
-/* const createSale = async (req, res) => {
-  try {
-    const saleItemsWithCost = await Promise.all(
-      req.body.items.map(async (item) => {
-        const inventoryItem = await Inventory.findOne({ itemId: item.itemId });
-        return {
-          ...item,
-          purchasePrice: inventoryItem?.purchasePrice || 0,
-        };
-      })
-    );
-
-    const newSale = new Sale({
-      ...req.body,
-      items: saleItemsWithCost,
-    });
-    await newSale.save();
-
-    for (const soldItem of newSale.items) {
-      const inventoryItem = await Inventory.findOne({ itemId: soldItem.itemId });
-      if (!inventoryItem) continue;
-
-      inventoryItem.stock -= soldItem.quantity;
-      if (inventoryItem.stock < 0) inventoryItem.stock = 0;
-
-      await inventoryItem.save();
-    }
-
-    try {
-      await createLog({
-        action: "Created Sale",
-        module: "Sales Management",
-        description: `User ${req.user.username} created a sale with: ${
-          newSale.items.length
-        } item(s) for customer: ${req.body.customerName || "Unknown"}`,
-        userId: req.user.id,
-      });
-    } catch (logErr) {
-      console.error("[Activity Log] Failed to log sale creation:", logErr.message);
-    }
-
-    res.status(201).json({
-      message: "Sale recorded and inventory updated successfully",
-      sale: newSale,
-    });
-  } catch (err) {
-    console.error("[SALE] Creation error:", err.message);
-    res.status(400).json({
-      message: "Failed to create sale",
-      error: err,
-    });
-  }
-}; */
 
 // POST function to delete and refund a sale
 const refundSale = async (req, res) => {
@@ -188,7 +162,7 @@ const refundSale = async (req, res) => {
     for (const item of sale.items) {
       const inventoryItem = await Inventory.findById(item.itemId);
       if (inventoryItem) {
-        inventoryItem.stock += item.quantity;
+        inventoryItem.currentStock += item.quantity;
         await inventoryItem.save();
       } else {
         console.warn(

@@ -92,27 +92,27 @@
 
 .sales-products-table th:nth-child(1),
 .sales-products-table td:nth-child(1) {
-  width: 7%;
+  width: 8%;
 }
 
 .sales-products-table th:nth-child(2),
 .sales-products-table td:nth-child(2) {
-  width: 12%;
+  width: 10%;
 }
 
 .sales-products-table th:nth-child(3),
 .sales-products-table td:nth-child(3) {
-  width: 12%;
+  width: 6%;
 }
 
 .sales-products-table th:nth-child(4),
 .sales-products-table td:nth-child(4) {
-  width: 7%;
+  width: 10%;
 }
 
 .sales-products-table th:nth-child(5),
 .sales-products-table td:nth-child(5) {
-  width: 7%;
+  width: 12%;
 }
 
 .sales-products-table th:nth-child(6),
@@ -127,12 +127,7 @@
 
 .sales-products-table th:nth-child(8),
 .sales-products-table td:nth-child(8) {
-  width: 15%;
-}
-
-.sales-products-table th:nth-child(9),
-.sales-products-table td:nth-child(9) {
-  width: 10%;
+  width: 12%;
 }
 
 /* ================= STATUS BADGES ================= */

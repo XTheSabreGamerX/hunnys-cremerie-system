@@ -2,21 +2,20 @@ const mongoose = require("mongoose");
 
 const saleSchema = new mongoose.Schema(
   {
-    saleId: { type: String, required: true, unique: true },
-    customerName: { type: String},
-    orderType: { 
-      type: String, 
-      enum: ["Walk-in", "Online"], 
+    invoiceNumber: { type: Number, required: true, unique: true },
+    customerName: { type: String },
+    orderType: {
+      type: String,
+      enum: ["Walk-in", "Online"],
       default: "Online",
-      required: true
+      required: true,
     },
     items: [
       {
         itemId: String,
         name: String,
         quantity: Number,
-        price: Number,
-        purchasePrice: Number
+        sellingPrice: Number,
       },
     ],
     subtotal: { type: Number },

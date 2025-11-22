@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { customAlphabet } from "nanoid/non-secure";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
 import DashboardLayout from "../scripts/DashboardLayout";
 import PopupMessage from "../components/PopupMessage";
@@ -15,8 +14,7 @@ const SalesManagement = () => {
   const [orderType, setOrderType] = useState("Walk-in");
   const [isUnregistered, setIsUnregistered] = useState(false);
   const [customerName, setCustomerName] = useState("");
-  const [taxRate, /* setTaxRate */] = useState(12);
- /*  const [paymentMethod, setPaymentMethod] = useState(""); */
+  const [taxRate] = useState(12);
   const [searchQuery, setSearchQuery] = useState("");
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("");
@@ -25,9 +23,6 @@ const SalesManagement = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [paginatedItems, setPaginatedItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [mode, /* setMode */] = useState("Sales");
-  const [activeSupplier, setActiveSupplier] = useState(null);
-  const [suppliers, setSuppliers] = useState([]);
 
   const navigate = useNavigate();
 
@@ -45,14 +40,9 @@ const SalesManagement = () => {
     }, 2000);
   };
 
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  const nanoid = customAlphabet(alphabet, 8);
-  const generateSaleID = () => `SALE-${nanoid()}`;
-  const generateAcqID = () => `ACQ-${nanoid()}`;
-
   const fetchInventory = useCallback(async () => {
     try {
-      let url = `${API_BASE}/api/inventory?page=${currentPage}&limit=10&search=${encodeURIComponent(
+      const url = `${API_BASE}/api/inventory?page=${currentPage}&limit=10&search=${encodeURIComponent(
         searchQuery
       )}`;
 
@@ -80,25 +70,7 @@ const SalesManagement = () => {
 
   useEffect(() => {
     fetchInventory();
-  }, [fetchInventory, mode]);
-
-  // Fetch suppliers
-  useEffect(() => {
-    authFetch(`${API_BASE}/api/suppliers?page=1&limit=1000`)
-      .then((res) => res.json())
-      .then((data) => {
-        const allSuppliers = Array.isArray(data.suppliers)
-          ? data.suppliers
-          : data;
-        setSuppliers(allSuppliers);
-      })
-      .catch((err) => console.error("Failed to fetch suppliers:", err));
-  }, []);
-
-  const getSupplierName = (supplierId) => {
-    const supplier = suppliers.find((s) => s._id === supplierId);
-    return supplier ? supplier.name : "-";
-  };
+  }, [fetchInventory]);
 
   // Fetch customers
   useEffect(() => {
@@ -118,35 +90,20 @@ const SalesManagement = () => {
 
   const handleAddToCart = (product) => {
     if (
-      mode === "Sales" &&
-      (product.stock <= 0 ||
-        product.status === "Out of stock" ||
-        product.status === "Expired")
-    ) {
+      product.currentStock <= 0 ||
+      product.status === "Out of stock" ||
+      product.status === "Expired"
+    )
       return;
-    }
 
-    if (mode === "Product Acquisition") {
-      const supplierId = product.supplier?._id || product.supplier;
-      if (!activeSupplier) {
-        setActiveSupplier(supplierId);
-      } else if (supplierId !== activeSupplier) {
-        showPopup(
-          "You can only add items from the same supplier in Product Acquisition mode.",
-          "error"
-        );
-        return;
-      }
-    }
-
+    // Decrement stock in inventory
     setInventoryItems((prev) =>
       prev.map((i) =>
-        i._id === product._id
-          ? { ...i, stock: mode === "Sales" ? i.stock - 1 : i.stock }
-          : i
+        i._id === product._id ? { ...i, currentStock: i.currentStock - 1 } : i
       )
     );
 
+    // Add to cart or increment quantity
     setCartItems((prev) => {
       const exists = prev.find((i) => i._id === product._id);
       return exists
@@ -158,22 +115,19 @@ const SalesManagement = () => {
   };
 
   const handleIncreaseQuantity = (itemId) => {
-    setCartItems((prev) =>
-      prev.map((cartItem) => {
+    setCartItems((prevCart) =>
+      prevCart.map((cartItem) => {
         if (cartItem._id === itemId) {
-          if (mode === "Sales" && cartItem.quantity >= cartItem.stock) {
-            return cartItem;
-          }
+          // Find corresponding inventory item
+          const invItem = inventoryItems.find((i) => i._id === itemId);
+          if (!invItem || invItem.currentStock <= 0) return cartItem;
 
-          if (mode === "Sales") {
-            setInventoryItems((prevInv) =>
-              prevInv.map((invItem) =>
-                invItem._id === itemId
-                  ? { ...invItem, stock: invItem.stock - 1 }
-                  : invItem
-              )
-            );
-          }
+          // Decrement stock
+          setInventoryItems((prevInv) =>
+            prevInv.map((i) =>
+              i._id === itemId ? { ...i, currentStock: i.currentStock - 1 } : i
+            )
+          );
 
           return { ...cartItem, quantity: cartItem.quantity + 1 };
         }
@@ -183,14 +137,13 @@ const SalesManagement = () => {
   };
 
   const handleDecreaseQuantity = (itemId) => {
-    setCartItems((prev) =>
-      prev.map((cartItem) => {
+    setCartItems((prevCart) =>
+      prevCart.map((cartItem) => {
         if (cartItem._id === itemId && cartItem.quantity > 1) {
+          // Increment stock back
           setInventoryItems((prevInv) =>
-            prevInv.map((invItem) =>
-              invItem._id === itemId
-                ? { ...invItem, stock: invItem.stock + 1 }
-                : invItem
+            prevInv.map((i) =>
+              i._id === itemId ? { ...i, currentStock: i.currentStock + 1 } : i
             )
           );
           return { ...cartItem, quantity: cartItem.quantity - 1 };
@@ -201,28 +154,17 @@ const SalesManagement = () => {
   };
 
   const handleRemoveFromCart = (itemId) => {
-    setCartItems((prev) => {
-      const newCart = prev.filter((i) => i._id !== itemId);
-
-      if (newCart.length === 0) {
-        setActiveSupplier(null);
-      }
-
-      return newCart;
-    });
-
-    setInventoryItems((prevInv) =>
-      prevInv.map((invItem) =>
-        invItem._id === itemId && mode === "Sales"
-          ? {
-              ...invItem,
-              stock:
-                invItem.stock +
-                (cartItems.find((i) => i._id === itemId)?.quantity || 0),
-            }
-          : invItem
-      )
-    );
+    const removedItem = cartItems.find((i) => i._id === itemId);
+    if (removedItem) {
+      setInventoryItems((prevInv) =>
+        prevInv.map((i) =>
+          i._id === itemId
+            ? { ...i, currentStock: i.currentStock + removedItem.quantity }
+            : i
+        )
+      );
+    }
+    setCartItems((prevCart) => prevCart.filter((i) => i._id !== itemId));
   };
 
   const handleSaveSale = async () => {
@@ -231,128 +173,63 @@ const SalesManagement = () => {
       return;
     }
 
-    if (mode === "Sales") {
-      if (!orderType) {
-        showPopup("Please select an order type.", "error");
-        return;
-      }
-      /* if (!paymentMethod) {
-        showPopup("Please select a payment method.", "error");
-        return;
-      } */
-    }/*  else if (mode === "Product Acquisition") {
-      if (!paymentMethod) {
-        showPopup("Please select a payment method.", "error");
-        return;
-      }
-    } */
-
-    if (mode === "Product Acquisition") {
-      const suppliers = [...new Set(cartItems.map((i) => i.supplier))];
-      if (suppliers.length > 1) {
-        showPopup(
-          "All items must come from the same supplier in Product Acquisition mode.",
-          "error"
-        );
-        return;
-      }
-      if (!activeSupplier && suppliers.length === 0) {
-        showPopup(
-          "Unable to determine supplier. Please reselect an item.",
-          "error"
-        );
-        return;
-      }
+    if (!orderType) {
+      showPopup("Please select an order type.", "error");
+      return;
     }
 
     setLoading(true);
 
     const taxRatePercent = Number(taxRate) || 0;
     try {
-      // Shared subtotal + totals
       const subtotal = cartItems.reduce(
-        (sum, i) =>
-          sum +
-          (mode === "Product Acquisition" ? i.purchasePrice : i.unitPrice) *
-            i.quantity,
+        (sum, i) => sum + i.sellingPrice * i.quantity,
         0
       );
       const taxAmount = (subtotal * taxRatePercent) / 100;
       const totalAmount = subtotal + taxAmount;
 
-      if (mode === "Sales") {
-        // === SALE MODE ===
-        const saleToSend = {
-          saleId: generateSaleID(alphabet),
-          customerName: isUnregistered
-            ? customerName.trim() || "Unregistered"
-            : customerName,
-          orderType,
-          items: cartItems.map((i) => ({
-            itemId: i._id,
-            name: i.name,
-            price: i.unitPrice,
-            quantity: i.quantity,
-            purchasePrice: i.purchasePrice || 0,
-          })),
-          subtotal,
-          taxRate: taxRatePercent,
-          taxAmount,
-          totalAmount,
-         /*  paymentMethod, */
-        };
+      const saleToSend = {
+        customerName: isUnregistered
+          ? customerName.trim() || "Unregistered"
+          : customerName,
+        orderType,
+        items: cartItems.map((i) => ({
+          itemId: i._id,
+          quantity: i.quantity,
+          sellingPrice: Number(i.sellingPrice.toFixed(2)),
+        })),
+        subtotal: Number(subtotal.toFixed(2)),
+        taxRate: taxRatePercent,
+        taxAmount: Number(taxAmount.toFixed(2)),
+        totalAmount: Number(totalAmount.toFixed(2)),
+      };
 
-        const res = await authFetch(`${API_BASE}/api/sales`, {
-          method: "POST",
-          body: JSON.stringify(saleToSend),
-        });
-        if (!res.ok) throw new Error("Failed to create sale.");
+      const res = await authFetch(`${API_BASE}/api/sales`, {
+        method: "POST",
+        body: JSON.stringify(saleToSend),
+      });
+      if (!res.ok) throw new Error("Failed to create sale.");
 
-        await Promise.all(
-          cartItems.map((item) =>
-            authFetch(`${API_BASE}/api/inventory/${item._id}`, {
-              method: "PUT",
-              body: JSON.stringify({ stock: item.stock - item.quantity }),
-            })
-          )
-        );
+      const resData = await res.json();
+      showPopup(
+        `Sale created successfully! Invoice #: ${resData.sale.invoiceNumber}`,
+        "success"
+      );
 
-        showPopup("Sale created successfully!", "success");
-      } else if (mode === "Product Acquisition") {
-        // === PRODUCT ACQUISITION MODE ===
-        const acquisitionToSend = {
-          acquisitionId: generateAcqID(alphabet),
-          supplier: activeSupplier || "Hunnys Crémerie",
-          items: cartItems.map((i) => ({
-            itemId: i._id,
-            name: i.name,
-            quantity: i.quantity,
-            unitCost: i.purchasePrice || 0,
-          })),
-          subtotal,
-          totalAmount,
-          /* paymentMethod, */
-        };
-
-        console.log(JSON.stringify(acquisitionToSend, null, 2));
-
-        const res = await authFetch(`${API_BASE}/api/acquisitions`, {
-          method: "POST",
-          body: JSON.stringify(acquisitionToSend),
-        });
-        if (!res.ok) throw new Error("Failed to create acquisition.");
-
-        showPopup(
-          "Product acquisition request created successfully!",
-          "success"
-        );
-      }
+      await Promise.all(
+        cartItems.map((item) =>
+          authFetch(`${API_BASE}/api/inventory/${item._id}`, {
+            method: "PUT",
+            body: JSON.stringify({ stock: item.currentStock - item.quantity }),
+          })
+        )
+      );
 
       setCartItems([]);
       setOrderType("Walk-in");
       setCustomerName("");
       setIsUnregistered(false);
-      /* setPaymentMethod(""); */
     } catch (err) {
       showPopup(err.message || "Something went wrong.", "error");
     } finally {
@@ -393,27 +270,26 @@ const SalesManagement = () => {
               <table className="sales-products-table">
                 <thead>
                   <tr>
-                    <th className="col-itemid">Item ID</th>
-                    <th className="col-name">Name</th>
-                    <th className="col-category">Category</th>
-                    <th className="col-purchase">Purchase Price</th>
-                    <th className="col-unitprice">Unit Price</th>
-                    <th className="col-amountunit">Amount</th>
-                    <th className="col-stock">Stock</th>
-                    <th className="col-supplier">Supplier</th>
-                    <th className="col-status">Status</th>
+                    <th>Item ID</th>
+                    <th>Name</th>
+                    <th>Stock</th>
+                    <th>Price</th>
+                    <th>Category</th>
+                    <th>Unit</th>
+                    <th>Status</th>
+                    <th>Expiration</th>
                   </tr>
                 </thead>
-
                 <tbody>
                   {paginatedItems.length === 0 ? (
                     <tr>
-                      <td colSpan="9" className="no-results">
+                      <td colSpan="8" className="no-results">
                         No matching products found.
                       </td>
                     </tr>
                   ) : (
                     paginatedItems
+                      .filter((item) => !item.archived)
                       .sort((a, b) => {
                         if (
                           a.status === "Well-stocked" &&
@@ -431,46 +307,21 @@ const SalesManagement = () => {
                         <tr
                           key={item._id}
                           className={`sales-table-row ${
-                            mode === "Sales" &&
-                            (item.stock <= 0 ||
-                              item.status === "Out of stock" ||
-                              item.status === "Expired")
+                            item.currentStock <= 0 ||
+                            item.status === "Out of stock" ||
+                            item.status === "Expired"
                               ? "disabled-row"
                               : ""
                           }`}
-                          onClick={() => {
-                            if (mode === "Sales") {
-                              if (
-                                item.stock > 0 &&
-                                item.status !== "Out of stock" &&
-                                item.status !== "Expired"
-                              ) {
-                                handleAddToCart(item);
-                              }
-                            } else {
-                              handleAddToCart(item);
-                            }
-                          }}
+                          onClick={() => handleAddToCart(item)}
                         >
-                          <td className="col-itemid">{item.itemId}</td>
-                          <td className="col-name" title={item.name}>
-                            {item.name}
-                          </td>
-                          <td className="col-category">{item.category}</td>
-                          <td className="col-purchase">
-                            ₱{item.purchasePrice}
-                          </td>
-                          <td className="col-unitprice">₱{item.unitPrice}</td>
-                          <td className="col-amountunit">
-                            {item.amount
-                              ? `${item.amount} ${item.unit?.name || ""}`
-                              : "—"}
-                          </td>
-                          <td className="col-stock">{item.stock}</td>
-                          <td className="col-supplier">
-                            {getSupplierName(item.supplier)}
-                          </td>
-                          <td className="col-status">
+                          <td>{item.itemId}</td>
+                          <td title={item.name}>{item.name}</td>
+                          <td>{item.currentStock}</td>
+                          <td>₱{item.sellingPrice?.toFixed(2)}</td>
+                          <td>{item.category}</td>
+                          <td>{item.unit?.name || "—"}</td>
+                          <td>
                             <span
                               className={`product-status ${item.status
                                 .replace(/\s+/g, "-")
@@ -479,6 +330,14 @@ const SalesManagement = () => {
                               {item.status}
                             </span>
                           </td>
+
+                          <td>
+                            {item.expirationDate
+                              ? new Date(
+                                  item.expirationDate
+                                ).toLocaleDateString()
+                              : "—"}
+                          </td>
                         </tr>
                       ))
                   )}
@@ -486,6 +345,7 @@ const SalesManagement = () => {
               </table>
             </div>
 
+            {/* Pagination */}
             <div className="pagination">
               <p className="pagination-info">
                 Showing {(currentPage - 1) * 10 + 1}-
@@ -501,7 +361,6 @@ const SalesManagement = () => {
                 >
                   Prev
                 </button>
-
                 {Array.from({ length: Math.min(7, totalPages) }).map(
                   (_, idx) => {
                     const start = Math.max(
@@ -521,7 +380,6 @@ const SalesManagement = () => {
                     );
                   }
                 )}
-
                 <button
                   onClick={() =>
                     setCurrentPage((prev) => Math.min(prev + 1, totalPages))
@@ -544,89 +402,51 @@ const SalesManagement = () => {
                 Order Type
                 <select
                   value={orderType}
-                  onChange={(e) => {
-                    const newType = e.target.value;
-                    setOrderType(newType);
-                  }}
+                  onChange={(e) => setOrderType(e.target.value)}
                 >
                   <option value="Walk-in">Walk-in</option>
                   <option value="Online">Online</option>
                 </select>
               </label>
 
-              {mode === "Sales" && (
-                <>
-                  <label>
-                    Customer
-                    {isUnregistered ? (
-                      <input
-                        type="text"
-                        placeholder="Enter customer name or leave blank."
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                      />
-                    ) : (
-                      <select
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                      >
-                        {customers.map((cust) => (
-                          <option key={cust._id} value={cust.name}>
-                            {cust.name} ({cust.customerId})
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </label>
+              <label>
+                Customer
+                {isUnregistered ? (
+                  <input
+                    type="text"
+                    placeholder="Enter customer name or leave blank."
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                  />
+                ) : (
+                  <select
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                  >
+                    {customers.map((cust) => (
+                      <option key={cust._id} value={cust.name}>
+                        {cust.name} ({cust.customerId})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </label>
 
-                  <label className="pos-unregistered-toggle">
-                    <input
-                      type="checkbox"
-                      checked={isUnregistered}
-                      onChange={(e) => {
-                        setIsUnregistered(e.target.checked);
-                        setCustomerName(
-                          e.target.checked
-                            ? ""
-                            : customers[0]?.name || "Unregistered"
-                        );
-                      }}
-                    />
-                    Unregistered Customer
-                  </label>
-                </>
-              )}
-
-              {mode === "Product Acquisition" && activeSupplier && (
-                <div className="pa-active-supplier">
-                  <strong>Current Supplier:</strong>{" "}
-                  {getSupplierName(activeSupplier)}
-                </div>
-              )}
-
-              {/* <label className="tax-toggle">
+              <label className="pos-unregistered-toggle">
                 <input
                   type="checkbox"
-                  checked={taxRate === 12}
-                  onChange={(e) => setTaxRate(e.target.checked ? 12 : 0)}
+                  checked={isUnregistered}
+                  onChange={(e) => {
+                    setIsUnregistered(e.target.checked);
+                    setCustomerName(
+                      e.target.checked
+                        ? ""
+                        : customers[0]?.name || "Unregistered"
+                    );
+                  }}
                 />
-                Apply 12% VAT
-              </label> */}
-
-             {/*  <label>
-                Payment Method
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                >
-                  <option value="">Select</option>
-                  <option value="Cash">Cash</option>
-                  <option value="Credit Card">Credit Card</option>
-                  <option value="GCash">GCash</option>
-                  <option value="PayMaya">PayMaya</option>
-                  <option value="Others">Others</option>
-                </select>
-              </label> */}
+                Unregistered Customer
+              </label>
             </div>
 
             <div className="pos-cart-items">
@@ -646,9 +466,7 @@ const SalesManagement = () => {
                       <span>{item.quantity}</span>
                       <button
                         onClick={() => handleIncreaseQuantity(item._id)}
-                        disabled={
-                          mode === "Sales" ? item.quantity >= item.stock : false
-                        }
+                        disabled={item.quantity >= item.currentStock}
                       >
                         +
                       </button>
@@ -659,14 +477,8 @@ const SalesManagement = () => {
                         <FiTrash2 />
                       </button>
                     </div>
-                    {/* <span>₱{(item.unitPrice * item.quantity).toFixed(2)}</span> */}
                     <span>
-                      ₱
-                      {(
-                        (mode === "Product Acquisition"
-                          ? item.purchasePrice
-                          : item.unitPrice) * item.quantity
-                      ).toFixed(2)}
+                      ₱{(item.sellingPrice * item.quantity).toFixed(2)}
                     </span>
                   </div>
                 ))
@@ -676,16 +488,14 @@ const SalesManagement = () => {
             <div className="pos-cart-summary">
               <p>
                 Subtotal: ₱
-                {cartItems.reduce(
-                  (sum, item) =>
-                    sum +
-                    (mode === "Product Acquisition"
-                      ? item.purchasePrice
-                      : item.unitPrice) *
-                      item.quantity,
-                  0
-                )}
+                {cartItems
+                  .reduce(
+                    (sum, item) => sum + item.sellingPrice * item.quantity,
+                    0
+                  )
+                  .toFixed(2)}
               </p>
+
               <button
                 className="pos-checkout-btn"
                 onClick={handleSaveSale}

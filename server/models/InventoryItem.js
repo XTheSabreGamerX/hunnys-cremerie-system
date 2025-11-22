@@ -107,7 +107,7 @@ inventoryItemSchema.pre("findOneAndUpdate", async function (next) {
       update.expirationDate ??
       (update.$set ? update.$set.expirationDate : currentDoc.expirationDate);
 
-    update.status = calculateStatus(currentStock, threshold, expirationDate);
+    update.status = calculateStatus(initialStock, maxStock, expirationDate);
     this.setUpdate(update);
     next();
   } catch (err) {
@@ -118,7 +118,7 @@ inventoryItemSchema.pre("findOneAndUpdate", async function (next) {
 // Post-save hook for logging and notifications
 inventoryItemSchema.post("save", async function (doc, next) {
   try {
-    if (this.$locals?.skipLog) return next();
+    if (doc.$locals?.skipLog) return next();
 
     await createLog({
       action: "Updated Item",
