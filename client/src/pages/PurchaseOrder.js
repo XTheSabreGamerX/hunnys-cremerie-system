@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../scripts/DashboardLayout";
-import { FaEye, FaPlus } from "react-icons/fa6";
+import { FaEye, FaPlus, FaBoxesStacked } from "react-icons/fa6";
+import { showToast } from "../components/ToastContainer";
 import ViewModal from "../components/ViewModal";
 import PurchaseOrderModal from "../components/PurchaseOrderModal";
+import PurchaseOrderReceiveModal from "../components/PurchaseOrderReceiveModal";
 import PopupMessage from "../components/PopupMessage";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
 import "../styles/App.css";
@@ -22,8 +24,10 @@ const PurchaseOrderManagement = () => {
   const [popupType, setPopupType] = useState("success");
 
   const [showPOCreateModal, setShowPOCreateModal] = useState(false);
+  const [showPOReceiveModal, setShowPOReceiveModal] = useState(false);
 
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [selectedPO, setSelectedPO] = useState(null);
   const [viewedPO, setViewedPO] = useState(null);
 
   const navigate = useNavigate();
@@ -103,6 +107,41 @@ const PurchaseOrderManagement = () => {
     }
   };
 
+  const handleReceiveSubmit = async (receivedItems) => {
+    try {
+      const response = await authFetch(
+        `${API_BASE}/api/purchaseOrder/receive/${selectedPO._id}`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ items: receivedItems }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to receive items");
+      }
+
+      showToast({
+        message: `Item Received successfully!`,
+        type: "success",
+        duration: 3000,
+      });
+
+      fetchPurchaseOrders();
+
+      setShowPOReceiveModal(false);
+    } catch (error) {
+      console.error("Receive PO Error:", error);
+      showToast({
+        message: error.message,
+        type: "error",
+        duration: 3000,
+      });
+    }
+  };
+
   return (
     <>
       {popupMessage && (
@@ -117,6 +156,15 @@ const PurchaseOrderManagement = () => {
         <PurchaseOrderModal
           onClose={() => setShowPOCreateModal(false)}
           onSave={handleSavePO}
+        />
+      )}
+
+      {showPOReceiveModal && (
+        <PurchaseOrderReceiveModal
+          isOpen={showPOReceiveModal}
+          onClose={() => setShowPOReceiveModal(false)}
+          purchaseOrder={selectedPO}
+          onSubmit={handleReceiveSubmit}
         />
       )}
 
@@ -213,6 +261,15 @@ const PurchaseOrderManagement = () => {
                       <td>{new Date(po.createdAt).toLocaleString()}</td>
                       <td>{new Date(po.updatedAt).toLocaleString()}</td>
                       <td>
+                        <button
+                          className="module-action-btn module-edit-btn"
+                          onClick={() => {
+                            setSelectedPO(po);
+                            setShowPOReceiveModal(true);
+                          }}
+                        >
+                          <FaBoxesStacked />
+                        </button>
                         <button
                           className="module-action-btn module-view-btn"
                           onClick={() => {
