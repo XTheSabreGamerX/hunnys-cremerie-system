@@ -97,7 +97,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/actionRequest", actionRequestRoutes);
 app.use("/api/report", reportRoutes);
 app.use("/api/cake", cakeRoutes);
-app.use("/api/backup", backupRoutes);
+app.use("/api/backup-restore", backupRoutes);
 app.use("/api/settings", settingsRoutes);
 
 /* // Nodemailer

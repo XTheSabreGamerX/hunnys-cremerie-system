@@ -182,7 +182,7 @@ const addInventoryItem = async (req, res) => {
     }
 
     // -------------------- PRICING --------------------
-    let lastManualPrice = frontEndPrice != null ? parseFloat(frontEndPrice) : 0;
+    let lastManualPrice = Number(frontEndPrice).toFixed(2) || 0;
     let sellingPrice = 0;
 
     const preferredSupplier = finalSuppliers.find((s) => s.isPreferred);

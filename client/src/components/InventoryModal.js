@@ -234,8 +234,10 @@ const InventoryModal = ({
         category: categoryName,
         threshold: formData.currentStock,
         note: formData.note || "",
-        sellingPrice: parseFloat(formData.sellingPrice.toFixed(2)),
-        lastManualPrice: parseFloat(formData.lastManualPrice.toFixed(2)),
+        sellingPrice: parseFloat(Number(formData.sellingPrice) || 0).toFixed(2),
+        lastManualPrice: parseFloat(
+          Number(formData.lastManualPrice) || 0
+        ).toFixed(2),
       };
 
       const res = await authFetch(url, {
