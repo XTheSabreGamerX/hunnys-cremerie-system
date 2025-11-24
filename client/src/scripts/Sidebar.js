@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import "../styles/Sidebar.css";
+import { API_BASE, authFetch } from "../utils/tokenUtils";
 import Logo from "../elements/images/icon32x32.png";
 import { Menu } from "lucide-react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
@@ -89,13 +90,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
       icon: <FaClipboard />,
       path: "/report",
       roles: ["admin", "owner"],
-    },/* 
+    } /* 
     {
       label: "Profitability Dashboard",
       icon: <FaCalculator />,
       path: "/dashboard",
       roles: ["admin", "owner"],
-    }, */
+    }, */,
     {
       label: "Supplier Management",
       icon: <FaTruck />,
@@ -134,6 +135,25 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     },
   ];
 
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const res = await authFetch(
+          `${API_BASE}/api/notifications/unread-count`
+        );
+        if (!res.ok) throw new Error("Failed to fetch unread notifications");
+        const data = await res.json();
+        setUnreadCount(data.unreadCount);
+      } catch (err) {
+        console.error("Error fetching unread count:", err);
+      }
+    };
+
+    fetchUnread();
+  }, []);
+
   return (
     <div className={`sidebar ${isCollapsed ? "collapsed" : ""}`}>
       <div className="sidebar-header">
@@ -157,6 +177,11 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                 >
                   {item.icon}
                   <span className="label">{item.label}</span>
+
+                  {/* Only show badge for Notifications */}
+                  {item.label === "Notifications" && unreadCount > 0 && (
+                    <span className="sidebar-badge">{unreadCount}</span>
+                  )}
                 </Link>
               )
           )}
