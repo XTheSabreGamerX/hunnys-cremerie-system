@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import DashboardLayout from "../scripts/DashboardLayout";
 import { FaEye, FaUndo } from "react-icons/fa";
 import PopupMessage from "../components/PopupMessage";
-import ViewModal from "../components/ViewModal";
+import RefundViewModal from "../components/RefundViewModal";
 import RefundModal from "../components/RefundModal";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
 
@@ -142,28 +142,15 @@ const Refund = () => {
         onSubmit={handleRefundSubmit}
       />
 
-      {/* View Modal */}
-      {isViewOpen && selectedSale && (
-        <ViewModal
-          item={selectedSale}
-          fields={[
-            { name: "invoiceNumber", label: "Invoice Number" },
-            { name: "customerName", label: "Customer" },
-            { name: "orderType", label: "Order Type" },
-            { name: "subtotal", label: "Subtotal" },
-            { name: "totalAmount", label: "Total Amount" },
-            {
-              name: "createdAt",
-              label: "Created",
-              formatter: (v) => new Date(v).toLocaleString(),
-            },
-          ]}
-          onClose={() => {
-            setIsViewOpen(false);
-            setSelectedSale(null);
-          }}
-        />
-      )}
+      {/* Refund View Modal */}
+      <RefundViewModal
+        isOpen={isViewOpen && !!selectedSale?.refund}
+        onClose={() => {
+          setIsViewOpen(false);
+          setSelectedSale(null);
+        }}
+        refund={selectedSale?.refund}
+      />
 
       <DashboardLayout>
         <main className="module-main-content refund-main">
@@ -230,16 +217,18 @@ const Refund = () => {
                       <td>{new Date(sale.createdAt).toLocaleString()}</td>
 
                       <td>
-                        {/* VIEW BUTTON */}
-                        <button
-                          className="module-action-btn module-view-btn"
-                          onClick={() => {
-                            setSelectedSale(sale);
-                            setIsViewOpen(true);
-                          }}
-                        >
-                          <FaEye />
-                        </button>
+                        {/* VIEW BUTTON (only show if the sale has a refund) */}
+                        {sale.refund?.status && (
+                          <button
+                            className="module-action-btn module-view-btn"
+                            onClick={() => {
+                              setSelectedSale(sale);
+                              setIsViewOpen(true);
+                            }}
+                          >
+                            <FaEye />
+                          </button>
+                        )}
 
                         {/* REFUND BUTTON (only show if no refund has happened) */}
                         {sale.refund?.status === null && (
