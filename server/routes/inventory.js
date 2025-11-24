@@ -6,7 +6,9 @@ const {
   addInventoryItem,
   updateInventoryItem,
   deleteInventoryItem,
+  repackInventoryItem,
   batchUpdateStatuses,
+  sendDailyInventoryNotifications,
 } = require('../controllers/inventoryController');
 
 // Routes for Inventory
@@ -18,6 +20,10 @@ router.put('/:id', authenticateToken, updateInventoryItem);
 
 router.delete('/:id', authenticateToken, deleteInventoryItem);
 
+router.post('/repack', authenticateToken, repackInventoryItem);
+
 router.post('/inventory/check-status', batchUpdateStatuses);
+
+router.post('/inventory/daily-update', sendDailyInventoryNotifications);
 
 module.exports = router;

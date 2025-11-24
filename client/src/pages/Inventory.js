@@ -1,18 +1,33 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { customAlphabet } from "nanoid/non-secure";
+<<<<<<< HEAD
 import { Search, Plus, Edit, Trash2, Eye, Package, Filter } from "lucide-react";
 
 import EditModal from "../components/EditModal";
 import ViewModal from "../components/ViewModal";
+=======
+import DashboardLayout from "../scripts/DashboardLayout";
+import InventoryModal from "../components/InventoryModal";
+import InventoryViewModal from "../components/InventoryViewModal";
+import CakeEditModal from "../components/CakeEditModal";
+import CakeViewModal from "../components/CakeViewModal";
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
 import PopupMessage from "../components/PopupMessage";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { showToast } from "../components/ToastContainer";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
+<<<<<<< HEAD
+=======
+import { FaEye, FaPencilAlt } from "react-icons/fa";
+/* import DateRangeFilter from "../components/DateRangeFilter"; */
+import "../styles/App.css";
+import "../styles/Inventory.css";
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
 
 const Inventory = () => {
   const [items, setItems] = useState([]);
-  const [cakeItems, setCakeItems] = useState([]);
+  const [cakeItems /* setCakeItems */] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [categories, setCategories] = useState({ inventory: [], cake: [] });
   const [uoms, setUoms] = useState([]);
@@ -23,14 +38,28 @@ const Inventory = () => {
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [modalMode, setModalMode] = useState("view");
+<<<<<<< HEAD
   const [formData, setFormData] = useState({}); // Used for EditModal
+=======
+  const [modalOpen, setModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    unitPrice: "",
+    ingredients: [],
+  });
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
   const [pendingEditData, setPendingEditData] = useState(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewedItem, setViewedItem] = useState(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+<<<<<<< HEAD
 
+=======
+  const [popupMessage, setPopupMessage] = useState("");
+  const [popupType /* setPopupType */] = useState("success");
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [popupMessage, setPopupMessage] = useState("");
@@ -45,6 +74,7 @@ const Inventory = () => {
     if (!token) navigate("/login");
   }, [navigate]);
 
+<<<<<<< HEAD
   // --- Configurations ---
   const inventoryFields = [
     {
@@ -52,18 +82,35 @@ const Inventory = () => {
       name: "name",
       required: true,
       placeholder: "e.g. All Purpose Flour",
+=======
+  const nanoid = customAlphabet("0123456789", 6);
+  const containerRef = useRef(null);
+
+  const cakeFields = [
+    {
+      label: "Cake Name",
+      name: "name",
+      type: "text",
+      required: true,
+      placeholder: "e.g. Chocolate Fudge, Red Velvet, etc.",
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
     },
     {
       label: "Category",
       name: "category",
       type: "select",
+<<<<<<< HEAD
       options: (categories.inventory || []).map((c) => ({
+=======
+      options: (categories.cake || []).map((c) => ({
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
         value: c._id,
         label: c.name,
       })),
       required: true,
     },
     {
+<<<<<<< HEAD
       label: "Purchase Price",
       name: "purchasePrice",
       type: "number",
@@ -115,6 +162,131 @@ const Inventory = () => {
 
   // --- Fetch Data ---
   const fetchItems = useCallback(async () => {
+=======
+      label: "Size",
+      name: "size",
+      type: "select",
+      options: cakeSize.map((s) => ({ value: s._id, label: s.name })),
+      required: true,
+    },
+    {
+      label: "Stock",
+      name: "stock",
+      type: "number",
+      placeholder: "Enter current stock...",
+    },
+    {
+      label: "Unit Price",
+      name: "unitPrice",
+      type: "number",
+      placeholder: "Selling price per cake. Leave Empty to follow Base Price.",
+    },
+    {
+      label: "Availability",
+      name: "availability",
+      type: "select",
+      required: true,
+      options: [
+        { value: "Regular", label: "Regular" },
+        { value: "Seasonal", label: "Seasonal" },
+      ],
+    },
+    {
+      label: "Expiration Date",
+      name: "expirationDate",
+      type: "date",
+    },
+    {
+      label: "Ingredients",
+      name: "ingredients",
+      type: "multiselect",
+      loadOptions: (inputValue) =>
+        authFetch(
+          `${API_BASE}/api/inventory?all=true&search=${encodeURIComponent(
+            inputValue
+          )}`
+        )
+          .then((res) => {
+            if (!res.ok) throw new Error("Failed to fetch inventory options");
+            return res.json();
+          })
+          .then((data) => {
+            const items = Array.isArray(data) ? data : data.items || [];
+
+            return items.map((i) => {
+              const stock = i.stock ?? i.amount ?? null;
+              const unitPrice =
+                Number(i.purchasePrice ?? i.unitPrice ?? i.price ?? 0) || 0;
+              const unitName = i.unit?.name ?? i.unit ?? null;
+
+              return {
+                value: i._id,
+                label: `${i.name} (Stock: ${stock ?? "—"})`,
+                name: i.name,
+                stock,
+                unitPrice,
+                unit: unitName,
+                raw: i,
+              };
+            });
+          })
+          .catch((err) => {
+            console.error("Async select load failed:", err);
+            return [];
+          }),
+      required: true,
+    },
+  ];
+
+  /* const showPopup = (message, type = "success") => {
+    setPopupMessage(message);
+    setPopupType(type);
+    setTimeout(() => {
+      setPopupMessage("");
+      setPopupType("success");
+    }, 2000);
+  }; */
+
+  const fetchItems = useCallback(
+    async (reset = false) => {
+      try {
+        const url = `${API_BASE}/api/inventory?page=${page}&limit=10&search=${encodeURIComponent(
+          searchQuery
+        )}${
+          columnFilter.field
+            ? `&field=${columnFilter.field}&order=${columnFilter.order}`
+            : ""
+        }`;
+
+        const res = await authFetch(url);
+        const data = await res.json();
+
+        setItems(data.items || []);
+        setTotalPages(data.totalPages || 1);
+        setTotalItems(data.totalItems || 0);
+      } catch (err) {
+        console.error("Error fetching inventory:", err);
+      }
+    },
+    [page, searchQuery, columnFilter]
+  );
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const status = params.get("status") || "";
+    const statusMap = {
+      "low-stock": "Low-stock",
+      "out-of-stock": "Out of stock",
+      expired: "Expired",
+    };
+
+    if (status) {
+      setSearchQuery(statusMap[status]);
+    }
+  }, [location.search]);
+
+  const fetchSuppliers = useCallback(async () => {
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
     try {
       let baseUrl = `${API_BASE}/api/${
         inventoryType === "Inventory" ? "inventory" : "cake"
@@ -184,8 +356,116 @@ const Inventory = () => {
     fetchItems();
   }, [fetchItems]);
 
+<<<<<<< HEAD
   // --- Handlers ---
 
+=======
+  /*  const handleInventoryToggle = (type) => {
+    setInventoryType(type);
+    setPage(1);
+    setIsViewOpen(false);
+    setViewedItem(null);
+    setSelectedItem(null);
+    setSelectedCake(null);
+    setFormData({});
+    setSelectedIngredientOption(null);
+    setIngredientForm({ quantity: 1 });
+    setPendingEditData(null);
+    setPendingCakeData(null);
+  }; */
+
+  /*  const validateFormData = (data) => {
+    if (modalMode === "cake-add" || modalMode === "cake-edit") {
+      if (!data.name || !String(data.name).trim()) {
+        showPopup("Please enter the cake name.", "error");
+        return false;
+      }
+
+      if (!data.category) {
+        showPopup("Please select a category.", "error");
+        return false;
+      }
+
+      if (!data.size) {
+        showPopup("Please select a cake size.", "error");
+        return false;
+      }
+      if (!data.availability) {
+        showPopup("Please select availability.", "error");
+        return false;
+      }
+
+      if (
+        data.price === undefined ||
+        data.price === null ||
+        data.price === ""
+      ) {
+        showPopup("Please enter the cake price.", "error");
+        return false;
+      }
+      if (!data.ingredients || data.ingredients.length === 0) {
+        showPopup("Please add at least one ingredient.", "error");
+        return false;
+      }
+
+      // numeric normalizations
+      data.stock = Number(data.stock) || 0;
+      data.unitPrice = Number(data.unitPrice) || 0;
+      data.amount = Number(data.amount) || 0;
+      data.price = Number(data.price) || 0;
+    } else {
+      // Inventory validation
+      const { itemId, name, stock, unitPrice, expirationDate } = data;
+
+      if (!name?.trim()) {
+        showPopup("Please fill up the required fields!", "error");
+        return false;
+      }
+
+      data.stock = stock === "" || stock === undefined ? 0 : Number(stock);
+      data.unitPrice =
+        unitPrice === "" || unitPrice === undefined ? 0 : Number(unitPrice);
+
+      if (isNaN(data.stock) || data.stock < 0) {
+        showPopup("Stock must be a non-negative number.", "error");
+        return false;
+      }
+
+      if (isNaN(data.unitPrice) || data.unitPrice < 0) {
+        showPopup("Unit price must be a non-negative number.", "error");
+        return false;
+      }
+
+      if (expirationDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const expDate = new Date(expirationDate);
+        expDate.setHours(0, 0, 0, 0);
+        if (expDate < today) {
+          showPopup("Expiration date cannot be in the past.", "error");
+          return false;
+        }
+      }
+
+      if (
+        modalMode === "add" &&
+        itemId?.trim() &&
+        items.some(
+          (i) => i.itemId.toLowerCase() === itemId.trim().toLowerCase()
+        )
+      ) {
+        showPopup(
+          "Item ID already exists. Please choose a unique ID.",
+          "error"
+        );
+        return false;
+      }
+    }
+
+    return true;
+  };
+ */
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
   const handleColumnClick = (field) => {
     setColumnFilter((prev) => ({
       field,
@@ -246,10 +526,53 @@ const Inventory = () => {
     }
   };
 
+<<<<<<< HEAD
   const handleDelete = async () => {
     if (!itemToDelete) return;
     try {
       await authFetch(`${API_BASE}/api/inventory/${itemToDelete._id}`, {
+=======
+  const handleConfirmEdit = async () => {
+    try {
+      if (pendingEditData) {
+        await saveItem(pendingEditData);
+        setPendingEditData(null);
+      } else if (pendingCakeData) {
+        await saveItem(pendingCakeData);
+        setPendingCakeData(null);
+      }
+    } catch (err) {
+      console.error("Confirm save failed", err);
+    } finally {
+      setShowConfirmation(false);
+      setModalMode("view");
+      setFormData({});
+      setSelectedIngredientOption(null);
+      setIngredientForm({ quantity: 1 });
+    }
+  };
+
+  /* const handleDelete = (itemId) => {
+    const item =
+      items.find((i) => i._id === itemId) ||
+      cakeItems.find((c) => c._id === itemId) ||
+      null;
+    setItemToDelete(item);
+    setIsConfirmOpen(true);
+  }; */
+
+  const confirmDelete = async () => {
+    try {
+      if (!itemToDelete) return;
+
+      const isCake =
+        itemToDelete.baseCost !== undefined || itemToDelete.price !== undefined;
+      const url = isCake
+        ? `${API_BASE}/api/cake/${itemToDelete._id}`
+        : `${API_BASE}/api/inventory/${itemToDelete._id}`;
+
+      const res = await authFetch(url, {
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
         method: "DELETE",
       });
       showToast({ message: "Item deleted.", type: "success" });
@@ -276,6 +599,7 @@ const Inventory = () => {
       colorClass = "bg-red-100 text-red-800";
     else if (status === "Expired") colorClass = "bg-rose-100 text-rose-800";
 
+<<<<<<< HEAD
     return (
       <span
         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}
@@ -283,6 +607,89 @@ const Inventory = () => {
         {status}
       </span>
     );
+=======
+    const newIngredient = {
+      _id: selectedIngredientOption.value,
+      name: selectedIngredientOption.name ?? selectedIngredientOption.label,
+      stock: selectedIngredientOption.stock ?? null,
+      unitPrice: Number(selectedIngredientOption.unitPrice ?? 0),
+      unit: selectedIngredientOption.unit ?? null,
+      quantity: Number(ingredientForm.quantity) || 1,
+      raw: selectedIngredientOption.raw || null,
+    };
+
+    setFormData((prev) => ({
+      ...prev,
+      ingredients: [...(prev.ingredients || []), newIngredient],
+    }));
+
+    setSelectedIngredientOption(null);
+    setIngredientForm({ quantity: 1 });
+  };
+
+  const handleChange = (name, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSeasonalChange = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      seasonalPeriod: {
+        ...prev.seasonalPeriod,
+        [field]: value,
+      },
+    }));
+  };
+
+  /* const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const url =
+        mode === "edit"
+          ? `${API_BASE}/api/inventory/${selectedItem._id}`
+          : `${API_BASE}/api/inventory`;
+
+      const method = mode === "edit" ? "PUT" : "POST";
+
+      const res = await authFetch(url, {
+        method,
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to save item");
+
+      onItemAdded(data);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }; */
+
+  /*   const handleViewCake = (cake) => {
+    setSelectedCake(cake);
+    setIsViewOpen(true);
+  }; */
+
+  const handleCloseCakeView = () => {
+    setSelectedCake(null);
+    setIsViewOpen(false);
+  };
+
+  const closeModal = () => {
+    setModalMode(null);
+    setFormData({});
+    setSelectedIngredientOption(null);
+    setIngredientForm({ quantity: 1 });
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
   };
 
   return (
@@ -476,6 +883,7 @@ const Inventory = () => {
           setPopupType={setPopupType}
         />
       )}
+<<<<<<< HEAD
 
       {isViewOpen && viewedItem && (
         <ViewModal
@@ -499,10 +907,83 @@ const Inventory = () => {
           onDelete={() => {
             setItemToDelete(viewedItem);
             setIsConfirmOpen(true);
+=======
+      {/* Inventory view modal (only for Inventory items) */}
+      <InventoryViewModal
+        isOpen={!!viewedItem}
+        onClose={() => setViewedItem(null)}
+        item={viewedItem}
+      />
+
+      {/* Cake view modal (only for Cake Inventory) */}
+      {isViewOpen && inventoryType === "Cake Inventory" && selectedCake && (
+        <CakeViewModal
+          onClose={handleCloseCakeView}
+          categories={categories}
+          cake={selectedCake}
+        />
+      )}
+      {/* Confirmation for delete */}
+      {isConfirmOpen && (
+        <ConfirmationModal
+          message={`Are you sure you want to delete "${
+            itemToDelete?.name || "this item"
+          }"?`}
+          onConfirm={confirmDelete}
+          onCancel={() => {
+            setIsConfirmOpen(false);
+            setItemToDelete(null);
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
           }}
         />
       )}
 
+<<<<<<< HEAD
+=======
+      {/* INVENTORY MODAL (New Add/Edit InventoryModal) */}
+      {(modalMode === "add" || modalMode === "edit") && (
+        <InventoryModal
+          mode={modalMode}
+          item={modalMode === "edit" ? selectedItem : null}
+          isOpen={modalOpen}
+          onClose={() => {
+            setSelectedItem(null);
+            setModalOpen(false);
+            setModalMode(null);
+          }}
+          onSuccess={() => {
+            fetchItems();
+            setSelectedItem(null);
+            setModalMode(null);
+          }}
+          uoms={uoms}
+          categories={categories?.inventory || []}
+          suppliers={suppliers || []}
+          onItemAdded={(newItem) => {
+            fetchItems();
+          }}
+        />
+      )}
+
+      {/* CAKE MODAL */}
+      {(modalMode === "cake-add" || modalMode === "cake-edit") && (
+        <CakeEditModal
+          mode={modalMode}
+          cakeFields={cakeFields}
+          formData={formData}
+          setFormData={setFormData}
+          selectedIngredientOption={selectedIngredientOption}
+          setSelectedIngredientOption={setSelectedIngredientOption}
+          ingredientForm={ingredientForm}
+          setIngredientForm={setIngredientForm}
+          handleAddIngredient={handleAddIngredient}
+          handleChange={handleChange}
+          handleSeasonalChange={handleSeasonalChange}
+          onClose={closeModal}
+        />
+      )}
+      {/* Save confirmation (shared for inventory & cake edits) */}
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
       {showConfirmation && (
         <ConfirmationModal
           message="Save changes to inventory?"
@@ -514,6 +995,7 @@ const Inventory = () => {
         />
       )}
 
+<<<<<<< HEAD
       {isConfirmOpen && (
         <ConfirmationModal
           message="Are you sure you want to delete this item?"
@@ -522,6 +1004,222 @@ const Inventory = () => {
         />
       )}
     </div>
+=======
+          <div className="module-actions-container">
+            {/*   <DateRangeFilter
+              options={["Inventory", "Cake Inventory"]}
+              onChange={handleInventoryToggle}
+            /> */}
+
+            <input
+              type="text"
+              className="module-search-input"
+              placeholder="Search items..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+            />
+
+            {/* Add Inventory Item */}
+            <button
+              className="module-action-btn module-add-btn"
+              onClick={() => {
+                setSelectedItem(null);
+                setModalMode("add");
+                setModalOpen(true);
+              }}
+            >
+              + Add Item
+            </button>
+
+            {/* Add Cake */}
+            {/* <button
+              className="module-action-btn module-add-btn"
+              onClick={() => {
+                setSelectedCake(null);
+                setModalMode("cake-add");
+              }}
+            >
+              + Add Cake
+            </button> */}
+          </div>
+
+          <div className="module-table-container" ref={containerRef}>
+            <table>
+              <thead>
+                <tr>
+                  {[
+                    { label: "Item Code", field: "itemId" },
+                    { label: "Item Name", field: "name" },
+                    { label: "Stock", field: "currentStock" },
+                    { label: "Unit", field: "unit.name" },
+                    { label: "Category", field: "category" },
+                    { label: "Price", field: "sellingPrice" },
+                    { label: "Expiration Date", field: "expirationDate" },
+                    { label: "Status", field: "status" },
+                    { label: "Actions", field: null },
+                  ].map((col) => (
+                    <th
+                      key={col.label}
+                      onClick={() => col.field && handleColumnClick(col.field)}
+                      style={{ cursor: col.field ? "pointer" : "default" }}
+                    >
+                      {col.label}{" "}
+                      {col.field && columnFilter.field === col.field && (
+                        <span>{columnFilter.order === "asc" ? "▲" : "▼"}</span>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {items.length === 0 ? (
+                  <tr>
+                    <td colSpan="10">No items found.</td>
+                  </tr>
+                ) : (
+                  items.map((item) => (
+                    <tr key={item._id}>
+                      <td>{item.itemId}</td>
+                      <td>{item.name}</td>
+                      <td>{item.currentStock}</td>
+                      <td>{item.unit?.name || "—"}</td>
+                      <td>{item.category || "—"}</td>
+                      <td>₱{item.sellingPrice.toFixed(2)}</td>
+                      <td>
+                        {item.expirationDate
+                          ? new Date(item.expirationDate).toLocaleDateString(
+                              "en-PH",
+                              {
+                                timeZone: "Asia/Manila",
+                              }
+                            )
+                          : "N/A"}
+                      </td>
+                      <td>{item.status}</td>
+                      <td>
+                        <button
+                          className="module-action-btn module-edit-btn"
+                          onClick={() => {
+                            // Normalize Category (backend sends category NAME)
+                            const categoryId =
+                              categories.inventory?.find(
+                                (c) => c.name === item.category
+                              )?._id || "";
+
+                            const unitId =
+                              item.unit?._id ||
+                              item.unit?.$oid ||
+                              item.unit ||
+                              "";
+
+                            const normalizedSuppliers =
+                              item.suppliers?.map((s) => ({
+                                supplier:
+                                  s.supplier?._id ||
+                                  s.supplier?.$oid ||
+                                  s.supplier ||
+                                  "",
+                                purchasePrice: s.purchasePrice,
+                                _id: s._id?.$oid || s._id,
+                              })) || [];
+
+                            const normalized = {
+                              ...item,
+                              category: categoryId,
+                              unit: unitId,
+                              suppliers: normalizedSuppliers,
+                              expirationDate:
+                                item.expirationDate?.$date?.split("T")[0] || "",
+                            };
+
+                            setSelectedItem(item);
+                            setFormData(normalized);
+                            setModalMode("edit");
+                            setModalOpen(true);
+                          }}
+                        >
+                          <FaPencilAlt />
+                        </button>
+
+                        <button
+                          className="module-action-btn module-view-btn"
+                          onClick={() => {
+                            setViewedItem(item);
+                            setIsViewOpen(true);
+                          }}
+                          title="View Item"
+                        >
+                          <FaEye />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="pagination">
+            {/* Use a wrapper div for column layout */}
+            <div className="pagination-top">
+              {inventoryType === "Inventory" && totalItems > 0 && (
+                <p className="pagination-info">
+                  Showing {(page - 1) * 10 + 1}-
+                  {Math.min(page * 10, totalItems * 10)} of {totalItems} items
+                </p>
+              )}
+
+              {inventoryType === "Cake Inventory" && cakeItems.length > 0 && (
+                <p className="pagination-info">
+                  Showing {(page - 1) * 10 + 1}-
+                  {Math.min(page * 10, cakeItems.length)} of {cakeItems.length}{" "}
+                  cakes
+                </p>
+              )}
+            </div>
+
+            <div className="pagination-buttons">
+              <button
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={page === 1}
+              >
+                Prev
+              </button>
+
+              {Array.from({
+                length: Math.min(7, totalPages),
+              }).map((_, idx) => {
+                const start = Math.max(1, Math.min(page - 3, totalPages - 6));
+                const pageNumber = start + idx;
+                if (pageNumber > totalPages) return null;
+                return (
+                  <button
+                    key={pageNumber}
+                    onClick={() => setPage(pageNumber)}
+                    className={page === pageNumber ? "active" : ""}
+                  >
+                    {pageNumber}
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() =>
+                  setPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={page === totalPages}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </main>
+      </DashboardLayout>
+    </>
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
   );
 };
 

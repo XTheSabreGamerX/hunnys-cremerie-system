@@ -23,6 +23,8 @@ import SupplierManagement from "../pages/SupplierManagement";
 import CustomerManagement from "../pages/CustomerManagement";
 import SalesManagement from "../pages/SalesManagement";
 import SalesReport from "../pages/SalesReport";
+import Refund from "../pages/Refund";
+import PurchaseOrder from "../pages/PurchaseOrder";
 import Report from "../pages/Report";
 import Notifications from "../pages/Notifications";
 import BackupRestore from "../pages/BackupRestore";
@@ -114,7 +116,35 @@ const AppRoutes = () => {
           }
         />
 
+<<<<<<< HEAD
         <Route
+=======
+        <Route //Refund route
+          path="/refund"
+          element={
+            <>
+              <ProtectedRoute>
+                <DashboardHeader />
+                <Refund />
+              </ProtectedRoute>
+            </>
+          }
+        />
+
+        <Route //Purchase Order route
+          path="/purchase-order"
+          element={
+            <>
+              <ProtectedRoute>
+                <DashboardHeader />
+                <PurchaseOrder />
+              </ProtectedRoute>
+            </>
+          }
+        />
+
+        <Route //Report route
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
           path="/report"
           element={
             <ProtectedRoute>

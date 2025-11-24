@@ -49,9 +49,16 @@ const SupplierManagement = () => {
   }, [navigate]);
 
   const supplierFields = [
+<<<<<<< HEAD
     { label: "Name", name: "name", required: "true" },
     { label: "Contact", name: "contact" },
     { label: "Company", name: "company" },
+=======
+    { label: "Name", name: "name", required: true },
+    { label: "Email", name: "email" },
+    { label: "Contact Person", name: "contactPerson" },
+    { label: "Contact Number", name: "contactNumber" },
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
   ];
 
   const showPopup = (message, type = "success") => {
@@ -96,6 +103,15 @@ const SupplierManagement = () => {
       showPopup("Please fill out required fields.", "error");
       return false;
     }
+
+    if (data.email) {
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(data.email)) {
+        showPopup("Please enter a valid email address.", "error");
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -109,11 +125,19 @@ const SupplierManagement = () => {
 
       if (modalMode === "add") data.supplierId = `SUP-${nanoid()}`;
 
-      await authFetch(url, {
+      const res = await authFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        // API returned an error, show it
+        showPopup(result.message || "Save failed.", "error");
+        return; // stop execution
+      }
 
       await fetchSuppliers();
       setSelectedSupplier(null);
@@ -399,6 +423,7 @@ const SupplierManagement = () => {
         />
       )}
 
+<<<<<<< HEAD
       {isConfirmOpen && (
         <ConfirmationModal
           message={`Delete supplier "${supplierToDelete?.name}"?`}
@@ -410,6 +435,140 @@ const SupplierManagement = () => {
         />
       )}
     </div>
+=======
+            <input
+              type="text"
+              className="module-search-input"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+            />
+
+            <button
+              className="module-action-btn module-add-btn"
+              onClick={() => {
+                setModalMode("add");
+                setSelectedSupplier(null);
+              }}
+            >
+              Add Supplier
+            </button>
+          </div>
+
+          <div className="module-table-container">
+            <table>
+              <thead>
+                <tr>
+                  {[
+                    { key: "supplierId", label: "ID" },
+                    { key: "name", label: "Name" },
+                    { key: "contactPerson", label: "Contact Person" },
+                    { key: "contactNumber", label: "Contact Number" },
+                    { key: "email", label: "Email" },
+                    { key: "createdAt", label: "Created" },
+                    { key: "updatedAt", label: "Updated" },
+                  ].map(({ key, label }) => (
+                    <th
+                      key={key}
+                      onClick={() => handleSort(key)}
+                      style={{ cursor: "pointer", userSelect: "none" }}
+                    >
+                      {label}{" "}
+                      {sortField === key && (
+                        <span>{sortOrder === "asc" ? "▲" : "▼"}</span>
+                      )}
+                    </th>
+                  ))}
+                  <th style={{ cursor: "default" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {suppliers.length === 0 ? (
+                  <tr>
+                    <td colSpan="8">No suppliers found.</td>
+                  </tr>
+                ) : (
+                  suppliers.map((supplier) => (
+                    <tr key={supplier._id}>
+                      <td>{supplier.supplierId}</td>
+                      <td>{supplier.name}</td>
+                      <td>{supplier.contactPerson}</td>
+                      <td>{supplier.contactNumber}</td>
+                      <td>{supplier.email}</td>
+                      <td>{new Date(supplier.createdAt).toLocaleString()}</td>
+                      <td>{new Date(supplier.updatedAt).toLocaleString()}</td>
+                      <td>
+                        <button
+                          className="module-action-btn module-edit-btn"
+                          onClick={() => {
+                            setModalMode("edit");
+                            setSelectedSupplier(supplier);
+                          }}
+                        >
+                          <FaPencil />
+                        </button>
+                        <button
+                          className="module-action-btn module-view-btn"
+                          onClick={() => {
+                            setViewedSupplier(supplier);
+                            setIsViewOpen(true);
+                          }}
+                        >
+                          <FaEye />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Your pagination UI unchanged */}
+          <div className="pagination">
+            <p className="pagination-info">
+              Showing {(page - 1) * 10 + 1}–{Math.min(page * 10, totalItems)} of{" "}
+              {totalItems} suppliers
+            </p>
+
+            <div className="pagination-buttons">
+              <button
+                onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                disabled={page === 1}
+              >
+                Prev
+              </button>
+
+              {Array.from({ length: Math.min(7, totalPages) }).map((_, idx) => {
+                const start = Math.max(1, Math.min(page - 3, totalPages - 6));
+                const pageNumber = start + idx;
+                if (pageNumber > totalPages) return null;
+                return (
+                  <button
+                    key={pageNumber}
+                    onClick={() => setPage(pageNumber)}
+                    className={page === pageNumber ? "active" : ""}
+                  >
+                    {pageNumber}
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+                disabled={page === totalPages}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </main>
+      </DashboardLayout>
+    </>
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
   );
 };
 

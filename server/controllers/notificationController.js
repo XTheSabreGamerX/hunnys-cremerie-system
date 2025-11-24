@@ -7,6 +7,7 @@ const createNotification = async ({
   roles = [],
   userId = null,
   isGlobal = null,
+  eventType = "general",
 }) => {
   if (!message) throw new Error("Message is required");
 
@@ -18,6 +19,7 @@ const createNotification = async ({
     roles,
     userId: userId || null,
     isGlobal: finalIsGlobal,
+    eventType,
   });
 
   return await notification.save();
@@ -29,7 +31,7 @@ const getUserNotifications = async (req, res) => {
     const user = req.user;
     if (!user) return res.status(401).json({ message: "Unauthorized" });
 
-    const userId =req.user.id?.toString();
+    const userId = req.user.id?.toString();
     const userRole = user.role;
 
     const page = parseInt(req.query.page) || 1;
@@ -80,23 +82,56 @@ const markAsRead = async (req, res) => {
   }
 };
 
-// Mark all as read
-const markAllAsRead = async (req, res) => {
+// Mark all notifications for this user as read
+/* const markAllAsRead = async (req, res) => {
+  if (!req.user || !req.user.id) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
   try {
-    await Notification.updateMany(
-      { userId: req.user._id, read: false },
+    const userId = req.user.id.toString();
+    const result = await Notification.updateMany(
+      { read: false, userId },
       { $set: { read: true } }
     );
 
-    res.json({ message: "All notifications marked as read" });
+    res.json({
+      message: "All notifications marked as read",
+      updatedCount: result.modifiedCount,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error marking all as read", error });
+    console.error("Error in markAllAsRead:", error);
+    res.status(500).json({
+      message: "Error marking all notifications as read",
+      error: error.message,
+    });
+  }
+}; */
+
+// GET /api/notifications/unread-count
+const getUnreadCount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    const count = await Notification.countDocuments({
+      read: false,
+      $or: [{ userId }, { roles: { $in: [userRole] } }, { isGlobal: true }],
+    });
+
+    res.json({ unreadCount: count });
+  } catch (err) {
+    console.error("Error getting unread count:", err);
+    res
+      .status(500)
+      .json({ message: "Error getting unread count", error: err.message });
   }
 };
 
 module.exports = {
   createNotification,
   getUserNotifications,
-  markAsRead,
-  markAllAsRead,
+  markAsRead /* 
+  markAllAsRead, */,
+  getUnreadCount,
 };

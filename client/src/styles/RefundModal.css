@@ -1,0 +1,138 @@
+/* OVERLAY */
+.refund-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+}
+
+/* MAIN MODAL */
+.refund-modal-container {
+    background: white;
+    width: 550px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* TITLES */
+.refund-modal-title {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.refund-modal-subtitle {
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+/* FORM ELEMENTS */
+.refund-modal-section {
+    margin-bottom: 15px;
+}
+
+.refund-modal-label {
+    font-weight: 500;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.refund-modal-select,
+.refund-modal-textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+.refund-modal-textarea {
+    min-height: 70px;
+    resize: vertical;
+}
+
+/* ITEMS LIST */
+.refund-modal-items-container {
+    background: #f8f8f8;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.refund-modal-items-header,
+.refund-modal-item-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 70px 90px;
+    gap: 10px;
+    padding: 6px 0;
+    font-size: 14px;
+}
+
+.refund-modal-items-header {
+    border-bottom: 1px solid #ddd;
+    font-weight: 600;
+}
+
+.refund-modal-item-row input {
+    width: 70px;
+}
+
+.refund-modal-qty-input {
+    padding: 6px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+/* TOTAL */
+.refund-modal-total {
+    font-size: 18px;
+    font-weight: 600;
+    text-align: right;
+    margin-bottom: 20px;
+}
+
+/* ACTION BUTTONS */
+.refund-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.refund-modal-cancel-btn {
+    background: #aaa;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+.refund-modal-submit-btn {
+    background: #198754;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.refund-modal-submit-btn:hover {
+    background: #157347;
+}
+
+.refund-modal-submit-btn.disabled,
+.refund-modal-submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}

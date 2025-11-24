@@ -1,43 +1,49 @@
 const Fuse = require("fuse.js");
 const InventoryItem = require("../models/InventoryItem");
-const Category = require("../models/Category");
+const Repack = require("../models/Repack");
+/* const Category = require("../models/Category"); */
+const Supplier = require("../models/Supplier");
+const Notification = require("../models/Notification");
+const User = require("../models/User");
+const nodemailer = require("nodemailer");
+const { updateItemStatus } = require("../utils/inventoryHelpers");
 const { createNotification } = require("../controllers/notificationController");
 const { createLog } = require("../controllers/activityLogController");
 const ActionRequest = require("../models/ActionRequest");
 
-// Computes inventory item status
-function computeStatus(item) {
-  const now = new Date();
+// Helper: compute selling price based on preferred supplier and markup
+/* const computeSellingPrice = (suppliers, markup) => {
+  const preferred = suppliers.find((s) => s.isPreferred);
+  if (!preferred) return 0;
+  return preferred.purchasePrice * (1 + markup / 100);
+}; */
 
-  if (item.expirationDate && new Date(item.expirationDate) < now) {
-    return "Expired";
-  }
+//Nodemailer
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST,
+  port: Number(process.env.EMAIL_PORT),
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+});
 
-  if (item.stock <= 0) {
-    return "Out of stock";
-  }
-
-  if (item.stock <= (item.restockThreshold ?? 5)) {
-    return "Low-stock";
-  }
-
-  return "Well-stocked";
-}
-
-// GET all inventory items (with search + pagination + column filter + fuzzy search)
+// ---------------------------- GET INVENTORY ----------------------------
 const getAllInventoryItems = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const search = req.query.search?.trim() || "";
-    const normalizedSearch = search.replace(/\s+/g, ""); // remove all spaces for search
+    const normalizedSearch = search.replace(/\s+/g, "");
     const field = req.query.field;
     const order = req.query.order === "desc" ? -1 : 1;
     const fetchAll = req.query.all === "true";
 
-    const allItems = await InventoryItem.find()
+    const allItems = await InventoryItem.find({ archived: false })
       .sort(field ? { [field]: order } : { itemId: 1 })
       .populate("unit", "name amount")
+      .populate("suppliers.supplier", "name")
       .populate("createdBy", "username");
 
     if (!search) {
@@ -55,20 +61,24 @@ const getAllInventoryItems = async (req, res) => {
       });
     }
 
-    let fuseKeys = [];
     const normalizeFn = (value) =>
-      (value?.toString() || "").replace(/\s+/g, ""); // normalize spaces
+      (value?.toString() || "").replace(/\s+/g, "");
+    let fuseKeys = [];
 
     if (field) {
-      if (
-        ["purchasePrice", "unitPrice", "amount", "restockThreshold"].includes(
-          field
-        )
-      ) {
+      if (["sellingPrice", "currentStock", "threshold"].includes(field)) {
         fuseKeys = [{ name: field, getFn: (item) => normalizeFn(item[field]) }];
       } else if (field === "unit.name") {
         fuseKeys = [
           { name: "unit.name", getFn: (item) => normalizeFn(item.unit?.name) },
+        ];
+      } else if (field === "suppliers") {
+        fuseKeys = [
+          {
+            name: "suppliers",
+            getFn: (item) =>
+              item.suppliers.map((s) => s.supplier?.name).join(" "),
+          },
         ];
       } else {
         fuseKeys = [field];
@@ -78,32 +88,31 @@ const getAllInventoryItems = async (req, res) => {
         { name: "itemId", getFn: (item) => normalizeFn(item.itemId) },
         { name: "name", getFn: (item) => normalizeFn(item.name) },
         { name: "category", getFn: (item) => normalizeFn(item.category) },
-        { name: "supplier", getFn: (item) => normalizeFn(item.supplier) },
         { name: "status", getFn: (item) => normalizeFn(item.status) },
         {
-          name: "purchasePrice",
-          getFn: (item) => normalizeFn(item.purchasePrice),
+          name: "sellingPrice",
+          getFn: (item) => normalizeFn(item.sellingPrice),
         },
-        { name: "unitPrice", getFn: (item) => normalizeFn(item.unitPrice) },
-        { name: "amount", getFn: (item) => normalizeFn(item.amount) },
         {
-          name: "restockThreshold",
-          getFn: (item) => normalizeFn(item.restockThreshold),
+          name: "currentStock",
+          getFn: (item) => normalizeFn(item.currentStock),
         },
+        { name: "threshold", getFn: (item) => normalizeFn(item.threshold) },
         { name: "unit.name", getFn: (item) => normalizeFn(item.unit?.name) },
+        {
+          name: "suppliers",
+          getFn: (item) =>
+            item.suppliers.map((s) => s.supplier?.name).join(" "),
+        },
       ];
     }
 
-    // Fuse.js fuzzy search
     const fuse = new Fuse(allItems, {
       keys: fuseKeys,
       threshold: 0.4,
       ignoreLocation: true,
     });
-
-    const fuseResults = fuse
-      .search(normalizedSearch)
-      .map((result) => result.item);
+    const fuseResults = fuse.search(normalizedSearch).map((r) => r.item);
 
     const totalItems = fuseResults.length;
     const totalPages = Math.ceil(totalItems / limit);
@@ -123,58 +132,97 @@ const getAllInventoryItems = async (req, res) => {
   }
 };
 
-// Adding a new inventory item
+// ---------------------------- ADD INVENTORY ----------------------------
 const addInventoryItem = async (req, res) => {
   try {
-    const categoryDoc = await Category.findById(req.body.category);
-    if (!categoryDoc)
-      return res.status(400).json({ message: "Invalid category" });
+    // Destructure incoming body
+    const {
+      itemId,
+      name,
+      currentStock = 0,
+      threshold = 0,
+      markup = 0,
+      sellingPrice: frontEndPrice,
+      category,
+      unit,
+      suppliers: incomingSuppliers = [],
+      expirationDate,
+      isSplit = false,
+    } = req.body;
 
-    const item = new InventoryItem({
-      ...req.body,
-      category: categoryDoc.name,
+    // -------------------- SUPPLIERS --------------------
+    let finalSuppliers = [];
+    if (incomingSuppliers.length > 0) {
+      for (const s of incomingSuppliers) {
+        const supplierDoc = await Supplier.findById(s.supplier);
+        if (!supplierDoc)
+          return res
+            .status(400)
+            .json({ message: `Supplier not found: ${s.supplier}` });
+        finalSuppliers.push({
+          supplier: supplierDoc._id,
+          purchasePrice: s.purchasePrice,
+          isPreferred: !!s.isPreferred,
+        });
+      }
+
+      // Ensure exactly one preferred supplier
+      if (!finalSuppliers.some((s) => s.isPreferred)) {
+        finalSuppliers[0].isPreferred = true;
+      }
+    }
+
+    // -------------------- PRICING --------------------
+    let lastManualPrice = Number(frontEndPrice).toFixed(2) || 0;
+    let sellingPrice = 0;
+
+    const preferredSupplier = finalSuppliers.find((s) => s.isPreferred);
+    if (preferredSupplier) {
+      sellingPrice = preferredSupplier.purchasePrice * (1 + markup / 100);
+    } else {
+      sellingPrice = lastManualPrice * (1 + markup / 100);
+    }
+
+    // -------------------- CREATE ITEM --------------------
+    const newItem = await InventoryItem.create({
+      itemId,
+      name,
+      currentStock,
+      threshold,
+      markup,
+      sellingPrice,
+      lastManualPrice,
+      category,
+      unit,
+      suppliers: finalSuppliers,
+      expirationDate,
+      isSplit,
       createdBy: req.user.id,
+      stockHistory: [
+        {
+          type: "Created",
+          quantity: currentStock,
+          previousStock: 0,
+          newStock: currentStock,
+          note: "Initial item creation.",
+        },
+      ],
     });
 
-    await item.save();
-
-    try {
-      await createLog({
-        action: "Added Item",
-        module: "Inventory",
-        description: `An inventory item was added: ${item.name}`,
-        userId: req.user.id,
-      });
-
-      await createNotification({
-        message: `An inventory item "${item.name}" was created.`,
-        type: "success",
-        roles: ["admin", "owner", "manager"],
-      });
-    } catch (logErr) {
-      console.error("[Activity Log] Failed to log addition:", logErr.message);
-    }
-
-    res.status(201).json(item);
+    res.json(newItem);
   } catch (err) {
-    console.error("Add item failed:", err);
-
-    if (err.name === "ValidationError") {
-      const messages = Object.values(err.errors).map((e) => e.message);
-      return res.status(400).json({ message: messages.join(", ") });
-    }
-
+    console.error("[ADD INVENTORY] Server error:", err);
     res.status(500).json({ message: err.message || "Failed to add item." });
   }
 };
 
-// Updating an inventory item
+// ---------------------------- UPDATE INVENTORY ----------------------------
 const updateInventoryItem = async (req, res) => {
   try {
     const item = await InventoryItem.findById(req.params.id);
     if (!item) return res.status(404).json({ message: "Item not found" });
 
-    // Staff update request (if not creator of the item)
+    // -------------------- STAFF REQUEST --------------------
     if (
       req.user.role === "staff" &&
       item.createdBy.toString() !== req.user.id
@@ -185,27 +233,10 @@ const updateInventoryItem = async (req, res) => {
         targetId: item._id.toString(),
         requestType: "edit",
         details: {
-          name: item.name,
-          itemId: item.itemId,
-          category: item.category,
-          stock: item.stock,
-          unitPrice: item.unitPrice,
+          ...item.toObject(),
           note: "Staff requested to edit this item",
         },
         requestedBy: req.user.id,
-      });
-
-      await createLog({
-        action: "Update Item Request",
-        module: "Inventory",
-        description: `User ${req.user.username} requested to update item: ${item.name}`,
-        userId: req.user.id,
-      });
-
-      await createNotification({
-        message: `An update request for inventory item: "${item.name}" is pending for approval.`,
-        type: "warning",
-        roles: ["admin", "owner", "manager"],
       });
 
       await createNotification({
@@ -221,48 +252,100 @@ const updateInventoryItem = async (req, res) => {
       });
     }
 
-    if (req.body.category) {
-      const categoryDoc = await Category.findById(req.body.category);
-      if (!categoryDoc) {
-        return res.status(400).json({ message: "Invalid category" });
+    const {
+      name,
+      currentStock,
+      markup,
+      sellingPrice: frontEndPrice,
+      category,
+      unit,
+      suppliers: incomingSuppliers = [],
+      expirationDate,
+      isSplit,
+    } = req.body;
+
+    // -------------------- SUPPLIERS --------------------
+    let finalSuppliers = item.suppliers;
+    if (incomingSuppliers.length > 0) {
+      finalSuppliers = [];
+      for (const s of incomingSuppliers) {
+        const supplierDoc = await Supplier.findById(s.supplier);
+        if (!supplierDoc)
+          return res
+            .status(400)
+            .json({ message: `Supplier not found: ${s.supplier}` });
+
+        finalSuppliers.push({
+          supplier: supplierDoc._id,
+          purchasePrice: s.purchasePrice,
+          isPreferred: !!s.isPreferred,
+        });
       }
-      req.body.category = categoryDoc.name;
+      if (!finalSuppliers.some((s) => s.isPreferred))
+        finalSuppliers[0].isPreferred = true;
     }
 
-    req.body.updatedBy = req.user.id;
+    // -------------------- PRICING --------------------
+    const lastManualPrice =
+      frontEndPrice != null ? parseFloat(frontEndPrice) : item.lastManualPrice;
+    const preferredSupplier = finalSuppliers.find((s) => s.isPreferred);
+    const effectiveMarkup = markup != null ? markup : item.markup ?? 0;
+    const sellingPrice = preferredSupplier
+      ? preferredSupplier.purchasePrice * (1 + effectiveMarkup / 100)
+      : lastManualPrice * (1 + effectiveMarkup / 100);
 
-    Object.assign(item, req.body);
+    // -------------------- APPLY UPDATES --------------------
+    const previousStock = item.currentStock;
 
-    if (item.unitPrice < item.purchasePrice) {
-      return res.status(400).json({
-        message: "Unit Price must be greater than or equal to Purchase Price",
+    item.name = name ?? item.name;
+    item.currentStock = currentStock ?? item.currentStock;
+    item.markup = markup ?? item.markup;
+    item.lastManualPrice = lastManualPrice;
+    item.sellingPrice = sellingPrice;
+    item.category = category ?? item.category;
+    item.unit = unit ?? item.unit;
+    item.suppliers = finalSuppliers;
+    item.expirationDate = expirationDate ?? item.expirationDate;
+    item.isSplit = isSplit ?? item.isSplit;
+    item.updatedBy = req.user.id;
+
+    // -------------------- STOCK HISTORY --------------------
+    const changes = [];
+    if (previousStock !== item.currentStock)
+      changes.push(
+        `Stock changed from ${previousStock} to ${item.currentStock}`
+      );
+    if (frontEndPrice != null)
+      changes.push(`Selling price updated to ${item.sellingPrice}`);
+
+    if (changes.length > 0) {
+      item.stockHistory.push({
+        type: "Adjustment",
+        quantity: Math.abs(item.currentStock - previousStock),
+        previousStock,
+        newStock: item.currentStock,
+        note: `${req.user.username} updated inventory: ${changes.join("; ")}`,
       });
     }
 
-    await item.save();
+    // -------------------- STATUS & NOTIFICATIONS --------------------
+    await updateItemStatus(item);
 
+    // -------------------- SAVE --------------------
     res.json(item);
   } catch (err) {
-    console.error("[UPDATE] Server error:", err);
-
-    if (err.name === "ValidationError") {
-      const messages = Object.values(err.errors).map((e) => e.message);
-      return res.status(400).json({ message: messages.join(", ") });
-    }
-
+    console.error("[UPDATE INVENTORY] Server error:", err);
     res.status(500).json({ message: err.message || "Failed to update item." });
   }
 };
 
-// Deleting an inventory item
+// ---------------------------- DELETE / ARCHIVE INVENTORY ----------------------------
 const deleteInventoryItem = async (req, res) => {
   try {
     const item = await InventoryItem.findById(req.params.id);
-    if (!item) {
-      return res.status(404).json({ message: "Item not found" });
-    }
+    if (!item) return res.status(404).json({ message: "Item not found" });
 
-    // Staff delete request
+    // Staff approval logic
     if (
       req.user.role === "staff" &&
       item.createdBy.toString() !== req.user.id
@@ -271,91 +354,319 @@ const deleteInventoryItem = async (req, res) => {
         module: "Inventory",
         moduleRef: "InventoryItem",
         targetId: item._id.toString(),
-        requestType: "delete",
+        requestType: "archive",
         details: {
-          name: item.name,
-          itemId: item.itemId,
-          category: item.category,
-          stock: item.stock,
-          unitPrice: item.unitPrice,
-          note: "Staff requested deletion of this item",
+          ...item.toObject(),
+          note: req.body.note || "Staff requested archiving",
         },
         requestedBy: req.user.id,
       });
 
       await createLog({
-        action: "Delete Item Request",
+        action: "Archive Item Request",
         module: "Inventory",
-        description: `User ${req.user.username} requested to delete item: ${item.name}`,
+        description: `User ${req.user.username} requested to archive item: ${item.name}`,
         userId: req.user.id,
       });
 
       await createNotification({
-        message: `A delete request for inventory item: "${item.name}" is pending for approval.`,
+        message: `An archive request for inventory item: "${item.name}" is pending approval.`,
         type: "warning",
         roles: ["admin", "owner", "manager"],
       });
 
       await createNotification({
-        message: `Your delete request for "${item.name}" is pending approval.`,
+        message: `Your archive request for "${item.name}" is pending approval.`,
         type: "info",
         userId: req.user.id,
         roles: [],
         isGlobal: false,
       });
 
-      return res.status(200).json({
-        message: "Your delete request has been sent for approval.",
-      });
+      return res
+        .status(200)
+        .json({ message: "Your archive request has been sent for approval." });
     }
 
-    const deletedItem = await InventoryItem.findByIdAndDelete(req.params.id);
+    // ---------------------------------------
+    // Archive the item
+    // ---------------------------------------
+    item.archived = true;
 
-    try {
-      await createLog({
-        action: "Deleted Item",
-        module: "Inventory",
-        description: `User ${req.user.username} deleted an item: ${deletedItem.name}`,
-        userId: req.user.id,
-      });
+    // Add stock history entry
+    item.stockHistory.push({
+      type: "Adjustment",
+      quantity: 0,
+      previousStock: item.currentStock,
+      newStock: item.currentStock,
+      date: new Date(),
+      note: `${req.user.username} archived the item${
+        req.body.note ? `: ${req.body.note}` : ""
+      }`,
+    });
 
-      await createNotification({
-        message: `An inventory item "${deletedItem.name}" was deleted.`,
-        type: "success",
-        roles: ["admin", "owner", "manager"],
-      });
-    } catch (logErr) {
-      console.error("[Activity Log] Failed to log deletion:", logErr.message);
-    }
+    await item.save();
 
-    res.status(200).json({ message: "Item has been deleted successfully" });
+    await createLog({
+      action: "Archived Item",
+      module: "Inventory",
+      description: `User ${req.user.username} archived item: ${item.name}`,
+      userId: req.user.id,
+    });
+
+    await createNotification({
+      message: `Inventory item "${item.name}" was archived.`,
+      type: "success",
+      roles: ["admin", "owner", "manager"],
+    });
+
+    res.status(200).json({ message: "Item has been archived successfully" });
   } catch (err) {
-    console.error("[DELETE] Server error:", err.message);
-    res.status(500).json({ message: "Server error during deletion" });
+    console.error("[DELETE INVENTORY] Error:", err);
+    res.status(500).json({ message: "Server error during archiving" });
   }
 };
 
-// Periodic update for status
+// ---------------------------- REPACK INVENTORY ----------------------------
+const repackInventoryItem = async (req, res) => {
+  try {
+    const { parentItemId, stockToUse, childName, unit, itemId, childStock } =
+      req.body;
+
+    if (
+      !parentItemId ||
+      !stockToUse ||
+      !childName ||
+      !unit ||
+      !itemId ||
+      !childStock
+    ) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const parentItem = await InventoryItem.findById(parentItemId);
+    if (!parentItem || parentItem.archived)
+      return res
+        .status(404)
+        .json({ message: "Parent item not found or archived" });
+
+    if (stockToUse > parentItem.currentStock) {
+      return res
+        .status(400)
+        .json({ message: "Insufficient stock in parent item" });
+    }
+
+    // Deduct from parent
+    const previousStock = parentItem.currentStock;
+    parentItem.currentStock -= stockToUse;
+    parentItem.status = calculateStatus(
+      parentItem.currentStock,
+      parentItem.threshold,
+      parentItem.expirationDate
+    );
+    parentItem.stockHistory.push({
+      type: "Adjustment",
+      quantity: -stockToUse,
+      previousStock,
+      newStock: parentItem.currentStock,
+      note: `Used for repacking into "${childName}"`,
+    });
+    await parentItem.save();
+
+    // Create child item
+    const childItem = new InventoryItem({
+      itemId,
+      name: childName,
+      category: parentItem.category,
+      currentStock: childStock,
+      threshold: parentItem.threshold,
+      unit,
+      suppliers: parentItem.suppliers,
+      markup: parentItem.markup,
+      sellingPrice: parentItem.sellingPrice,
+      lastManualPrice: parentItem.lastManualPrice,
+      createdBy: req.user.id,
+      status: calculateStatus(
+        childStock,
+        parentItem.threshold,
+        parentItem.expirationDate
+      ),
+    });
+
+    await childItem.save();
+
+    const repackRecord = new Repack({
+      itemId,
+      parentItem: parentItem._id,
+      childItem: childItem._id,
+      parentStockUsed: stockToUse,
+      childStockCreated: childStock,
+      createdBy: req.user.id,
+    });
+
+    await repackRecord.save();
+
+    parentItem.repackedItems.push(repackRecord._id);
+    await parentItem.save();
+
+    await createLog({
+      action: "Repacked Item",
+      module: "Inventory",
+      description: `User ${req.user.username} repacked "${parentItem.name}" into "${childItem.name}"`,
+      userId: req.user.id,
+    });
+
+    await createNotification({
+      message: `Repacked "${parentItem.name}" into "${childItem.name}" successfully.`,
+      type: "success",
+      roles: ["admin", "owner", "manager"],
+    });
+
+    res.status(201).json({ parentItem, childItem, repackRecord });
+  } catch (err) {
+    console.error("[REPACK INVENTORY] Error:", err);
+    res.status(500).json({ message: "Server error while repacking item" });
+  }
+};
+
+// ---------------------------- BATCH STATUS UPDATE ----------------------------
 const batchUpdateStatuses = async () => {
   try {
-    const items = await InventoryItem.find();
-
+    const items = await InventoryItem.find({ archived: false });
     const systemUserId = "6891c3c178b2ff675c9cdfd7";
 
     for (const item of items) {
-      const newStatus = computeStatus(item);
-      if (!item.createdBy) {
-        item.createdBy = systemUserId;
-      }
+      item.updatedBy = item.updatedBy || systemUserId;
 
-      if (item.status !== newStatus) {
-        item.status = newStatus;
-        await item.save();
-      }
+      item.$locals = item.$locals || {};
+      item.$locals.skipLog = true;
+
+      await updateItemStatus(item);
     }
+
     console.log("Batch status update complete");
-  } catch (error) {
-    console.error("Error during batch status update:", error);
+  } catch (err) {
+    console.error("[BATCH STATUS] Error:", err);
+  }
+};
+
+// ---------------------------- DAILY INVENTORY UPDATE ----------------------------
+const generateInventoryTable = ({
+  criticalItems,
+  lowStockItems,
+  outOfStockItems,
+}) => {
+  let html = `<h2>Daily Inventory Summary</h2>`;
+  const sections = [
+    { title: "Critical", items: criticalItems },
+    { title: "Low Stock", items: lowStockItems },
+    { title: "Out of Stock", items: outOfStockItems },
+  ];
+
+  for (const sec of sections) {
+    if (sec.items.length > 0) {
+      html += `<h3>${sec.title} (${sec.items.length})</h3>`;
+      html += `<table border="1" cellpadding="5" cellspacing="0">
+        <tr>
+          <th>Item ID</th>
+          <th>Name</th>
+          <th>Current Stock</th>
+          <th>Threshold</th>
+          <th>Status</th>
+        </tr>`;
+      for (const item of sec.items) {
+        html += `<tr>
+          <td>${item.itemId ?? item._id}</td>
+          <td>${item.name ?? "Unknown"}</td>
+          <td>${item.currentStock ?? 0}</td>
+          <td>${item.threshold ?? 0}</td>
+          <td>${item.status ?? "Unknown"}</td>
+        </tr>`;
+      }
+      html += `</table><br/>`;
+    }
+  }
+
+  return html;
+};
+
+const sendDailyInventoryNotifications = async () => {
+  try {
+    const today = new Date().toDateString();
+
+    // Prevent duplicate notifications
+    const existing = await Notification.findOne({
+      type: "InventoryDailySummary",
+    }).sort({ createdAt: -1 });
+
+    if (existing && new Date(existing.createdAt).toDateString() === today) {
+      console.log("Daily inventory notification already sent today.");
+      return;
+    }
+
+    // Fetch all items
+    let items = await InventoryItem.find({ archived: false });
+
+    // Recalculate status for each item using our util
+    for (let i = 0; i < items.length; i++) {
+      items[i] = await updateItemStatus(items[i]);
+    }
+
+    // Group items by status
+    const criticalItems = items.filter((i) => i.status === "Critical");
+    const lowStockItems = items.filter((i) => i.status === "Low-stock");
+    const outOfStockItems = items.filter((i) => i.status === "Out of Stock");
+
+    if (
+      criticalItems.length === 0 &&
+      lowStockItems.length === 0 &&
+      outOfStockItems.length === 0
+    ) {
+      console.log("No inventory issues today.");
+      return;
+    }
+
+    // Create summary message
+    let message = "Daily Inventory Summary:\n";
+    if (criticalItems.length > 0)
+      message += `• Critical: ${criticalItems.length}\n`;
+    if (lowStockItems.length > 0)
+      message += `• Low Stock: ${lowStockItems.length}\n`;
+    if (outOfStockItems.length > 0)
+      message += `• Out of Stock: ${outOfStockItems.length}\n`;
+
+    await createNotification({
+      message,
+      type: "InventoryDailySummary",
+      isGlobal: true,
+    });
+
+    // Generate HTML table
+    const htmlTable = generateInventoryTable({
+      criticalItems,
+      lowStockItems,
+      outOfStockItems,
+    });
+
+    // Send email
+    const recipients = await User.find({
+      role: { $in: ["admin", "owner", "manager"] },
+      email: { $exists: true, $ne: "" },
+    });
+    const adminEmails = recipients.map((u) => u.email);
+
+    if (adminEmails.length > 0) {
+      await transporter.sendMail({
+        from: `"Hunny's Crémerie" <${process.env.EMAIL_USER}>`,
+        to: adminEmails.join(","),
+        subject: "Daily Inventory Summary",
+        html: htmlTable,
+      });
+    }
+
+    console.log("Daily inventory notification & email sent.");
+  } catch (err) {
+    console.error("[DAILY NOTIFICATION] Error:", err);
   }
 };
 
@@ -364,5 +675,7 @@ module.exports = {
   addInventoryItem,
   updateInventoryItem,
   deleteInventoryItem,
+  repackInventoryItem,
   batchUpdateStatuses,
+  sendDailyInventoryNotifications,
 };

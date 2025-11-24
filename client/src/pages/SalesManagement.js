@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+<<<<<<< HEAD
 import { customAlphabet } from "nanoid/non-secure";
 import {
   ShoppingCart,
@@ -11,9 +12,17 @@ import {
   Truck,
 } from "lucide-react";
 
+=======
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
 import { authFetch, API_BASE } from "../utils/tokenUtils";
 import PopupMessage from "../components/PopupMessage";
+<<<<<<< HEAD
 import DateRangeFilter from "../components/DateRangeFilter";
+=======
+import { FiTrash2 } from "react-icons/fi";
+import "../styles/App.css";
+import "../styles/SalesManagement.css";
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
 
 const SalesManagement = () => {
   // --- States ---
@@ -23,6 +32,10 @@ const SalesManagement = () => {
   const [orderType, setOrderType] = useState("Walk-in");
   const [isUnregistered, setIsUnregistered] = useState(false);
   const [customerName, setCustomerName] = useState("");
+<<<<<<< HEAD
+=======
+  const [discount, setDiscount] = useState(0); // flat amount in PHP
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
   const [taxRate] = useState(12);
   const [searchQuery, setSearchQuery] = useState("");
   const [popupMessage, setPopupMessage] = useState("");
@@ -34,9 +47,12 @@ const SalesManagement = () => {
   const [totalItems, setTotalItems] = useState(0);
 
   const [loading, setLoading] = useState(false);
+<<<<<<< HEAD
   const [mode, setMode] = useState("Sales"); // "Sales" or "Product Acquisition"
   const [activeSupplier, setActiveSupplier] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
+=======
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
 
   const navigate = useNavigate();
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -57,10 +73,16 @@ const SalesManagement = () => {
     }, 2000);
   };
 
+<<<<<<< HEAD
   // --- Fetch Data ---
   const fetchInventory = useCallback(async () => {
     try {
       let url = `${API_BASE}/api/inventory?page=${currentPage}&limit=12&search=${encodeURIComponent(
+=======
+  const fetchInventory = useCallback(async () => {
+    try {
+      const url = `${API_BASE}/api/inventory?page=${currentPage}&limit=10&search=${encodeURIComponent(
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
         searchQuery
       )}`;
       const res = await authFetch(url);
@@ -91,6 +113,7 @@ const SalesManagement = () => {
 
   useEffect(() => {
     fetchInventory();
+<<<<<<< HEAD
   }, [fetchInventory, mode]);
 
   // Fetch Suppliers
@@ -104,6 +127,11 @@ const SalesManagement = () => {
   }, []);
 
   // Fetch Customers
+=======
+  }, [fetchInventory]);
+
+  // Fetch customers
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
   useEffect(() => {
     authFetch(`${API_BASE}/api/customers?page=1&limit=1000`)
       .then((res) => res.json())
@@ -123,6 +151,7 @@ const SalesManagement = () => {
 
   const handleAddToCart = (product) => {
     if (
+<<<<<<< HEAD
       mode === "Sales" &&
       (product.stock <= 0 ||
         product.status === "Out of stock" ||
@@ -140,14 +169,22 @@ const SalesManagement = () => {
     }
 
     // Optimistic Update
+=======
+      product.currentStock <= 0 ||
+      product.status === "Out of stock" ||
+      product.status === "Expired"
+    )
+      return;
+
+    // Decrement stock in inventory
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
     setInventoryItems((prev) =>
       prev.map((i) =>
-        i._id === product._id
-          ? { ...i, stock: mode === "Sales" ? i.stock - 1 : i.stock }
-          : i
+        i._id === product._id ? { ...i, currentStock: i.currentStock - 1 } : i
       )
     );
 
+    // Add to cart or increment quantity
     setCartItems((prev) => {
       const exists = prev.find((i) => i._id === product._id);
       return exists
@@ -158,6 +195,7 @@ const SalesManagement = () => {
     });
   };
 
+<<<<<<< HEAD
   const handleQuantityChange = (itemId, delta) => {
     setCartItems((prev) =>
       prev.map((cartItem) => {
@@ -183,6 +221,41 @@ const SalesManagement = () => {
             );
           }
           return { ...cartItem, quantity: newQty };
+=======
+  const handleIncreaseQuantity = (itemId) => {
+    setCartItems((prevCart) =>
+      prevCart.map((cartItem) => {
+        if (cartItem._id === itemId) {
+          // Find corresponding inventory item
+          const invItem = inventoryItems.find((i) => i._id === itemId);
+          if (!invItem || invItem.currentStock <= 0) return cartItem;
+
+          // Decrement stock
+          setInventoryItems((prevInv) =>
+            prevInv.map((i) =>
+              i._id === itemId ? { ...i, currentStock: i.currentStock - 1 } : i
+            )
+          );
+
+          return { ...cartItem, quantity: cartItem.quantity + 1 };
+        }
+        return cartItem;
+      })
+    );
+  };
+
+  const handleDecreaseQuantity = (itemId) => {
+    setCartItems((prevCart) =>
+      prevCart.map((cartItem) => {
+        if (cartItem._id === itemId && cartItem.quantity > 1) {
+          // Increment stock back
+          setInventoryItems((prevInv) =>
+            prevInv.map((i) =>
+              i._id === itemId ? { ...i, currentStock: i.currentStock + 1 } : i
+            )
+          );
+          return { ...cartItem, quantity: cartItem.quantity - 1 };
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
         }
         return cartItem;
       })
@@ -190,6 +263,7 @@ const SalesManagement = () => {
   };
 
   const handleRemoveFromCart = (itemId) => {
+<<<<<<< HEAD
     const itemToRemove = cartItems.find((i) => i._id === itemId);
     if (!itemToRemove) return;
 
@@ -204,19 +278,49 @@ const SalesManagement = () => {
         prev.map((i) =>
           i._id === itemId
             ? { ...i, stock: i.stock + itemToRemove.quantity }
+=======
+    const removedItem = cartItems.find((i) => i._id === itemId);
+    if (removedItem) {
+      setInventoryItems((prevInv) =>
+        prevInv.map((i) =>
+          i._id === itemId
+            ? { ...i, currentStock: i.currentStock + removedItem.quantity }
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
             : i
         )
       );
     }
+<<<<<<< HEAD
   };
 
   // --- Checkout Logic ---
+=======
+    setCartItems((prevCart) => prevCart.filter((i) => i._id !== itemId));
+  };
+
+  // ---------------------------
+  // Calculations used by UI
+  // ---------------------------
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + item.sellingPrice * item.quantity,
+    0
+  );
+
+// Ensure discount is numeric and non-negative
+  const safeDiscount = Number.isFinite(Number(discount)) ? Number(discount) : 0;
+  const effectiveSubtotal = Math.max(subtotal - Math.max(0, safeDiscount), 0);
+
+  const taxAmount = (effectiveSubtotal * Number(taxRate)) / 100;
+  const total = effectiveSubtotal + taxAmount;
+
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
   const handleSaveSale = async () => {
     if (cartItems.length === 0) {
       showPopup("Cart is empty.", "error");
       return;
     }
 
+<<<<<<< HEAD
     setLoading(true);
     try {
       const subtotal = cartItems.reduce(
@@ -284,13 +388,81 @@ const SalesManagement = () => {
         });
         if (!res.ok) throw new Error("Failed to create acquisition.");
         showPopup("Acquisition request sent!", "success");
+=======
+    if (!orderType) {
+      showPopup("Please select an order type.", "error");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Recompute server-safe values the same way UI does
+      const subtotalLocal = cartItems.reduce(
+        (sum, item) => sum + item.sellingPrice * item.quantity,
+        0
+      );
+
+      const discountAmount = Number.isFinite(Number(discount))
+        ? Number(discount)
+        : 0;
+
+      const effective = Math.max(subtotalLocal - Math.max(0, discountAmount), 0);
+      const taxAmt = (effective * Number(taxRate)) / 100;
+      const totalAmount = effective + taxAmt;
+
+      const saleToSend = {
+        customerName: isUnregistered
+          ? customerName.trim() || "Unregistered"
+          : customerName,
+        orderType,
+        items: cartItems.map((i) => ({
+          itemId: i._id,
+          quantity: i.quantity,
+          sellingPrice: Number(i.sellingPrice.toFixed(2)),
+        })),
+        subtotal: Number(subtotalLocal.toFixed(2)),
+        taxRate: Number(taxRate),
+        taxAmount: Number(taxAmt.toFixed(2)),
+        discount: Number(discountAmount.toFixed(2)),
+        totalAmount: Number(totalAmount.toFixed(2)),
+      };
+
+      const res = await authFetch(`${API_BASE}/api/sales`, {
+        method: "POST",
+        body: JSON.stringify(saleToSend),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.message || "Failed to create sale.");
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
       }
+
+      const resData = await res.json();
+      showPopup(
+        `Sale created successfully! Invoice #: ${resData.sale.invoiceNumber}`,
+        "success"
+      );
+
+      // Update inventory via your endpoint (keeps your original approach)
+      await Promise.all(
+        cartItems.map((item) =>
+          authFetch(`${API_BASE}/api/inventory/${item._id}`, {
+            method: "PUT",
+            body: JSON.stringify({ stock: item.currentStock - item.quantity }),
+          })
+        )
+      );
 
       setCartItems([]);
       setCustomerName("");
       setIsUnregistered(false);
+<<<<<<< HEAD
       setActiveSupplier(null);
       fetchInventory();
+=======
+      setDiscount(0);
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
     } catch (err) {
       showPopup(err.message || "Error processing transaction.", "error");
     } finally {
@@ -314,6 +486,7 @@ const SalesManagement = () => {
           onClose={() => setPopupMessage("")}
         />
       )}
+<<<<<<< HEAD
 
       {/* --- LEFT SIDE: PRODUCT LIST --- */}
       <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden">
@@ -339,6 +512,12 @@ const SalesManagement = () => {
             />
             <div className="relative flex-1 md:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+=======
+      <DashboardLayout>
+        <main className="pos-main">
+          <section className="sales-products">
+            <div className="sales-products-header">
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
               <input
                 type="text"
                 placeholder="Search products..."
@@ -350,12 +529,137 @@ const SalesManagement = () => {
           </div>
         </div>
 
+<<<<<<< HEAD
         {/* Product Grid */}
         <div className="flex-1 overflow-y-auto pr-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {inventoryItems.length === 0 ? (
               <div className="col-span-full text-center py-12 text-gray-400">
                 No products found.
+=======
+            <div className="sales-products-table-container">
+              <table className="sales-products-table">
+                <thead>
+                  <tr>
+                    <th>Item ID</th>
+                    <th>Name</th>
+                    <th>Stock</th>
+                    <th>Price</th>
+                    <th>Category</th>
+                    <th>Unit</th>
+                    <th>Status</th>
+                    <th>Expiration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedItems.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" className="no-results">
+                        No matching products found.
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedItems
+                      .filter((item) => !item.archived)
+                      .sort((a, b) => {
+                        if (
+                          a.status === "Well-stocked" &&
+                          b.status !== "Well-stocked"
+                        )
+                          return -1;
+                        if (
+                          a.status !== "Well-stocked" &&
+                          b.status === "Well-stocked"
+                        )
+                          return 1;
+                        return 0;
+                      })
+                      .map((item) => (
+                        <tr
+                          key={item._id}
+                          className={`sales-table-row ${
+                            item.currentStock <= 0 ||
+                            item.status === "Out of stock" ||
+                            item.status === "Expired"
+                              ? "disabled-row"
+                              : ""
+                          }`}
+                          onClick={() => handleAddToCart(item)}
+                        >
+                          <td>{item.itemId}</td>
+                          <td title={item.name}>{item.name}</td>
+                          <td>{item.currentStock}</td>
+                          <td>₱{item.sellingPrice?.toFixed(2)}</td>
+                          <td>{item.category}</td>
+                          <td>{item.unit?.name || "—"}</td>
+                          <td>
+                            <span
+                              className={`product-status ${item.status
+                                .replace(/\s+/g, "-")
+                                .toLowerCase()}`}
+                            >
+                              {item.status}
+                            </span>
+                          </td>
+
+                          <td>
+                            {item.expirationDate
+                              ? new Date(
+                                  item.expirationDate
+                                ).toLocaleDateString()
+                              : "—"}
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="pagination">
+              <p className="pagination-info">
+                Showing {(currentPage - 1) * 10 + 1}-
+                {Math.min(currentPage * 10, totalItems)} of {totalItems} items
+              </p>
+
+              <div className="pagination-buttons">
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPage === 1}
+                >
+                  Prev
+                </button>
+                {Array.from({ length: Math.min(7, totalPages) }).map(
+                  (_, idx) => {
+                    const start = Math.max(
+                      1,
+                      Math.min(currentPage - 3, totalPages - 6)
+                    );
+                    const pageNumber = start + idx;
+                    if (pageNumber > totalPages) return null;
+                    return (
+                      <button
+                        key={pageNumber}
+                        onClick={() => setCurrentPage(pageNumber)}
+                        className={currentPage === pageNumber ? "active" : ""}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  }
+                )}
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </button>
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
               </div>
             ) : (
               inventoryItems.map((item) => {
@@ -371,6 +675,7 @@ const SalesManagement = () => {
                     ? item.purchasePrice || 0
                     : item.unitPrice || 0;
 
+<<<<<<< HEAD
                 return (
                   <div
                     key={item._id}
@@ -494,20 +799,50 @@ const SalesManagement = () => {
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     className="flex-1 p-2 border rounded-lg text-sm bg-gray-50 outline-none focus:ring-1 focus:ring-brand-primary"
+=======
+            <div className="pos-order-info">
+              <label>
+                Order Type
+                <select
+                  value={orderType}
+                  onChange={(e) => setOrderType(e.target.value)}
+                >
+                  <option value="Walk-in">Walk-in</option>
+                  <option value="Online">Online</option>
+                </select>
+              </label>
+
+              <label>
+                Customer
+                {isUnregistered ? (
+                  <input
+                    type="text"
+                    placeholder="Enter customer name or leave blank."
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
                   />
                 ) : (
                   <select
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
+<<<<<<< HEAD
                     className="flex-1 p-2 border rounded-lg text-sm bg-gray-50 outline-none focus:ring-1 focus:ring-brand-primary"
                   >
                     {customers.map((c) => (
                       <option key={c._id} value={c.name}>
                         {c.name}
+=======
+                  >
+                    {customers.map((cust) => (
+                      <option key={cust._id} value={cust.name}>
+                        {cust.name} ({cust.customerId})
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
                       </option>
                     ))}
                   </select>
                 )}
+<<<<<<< HEAD
               </div>
               <label className="flex items-center gap-2 mt-2 text-xs text-gray-500 cursor-pointer">
                 <input
@@ -516,6 +851,38 @@ const SalesManagement = () => {
                   onChange={(e) => setIsUnregistered(e.target.checked)}
                 />
                 Unregistered / Guest
+=======
+              </label>
+
+              <label className="pos-unregistered-toggle">
+                <input
+                  type="checkbox"
+                  checked={isUnregistered}
+                  onChange={(e) => {
+                    setIsUnregistered(e.target.checked);
+                    setCustomerName(
+                      e.target.checked
+                        ? ""
+                        : customers[0]?.name || "Unregistered"
+                    );
+                  }}
+                />
+                Unregistered Customer
+              </label>
+              <label className="pos-discount-input">
+                Discount (₱):
+                <input
+                  type="number"
+                  min="0"
+                  value={discount}
+                  onChange={(e) =>
+                    setDiscount(
+                      e.target.value === "" ? 0 : Number(parseFloat(e.target.value))
+                    )
+                  }
+                  placeholder="0.00"
+                />
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
               </label>
             </div>
           )}
@@ -562,18 +929,29 @@ const SalesManagement = () => {
                         {item.quantity}
                       </span>
                       <button
+<<<<<<< HEAD
                         onClick={() => handleQuantityChange(item._id, 1)}
                         className="p-1 hover:bg-gray-100"
+=======
+                        onClick={() => handleIncreaseQuantity(item._id)}
+                        disabled={item.quantity >= item.currentStock}
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
                       >
                         <Plus className="w-3 h-3" />
                       </button>
                     </div>
+<<<<<<< HEAD
                     <button
                       onClick={() => handleRemoveFromCart(item._id)}
                       className="text-gray-400 hover:text-red-500"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
+=======
+                    <span>
+                      ₱{(item.sellingPrice * item.quantity).toFixed(2)}
+                    </span>
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
                   </div>
                 </div>
               );
@@ -581,6 +959,7 @@ const SalesManagement = () => {
           )}
         </div>
 
+<<<<<<< HEAD
         {/* Footer / Checkout */}
         <div className="p-4 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
           <div className="flex justify-between items-center mb-4">
@@ -605,6 +984,29 @@ const SalesManagement = () => {
         </div>
       </div>
     </div>
+=======
+            <div className="pos-cart-summary">
+              <p>Subtotal: ₱{subtotal.toFixed(2)}</p>
+              <p>Discount: ₱{Number(safeDiscount).toFixed(2)}</p>
+              <p>
+                Tax ({taxRate}%): ₱{taxAmount.toFixed(2)}
+              </p>
+              <p>Total: ₱{total.toFixed(2)}</p>
+
+              <button
+                className="pos-checkout-btn"
+                onClick={handleSaveSale}
+                disabled={loading}
+              >
+                {loading ? "Checking Out..." : "Checkout"}
+              </button>
+            </div>
+          </section>
+        </main>
+      </DashboardLayout>
+      {popupMessage && <PopupMessage type={popupType} message={popupMessage} />}
+    </>
+>>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
   );
 };
 

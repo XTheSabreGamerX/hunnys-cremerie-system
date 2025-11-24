@@ -1,0 +1,187 @@
+/* Overlay */
+.po-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Modal */
+.po-modal {
+  background: #fff;
+  width: 800px;
+  max-width: 100%;
+  max-height: 95%;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.po-modal-header {
+  padding: 15px 20px;
+  border-bottom: 1px solid #ddd;
+}
+
+.po-modal-header h2 {
+  margin: 0;
+}
+
+/* Body */
+.po-modal-body {
+  padding: 15px 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  overflow-y: auto;
+}
+
+/* Section */
+.po-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.po-modal-section label {
+  font-weight: 500;
+}
+
+/* Add Items Inputs */
+.po-item-inputs {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr auto;
+  /* keeps Add button fixed */
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Limit select width and truncate long text */
+.po-item-inputs select {
+  width: 100%;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Inputs stay contained */
+.po-item-inputs input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Make the Add button fixed width */
+.po-add-item-btn {
+  flex-shrink: 0;
+  width: 60px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* Table */
+.po-items-table {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.po-items-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.po-items-table th,
+.po-items-table td {
+  border: 1px solid #ccc;
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.po-items-table th {
+  background: #f7f7f7;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+/* Buttons */
+.po-add-item-btn,
+.po-remove-item-btn,
+.po-save-btn,
+.po-cancel-btn {
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* Add / Remove */
+.po-add-item-btn {
+  background: #28a745;
+  color: #fff;
+  padding: 6px 10px;
+}
+
+.po-add-item-btn:hover {
+  background: #218838;
+}
+
+.po-remove-item-btn {
+  background: #dc3545;
+  color: #fff;
+  padding: 4px 6px;
+}
+
+.po-remove-item-btn:hover {
+  background: #c82333;
+}
+
+/* Footer */
+.po-modal-footer {
+  padding: 15px 20px;
+  border-top: 1px solid #ddd;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.po-save-btn {
+  background: #007bff;
+  color: #fff;
+  padding: 8px 12px;
+}
+
+.po-save-btn:hover {
+  background: #0069d9;
+}
+
+.po-cancel-btn {
+  background: #6c757d;
+  color: #fff;
+  padding: 8px 12px;
+}
+
+.po-cancel-btn:hover {
+  background: #5a6268;
+}
+
+.po-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

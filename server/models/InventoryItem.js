@@ -2,92 +2,124 @@ const mongoose = require("mongoose");
 const { createNotification } = require("../controllers/notificationController");
 const { createLog } = require("../controllers/activityLogController");
 
-const inventoryItemSchema = new mongoose.Schema({
-  itemId: { type: String, unique: true },
-  name: { type: String, required: true },
-  stock: { type: Number, min: 0, default: 0 },
-  category: { type: String },
-  purchasePrice: { type: Number, min: 0, default: 0 },
-  unitPrice: {
-    type: Number,
-    required: true,
-    min: 0,
-    validate: {
-      validator: function (value) {
-        if (this.purchasePrice === undefined) return true;
-        return value >= this.purchasePrice;
+const inventoryItemSchema = new mongoose.Schema(
+  {
+    itemId: { type: String, unique: true, required: true },
+    name: { type: String, required: true },
+
+    // Stock fields
+    currentStock: { type: Number, min: 0, default: 0 },
+    threshold: { type: Number, min: 0, default: 0 }, // low-stock warning
+
+    markup: { type: Number, min: 0, default: 0 },
+    sellingPrice: { type: Number, required: true, min: 0 },
+    lastManualPrice: { type: Number, default: 0},
+
+    category: { type: String },
+    unit: { type: mongoose.Schema.Types.ObjectId, ref: "UnitOfMeasurement" },
+
+    suppliers: [
+      {
+        supplier: { type: mongoose.Schema.Types.ObjectId, ref: "Supplier" },
+        purchasePrice: { type: Number, min: 0 },
+        isPreferred: { type: Boolean, default: false },
       },
-      message: "Unit Price must be greater than or equal to Purchase Price",
+    ],
+
+    expirationDate: { type: Date },
+    isSplit: { type: Boolean, default: false },
+
+    status: {
+      type: String,
+      enum: [
+        "Well-stocked",
+        "Low-stock",
+        "Critical",
+        "Out of stock",
+        "Expired",
+      ],
+      default: "Well-stocked",
+    },
+    archived: {
+      type: Boolean,
+      default: false,
+    },
+
+    repackedItems: [{ type: mongoose.Schema.Types.ObjectId, ref: "Repack" }],
+
+    stockHistory: [
+      {
+        type: {
+          type: String,
+          enum: ["Restock", "Sale", "Adjustment", "Refund", "Created"],
+          required: true,
+        },
+        quantity: { type: Number, required: true },
+        previousStock: { type: Number, required: true },
+        newStock: { type: Number, required: true },
+        date: { type: Date, default: Date.now },
+        note: { type: String },
+      },
+    ],
+
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
   },
-  amount: { type: Number, required: true, min: 1 },
-  unit: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "UnitOfMeasurement",
-  },
-  supplier: { type: String },
-  restockThreshold: { type: Number, default: 0 },
-  expirationDate: { type: Date },
-  status: {
-    type: String,
-    enum: ["Well-stocked", "Low-stock", "Out of stock", "Expired"],
-    default: "Well-stocked",
-  },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-  },
-  //isSplit boolean default false optional (tag for repacking)
-});
+  { timestamps: true }
+);
 
-// Calculates Status After Creation/Update
-function calculateStatus(stock, threshold, expirationDate) {
+// Status calculation function
+function calculateStatus(currentStock, threshold, expirationDate) {
   const now = new Date();
   if (expirationDate && expirationDate < now) return "Expired";
-  if (stock <= 0) return "Out of stock";
-  if (stock <= threshold) return "Low-stock";
+  if (currentStock <= 0) return "Out of stock";
+  if (currentStock <= threshold / 4) return "Critical";
+  if (currentStock <= threshold / 3) return "Low-stock";
   return "Well-stocked";
 }
 
 // Pre-save hook
 inventoryItemSchema.pre("save", function (next) {
   this.status = calculateStatus(
-    this.stock,
-    this.restockThreshold,
+    this.currentStock,
+    this.threshold,
     this.expirationDate
   );
   next();
 });
 
 // Pre-update hook
-inventoryItemSchema.pre("findOneAndUpdate", function (next) {
-  const update = this.getUpdate() || {};
+inventoryItemSchema.pre("findOneAndUpdate", async function (next) {
+  try {
+    const update = this.getUpdate() || {};
+    const currentDoc = await this.model.findOne(this.getQuery());
 
-  if (
-    update.stock !== undefined ||
-    update.restockThreshold !== undefined ||
-    update.expirationDate !== undefined
-  ) {
-    const stock = update.stock ?? (update.$set ? update.$set.stock : undefined);
-    const restockThreshold =
-      update.restockThreshold ??
-      (update.$set ? update.$set.restockThreshold : undefined);
+    const initialStock =
+      update.currentStock ??
+      (update.$set ? update.$set.currentStock : currentDoc.currentStock);
+    const maxStock =
+      update.threshold ??
+      (update.$set ? update.$set.threshold : currentDoc.threshold);
     const expirationDate =
       update.expirationDate ??
-      (update.$set ? update.$set.expirationDate : undefined);
+      (update.$set ? update.$set.expirationDate : currentDoc.expirationDate);
 
-    update.status = calculateStatus(stock, restockThreshold, expirationDate);
+    update.status = calculateStatus(initialStock, maxStock, expirationDate);
     this.setUpdate(update);
+    next();
+  } catch (err) {
+    next(err);
   }
-  next();
 });
 
+// Post-save hook for logging and notifications
 inventoryItemSchema.post("save", async function (doc, next) {
   try {
-    if (this.$locals?.skipLog) return next();
+    if (doc.$locals?.skipLog) return next();
 
-    // Create log
     await createLog({
       action: "Updated Item",
       module: "Inventory",
@@ -95,7 +127,6 @@ inventoryItemSchema.post("save", async function (doc, next) {
       userId: doc.updatedBy || doc.createdBy,
     });
 
-    // Create notification
     await createNotification({
       message: `Inventory item "${doc.name}" was updated.`,
       type: "info",

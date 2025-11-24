@@ -1,0 +1,139 @@
+/* Background Overlay */
+.receive-po-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+/* Modal Container */
+.receive-po-modal {
+  background: #fff;
+  width: 900px;
+  max-height: 90vh;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  animation: fadeIn 0.22s ease-out;
+}
+
+/* Header */
+.receive-po-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 22px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+}
+
+.receive-po-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.receive-po-close-btn {
+  background: none;
+  border: none;
+  font-size: 26px;
+  cursor: pointer;
+  padding: 4px;
+  color: #444;
+}
+.receive-po-close-btn:hover {
+  color: #000;
+}
+
+/* Body */
+.receive-po-body {
+  padding: 16px 22px;
+  overflow-y: auto;
+}
+
+.receive-po-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.receive-po-table th {
+  background: #fafafa;
+  text-align: left;
+  padding: 10px;
+  border-bottom: 2px solid #ddd;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.receive-po-table td {
+  padding: 10px;
+  border-bottom: 1px solid #e5e5e5;
+  font-size: 14px;
+}
+
+/* Inputs */
+.receive-po-input {
+  width: 80px;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.receive-po-expiration {
+  width: 150px;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+/* Footer */
+.receive-po-footer {
+  padding: 16px 22px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f5f5f5;
+  border-top: 1px solid #ddd;
+}
+
+.receive-po-cancel {
+  background: #ccc;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.receive-po-cancel:hover {
+  background: #bbb;
+}
+
+.receive-po-confirm {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.receive-po-confirm:hover {
+  background: #43a047;
+}
+
+/* Disabled confirm button */
+.receive-po-confirm:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Fade Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

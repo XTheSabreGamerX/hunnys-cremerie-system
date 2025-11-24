@@ -1,26 +1,26 @@
 .supplier-main .module-table-container table th:nth-child(1),
 .supplier-main .module-table-container table td:nth-child(1) {
-  width: 7%;
+  width: 10%;
 }
 
 .supplier-main .module-table-container table th:nth-child(2),
 .supplier-main .module-table-container table td:nth-child(2) {
-  width: 10%;
+  width: 12%;
 }
 
 .supplier-main .module-table-container table th:nth-child(3),
 .supplier-main .module-table-container table td:nth-child(3) {
-  width: 10%;
+  width: 12%;
 }
 
 .supplier-main .module-table-container table th:nth-child(4),
 .supplier-main .module-table-container table td:nth-child(4) {
-  width: 15%;
+  width: 10%;
 }
 
 .supplier-main .module-table-container table th:nth-child(5),
 .supplier-main .module-table-container table td:nth-child(5) {
-  width: 10%;
+  width: 12%;
 }
 
 .supplier-main .module-table-container table th:nth-child(6),
@@ -30,5 +30,10 @@
 
 .supplier-main .module-table-container table th:nth-child(7),
 .supplier-main .module-table-container table td:nth-child(7) {
-  width: 8%;
+  width: 10%;
+}
+
+.supplier-main .module-table-container table th:nth-child(8),
+.supplier-main .module-table-container table td:nth-child(8) {
+  width: 12%;
 }
