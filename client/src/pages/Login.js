@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
+import { Mail, Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
 import PopupMessage from "../components/PopupMessage";
 import ResetPasswordModal from "../components/ResetPasswordModal";
 
@@ -332,7 +332,7 @@ const Login = () => {
                 <div className="relative">
                   <input
                     type="email"
-                    placeholder="admin@hunnys.com"
+                    placeholder="johndoe@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className={`w-full pl-5 pr-5 py-4 bg-gray-50 border rounded-2xl focus:ring-4 focus:ring-brand-light focus:border-brand-primary outline-none transition-all placeholder-gray-400 font-medium ${
@@ -359,7 +359,7 @@ const Login = () => {
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
+                    placeholder="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className={`w-full pl-5 pr-12 py-4 bg-gray-50 border rounded-2xl focus:ring-4 focus:ring-brand-light focus:border-brand-primary outline-none transition-all placeholder-gray-400 font-medium ${
