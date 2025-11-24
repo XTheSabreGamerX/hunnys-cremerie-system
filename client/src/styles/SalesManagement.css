@@ -154,6 +154,11 @@
   background-color: #f8d7da;
 }
 
+.product-status.critical {
+  color: #ffffff;
+  background-color: #c90e1e;
+}
+
 .product-status.expired {
   color: #721c24;
   background-color: #f5c6cb;

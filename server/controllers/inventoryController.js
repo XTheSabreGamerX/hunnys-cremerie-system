@@ -6,6 +6,7 @@ const Supplier = require("../models/Supplier");
 const Notification = require("../models/Notification");
 const User = require("../models/User");
 const nodemailer = require("nodemailer");
+const { updateItemStatus } = require("../utils/inventoryHelpers");
 const { createNotification } = require("../controllers/notificationController");
 const { createLog } = require("../controllers/activityLogController");
 const ActionRequest = require("../models/ActionRequest");
@@ -16,16 +17,6 @@ const ActionRequest = require("../models/ActionRequest");
   if (!preferred) return 0;
   return preferred.purchasePrice * (1 + markup / 100);
 }; */
-
-// Helper: calculate status based on currentStock, threshold, expirationDate
-const calculateStatus = (currentStock, threshold, expirationDate) => {
-  const now = new Date();
-  if (expirationDate && expirationDate < now) return "Expired";
-  if (currentStock <= 0) return "Out of stock";
-  if (currentStock <= threshold / 4) return "Critical";
-  if (currentStock <= threshold / 3) return "Low-stock";
-  return "Well-stocked";
-};
 
 //Nodemailer
 const transporter = nodemailer.createTransport({
@@ -256,15 +247,14 @@ const updateInventoryItem = async (req, res) => {
         isGlobal: false,
       });
 
-      return res
-        .status(200)
-        .json({ message: "Your update request has been sent for approval." });
+      return res.status(200).json({
+        message: "Your update request has been sent for approval.",
+      });
     }
 
     const {
       name,
       currentStock,
-      threshold,
       markup,
       sellingPrice: frontEndPrice,
       category,
@@ -284,49 +274,40 @@ const updateInventoryItem = async (req, res) => {
           return res
             .status(400)
             .json({ message: `Supplier not found: ${s.supplier}` });
+
         finalSuppliers.push({
           supplier: supplierDoc._id,
           purchasePrice: s.purchasePrice,
           isPreferred: !!s.isPreferred,
         });
       }
-
       if (!finalSuppliers.some((s) => s.isPreferred))
         finalSuppliers[0].isPreferred = true;
     }
 
     // -------------------- PRICING --------------------
-    let lastManualPrice =
+    const lastManualPrice =
       frontEndPrice != null ? parseFloat(frontEndPrice) : item.lastManualPrice;
-    let sellingPrice = 0;
-
     const preferredSupplier = finalSuppliers.find((s) => s.isPreferred);
     const effectiveMarkup = markup != null ? markup : item.markup ?? 0;
-
-    if (preferredSupplier) {
-      sellingPrice =
-        preferredSupplier.purchasePrice * (1 + effectiveMarkup / 100);
-    } else {
-      sellingPrice = lastManualPrice * (1 + effectiveMarkup / 100);
-    }
+    const sellingPrice = preferredSupplier
+      ? preferredSupplier.purchasePrice * (1 + effectiveMarkup / 100)
+      : lastManualPrice * (1 + effectiveMarkup / 100);
 
     // -------------------- APPLY UPDATES --------------------
     const previousStock = item.currentStock;
 
-    Object.assign(item, {
-      name: name ?? item.name,
-      currentStock: currentStock ?? item.currentStock,
-      threshold: threshold ?? item.threshold,
-      markup: markup ?? item.markup,
-      lastManualPrice,
-      sellingPrice,
-      category: category ?? item.category,
-      unit: unit ?? item.unit,
-      suppliers: finalSuppliers,
-      expirationDate: expirationDate ?? item.expirationDate,
-      isSplit: isSplit ?? item.isSplit,
-      updatedBy: req.user.id,
-    });
+    item.name = name ?? item.name;
+    item.currentStock = currentStock ?? item.currentStock;
+    item.markup = markup ?? item.markup;
+    item.lastManualPrice = lastManualPrice;
+    item.sellingPrice = sellingPrice;
+    item.category = category ?? item.category;
+    item.unit = unit ?? item.unit;
+    item.suppliers = finalSuppliers;
+    item.expirationDate = expirationDate ?? item.expirationDate;
+    item.isSplit = isSplit ?? item.isSplit;
+    item.updatedBy = req.user.id;
 
     // -------------------- STOCK HISTORY --------------------
     const changes = [];
@@ -336,8 +317,6 @@ const updateInventoryItem = async (req, res) => {
       );
     if (frontEndPrice != null)
       changes.push(`Selling price updated to ${item.sellingPrice}`);
-    if (threshold != null && threshold !== item.threshold)
-      changes.push(`Threshold updated to ${item.threshold}`);
 
     if (changes.length > 0) {
       item.stockHistory.push({
@@ -349,14 +328,10 @@ const updateInventoryItem = async (req, res) => {
       });
     }
 
-    // -------------------- STATUS & SAVE --------------------
-    item.status = calculateStatus(
-      item.currentStock,
-      item.threshold,
-      item.expirationDate
-    );
-    await item.save();
+    // -------------------- STATUS & NOTIFICATIONS --------------------
+    await updateItemStatus(item);
 
+    // -------------------- SAVE --------------------
     res.json(item);
   } catch (err) {
     console.error("[UPDATE INVENTORY] Server error:", err);
@@ -559,8 +534,12 @@ const batchUpdateStatuses = async () => {
   try {
     const items = await InventoryItem.find({ archived: false });
     const systemUserId = "6891c3c178b2ff675c9cdfd7";
+    const criticalStatuses = ["Low-Stock", "Critical", "Out of Stock"];
 
     for (const item of items) {
+      const oldStatus = item.status;
+
+      // Recalculate status first
       item.status = calculateStatus(
         item.currentStock,
         item.threshold,
@@ -571,6 +550,17 @@ const batchUpdateStatuses = async () => {
 
       item.$locals = item.$locals || {};
       item.$locals.skipLog = true;
+
+      // Only trigger notification if the status changed to a critical one
+      if (item.status !== oldStatus && criticalStatuses.includes(item.status)) {
+        await createNotification({
+          message: `Inventory item "${item.name}" is now ${item.status}.`,
+          type: "warning",
+          roles: ["admin", "owner", "manager"],
+          isGlobal: true,
+          eventType: "low_stock",
+        });
+      }
 
       await item.save();
     }

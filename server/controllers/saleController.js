@@ -1,6 +1,7 @@
 const Fuse = require("fuse.js");
 const Sale = require("../models/Sale");
 const Inventory = require("../models/InventoryItem");
+const { updateItemStatus } = require("../utils/inventoryHelpers");
 const { createLog } = require("../controllers/activityLogController");
 const { createNotification } = require("../controllers/notificationController");
 
@@ -182,7 +183,7 @@ const createSale = async (req, res) => {
 
     await newSale.save();
 
-    // Update inventory stock and push to stockHistory
+    // Update inventory stock, push to stockHistory, and update status
     for (const soldItem of saleItems) {
       const inventoryItem = await Inventory.findById(soldItem.itemId);
       if (!inventoryItem) continue;
@@ -203,7 +204,7 @@ const createSale = async (req, res) => {
 
       inventoryItem.$locals = { skipLog: true };
 
-      await inventoryItem.save();
+      await updateItemStatus(inventoryItem);
     }
 
     // Create activity log and notification
@@ -306,7 +307,7 @@ const refundSale = async (req, res) => {
     try {
       await createLog({
         action: `Sale marked as ${status}`,
-        module: "Sales Management",
+        module: "Refund",
         description: `Sale #${sale.invoiceNumber} has been marked as "${status}" by ${req.user.username}`,
         userId: req.user.id,
       });
