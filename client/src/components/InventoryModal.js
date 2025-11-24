@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { customAlphabet } from "nanoid/non-secure";
-import { FaPlus, FaTrash, FaStar, FaRegStar } from "react-icons/fa";
+import { X, Plus, Trash2, Star } from "lucide-react";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
-import "../styles/InventoryModal.css";
 
 const InventoryModal = ({
   isOpen,
@@ -37,44 +36,36 @@ const InventoryModal = ({
 
   const nanoid = customAlphabet("0123456789", 6);
 
-  // ------------------------- EDIT MODE INITIALIZATION -------------------------
+  // Initialize Data
   useEffect(() => {
     if (mode === "edit" && item) {
       const categoryId =
-        typeof item.category === "object"
-          ? item.category?._id || ""
-          : categories.find((c) => c.name === item.category)?._id ||
-            item.category ||
-            "";
-
-      const unitId = item.unit?._id || item.unit?.$oid || item.unit || "";
-
+        categories.find((c) => c.name === item.category)?._id ||
+        item.category ||
+        "";
+      const unitId = item.unit?._id || item.unit || "";
       const normalizedSuppliers =
         item.suppliers?.map((s) => ({
-          supplier: s.supplier?._id || s.supplier?.$oid || s.supplier || "",
+          supplier: s.supplier?._id || s.supplier || "",
           purchasePrice: s.purchasePrice,
-          _id: s._id?.$oid || s._id,
+          _id: s._id,
           isPreferred: s.isPreferred || false,
         })) || [];
 
-      const expirationDate = item.expirationDate?.$date
-        ? item.expirationDate.$date.split("T")[0]
-        : item.expirationDate?.split?.("T")[0] || "";
-
-      // Set form data
       setFormData({
         ...item,
         category: categoryId,
         unit: unitId,
         suppliers: normalizedSuppliers,
-        expirationDate,
+        expirationDate: item.expirationDate
+          ? new Date(item.expirationDate).toISOString().split("T")[0]
+          : "",
         sellingPrice: item.lastManualPrice ?? item.sellingPrice,
-        lastManualPrice: item.lastManualPrice ?? item.sellingPrice,
       });
     }
   }, [mode, item, categories]);
 
-  // ------------------------- RESET MODAL -------------------------
+  // Reset
   useEffect(() => {
     if (!isOpen) {
       setFormData({
@@ -95,161 +86,69 @@ const InventoryModal = ({
     }
   }, [isOpen]);
 
-  // ------------------------- ITEM ID GENERATION -------------------------
-  useEffect(() => {
-    if (mode === "add" && formData.name && formData.category) {
-      const generateItemCode = (name, categoryName) => {
-        const namePart = (name?.substring(0, 3) || "XXX").toUpperCase();
-        const categoryPart = (
-          categoryName?.substring(0, 3) || "XXX"
-        ).toUpperCase();
-        const randomPart = nanoid();
-        return `${namePart}-${categoryPart}-${randomPart}`;
-      };
-      const categoryName =
-        categories.find((c) => c._id === formData.category)?.name || "";
-      setFormData((prev) => ({
-        ...prev,
-        itemId: generateItemCode(prev.name, categoryName),
-      }));
-    }
-  }, [formData.name, formData.category, mode, categories, nanoid]);
-
-  // ------------------------- FORM VALIDATION -------------------------
-  const isFormValid = () => {
-    if (!formData.name.trim() || !formData.category || !formData.unit)
-      return false;
-    if (formData.currentStock < 0 || formData.sellingPrice < 0) return false;
-    if (formData.markup > 100) return false;
-    if (formData.expirationDate) {
-      const expDate = new Date(formData.expirationDate);
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      if (expDate < now) return false;
-    }
-    return true;
-  };
-
-  // ------------------------- INPUT CHANGE -------------------------
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-
     setFormData((prev) => {
       let updated = { ...prev, [name]: value };
-
-      if (name === "sellingPrice") {
-        const typedPrice = parseFloat(value) || 0;
-        updated.lastManualPrice = typedPrice;
-      }
-
+      if (name === "sellingPrice")
+        updated.lastManualPrice = parseFloat(value) || 0;
       if (name === "markup") {
         updated.markup = parseFloat(value) || 0;
         const preferred = prev.suppliers.find((s) => s.isPreferred);
-        if (preferred) {
+        if (preferred)
           updated.sellingPrice =
             preferred.purchasePrice * (1 + updated.markup / 100);
-        }
       }
-
       return updated;
     });
   };
 
-  // ------------------------- ADD / REMOVE SUPPLIER -------------------------
   const handleAddSupplier = () => {
-    if (!tempSupplier.supplier || tempSupplier.purchasePrice === 0) return;
-    if (formData.suppliers.some((s) => s.supplier === tempSupplier.supplier)) {
-      setError("Supplier already added.");
-      return;
-    }
+    if (!tempSupplier.supplier || tempSupplier.purchasePrice <= 0) return;
     setFormData((prev) => {
-      const updatedSuppliers = [
+      const newSuppliers = [
         ...prev.suppliers,
         { ...tempSupplier, isPreferred: prev.suppliers.length === 0 },
       ];
-      const preferred = updatedSuppliers.find((s) => s.isPreferred);
-      return {
-        ...prev,
-        suppliers: updatedSuppliers,
-        sellingPrice: preferred.purchasePrice * (1 + prev.markup / 100),
-      };
+      // Recalculate price if first supplier added
+      const preferred = newSuppliers.find((s) => s.isPreferred);
+      const newPrice = preferred
+        ? preferred.purchasePrice * (1 + prev.markup / 100)
+        : prev.sellingPrice;
+      return { ...prev, suppliers: newSuppliers, sellingPrice: newPrice };
     });
     setTempSupplier({ supplier: "", purchasePrice: 0 });
-    setError("");
   };
 
-  const handleRemoveSupplier = (index) => {
-    setFormData((prev) => {
-      const updatedSuppliers = prev.suppliers.filter((_, i) => i !== index);
-      if (
-        !updatedSuppliers.some((s) => s.isPreferred) &&
-        updatedSuppliers.length > 0
-      ) {
-        updatedSuppliers[0].isPreferred = true;
-      }
-      const preferred = updatedSuppliers.find((s) => s.isPreferred);
-      return {
-        ...prev,
-        suppliers: updatedSuppliers,
-        sellingPrice: preferred
-          ? preferred.purchasePrice * (1 + prev.markup / 100)
-          : prev.sellingPrice,
-      };
-    });
-  };
-
-  const handleSetPreferredSupplier = (index) => {
-    setFormData((prev) => {
-      const updatedSuppliers = prev.suppliers.map((s, i) => ({
-        ...s,
-        isPreferred: i === index,
-      }));
-      const preferred = updatedSuppliers.find((s) => s.isPreferred);
-      return {
-        ...prev,
-        suppliers: updatedSuppliers,
-        sellingPrice: preferred.purchasePrice * (1 + prev.markup / 100),
-      };
-    });
-  };
-
-  // ------------------------- SUBMIT -------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
-
     try {
-      const isEdit = mode === "edit";
-      const url = isEdit
-        ? `${API_BASE}/api/inventory/${item._id}`
-        : `${API_BASE}/api/inventory`;
-      const method = isEdit ? "PUT" : "POST";
+      const url =
+        mode === "edit"
+          ? `${API_BASE}/api/inventory/${item._id}`
+          : `${API_BASE}/api/inventory`;
+      const method = mode === "edit" ? "PUT" : "POST";
 
+      // Map ID back to Name for backend if needed, or send ID if backend updated
       const categoryName =
         categories.find((c) => c._id === formData.category)?.name || "";
 
       const payload = {
         ...formData,
-        category: categoryName,
-        threshold: formData.currentStock,
-        note: formData.note || "",
-        sellingPrice: parseFloat(Number(formData.sellingPrice) || 0).toFixed(2),
-        lastManualPrice: parseFloat(
-          Number(formData.lastManualPrice) || 0
-        ).toFixed(2),
+        category: categoryName, // Backend expects Name string based on your controller
+        threshold: Number(formData.currentStock), // Threshold = Stock logic from your controller
+        itemId: mode === "add" ? `INV-${nanoid()}` : formData.itemId,
       };
 
       const res = await authFetch(url, {
         method,
         body: JSON.stringify(payload),
       });
+      if (!res.ok) throw new Error("Failed to save");
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to save item");
-
-      onItemAdded?.(data);
-      onClose?.();
+      onItemAdded(await res.json());
+      onClose();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -260,253 +159,242 @@ const InventoryModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="inventory-modal-overlay">
-      <div className="inventory-modal">
-        <h2 className="inventory-modal-title">
-          {mode === "edit" ? "Edit Inventory Item" : "Add Inventory Item"}
-        </h2>
-        {error && <div className="inventory-modal-error">{error}</div>}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-xl font-bold text-gray-800">
+            {mode === "edit" ? "Edit Item" : "Add New Item"}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
 
-        <form onSubmit={handleSubmit} className="inventory-modal-form">
-          <div className="inventory-top-fields">
-            {/* Item Name */}
-            <div className="inventory-form-group">
-              <label htmlFor="name">
-                Item Name <span className="required">*</span>
-              </label>
-              <input
-                type="text"
-                name="name"
-                id="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                required
-                className="inventory-input"
-              />
-            </div>
-
-            {/* Markup */}
-            <div className="inventory-form-group">
-              <label htmlFor="markup">Markup (%)</label>
-              <input
-                type="number"
-                name="markup"
-                id="markup"
-                min="0"
-                max="100"
-                value={formData.markup}
-                onChange={handleInputChange}
-                className="inventory-input"
-              />
-            </div>
-
-            {/* Current Stock */}
-            <div className="inventory-form-group">
-              <label htmlFor="currentStock">
-                Current Stock <span className="required">*</span>
-              </label>
-              <input
-                type="number"
-                name="currentStock"
-                id="currentStock"
-                min="0"
-                value={formData.currentStock}
-                onChange={handleInputChange}
-                required
-                className="inventory-input"
-              />
-            </div>
-
-            {/* Selling Price */}
-            <div className="inventory-form-group">
-              <label htmlFor="sellingPrice">
-                Selling Price ₱ <span className="required">*</span>
-              </label>
-              <input
-                type="number"
-                name="sellingPrice"
-                id="sellingPrice"
-                min="0"
-                step="0.01"
-                value={formData.sellingPrice}
-                onChange={handleInputChange}
-                required
-                className="inventory-input"
-              />
-            </div>
-
-            {/* Category */}
-            <div className="inventory-form-group">
-              <label htmlFor="category">
-                Category <span className="required">*</span>
-              </label>
-              <select
-                name="category"
-                id="category"
-                value={formData.category}
-                onChange={handleInputChange}
-                required
-                className="inventory-select"
-              >
-                <option value="">Select Category</option>
-                {categories.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Unit */}
-            <div className="inventory-form-group">
-              <label htmlFor="unit">
-                Unit <span className="required">*</span>
-              </label>
-              <select
-                name="unit"
-                id="unit"
-                value={formData.unit}
-                onChange={handleInputChange}
-                required
-                className="inventory-select"
-              >
-                <option value="">Select Unit</option>
-                {uoms.map((u) => (
-                  <option key={u._id} value={u._id}>
-                    {u.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Expiration Date */}
-            <div className="inventory-form-group">
-              <label htmlFor="expirationDate">Expiration Date</label>
-              <input
-                type="date"
-                name="expirationDate"
-                id="expirationDate"
-                value={formData.expirationDate}
-                onChange={handleInputChange}
-                className="inventory-input"
-              />
-            </div>
-          </div>
-
-          {/* Suppliers Section */}
-          <div className="inventory-suppliers-section">
-            <h4 className="inventory-suppliers-title">Suppliers</h4>
-            <div className="inventory-add-supplier-row">
-              <select
-                value={tempSupplier.supplier}
-                onChange={(e) =>
-                  setTempSupplier((prev) => ({
-                    ...prev,
-                    supplier: e.target.value,
-                  }))
-                }
-                className="inventory-select"
-              >
-                <option value="">Select Supplier</option>
-                {suppliers.map((s) => (
-                  <option key={s._id} value={s._id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                min="0"
-                placeholder="Purchase Price"
-                value={tempSupplier.purchasePrice}
-                onChange={(e) =>
-                  setTempSupplier((prev) => ({
-                    ...prev,
-                    purchasePrice: Number(e.target.value),
-                  }))
-                }
-                className="inventory-input"
-              />
-              <button
-                type="button"
-                onClick={handleAddSupplier}
-                className="inventory-add-btn"
-              >
-                <FaPlus />
-              </button>
-            </div>
-            <ul className="inventory-suppliers-list">
-              {formData.suppliers.map((s, index) => {
-                const supplierName =
-                  suppliers.find((sup) => sup._id === s.supplier)?.name ||
-                  "Unknown";
-                return (
-                  <li key={index} className="inventory-supplier-item">
-                    <button
-                      type="button"
-                      onClick={() => handleSetPreferredSupplier(index)}
-                      className="inventory-preferred-btn"
-                    >
-                      {s.isPreferred ? (
-                        <FaStar color="#FFD700" />
-                      ) : (
-                        <FaRegStar />
-                      )}
-                    </button>
-                    {supplierName} - ₱{s.purchasePrice}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSupplier(index)}
-                      className="inventory-remove-btn"
-                    >
-                      <FaTrash />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-
-          {/* Edit Note */}
-          {mode === "edit" && (
-            <div className="inventory-note-group">
-              <label htmlFor="note">Edit Note (optional)</label>
-              <textarea
-                name="note"
-                id="note"
-                placeholder="Reason for editing..."
-                value={formData.note}
-                onChange={handleInputChange}
-                className="inventory-input"
-                rows="4"
-              />
+        {/* Body */}
+        <div className="p-6 overflow-y-auto">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">
+              {error}
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="inventory-modal-actions">
-            <button
-              type="submit"
-              disabled={loading || !isFormValid()}
-              className="inventory-submit-btn"
-            >
-              {loading
-                ? mode === "edit"
-                  ? "Saving..."
-                  : "Adding..."
-                : mode === "edit"
-                ? "Save Changes"
-                : "Add Item"}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inventory-cancel-btn"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+          <form id="invForm" onSubmit={handleSubmit} className="space-y-6">
+            {/* Basic Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Item Name *
+                </label>
+                <input
+                  required
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-primary outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category *
+                </label>
+                <select
+                  required
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-primary outline-none bg-white"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Stock *
+                </label>
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  name="currentStock"
+                  value={formData.currentStock}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-primary outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Unit *
+                </label>
+                <select
+                  required
+                  name="unit"
+                  value={formData.unit}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-primary outline-none bg-white"
+                >
+                  <option value="">Select Unit</option>
+                  {uoms.map((u) => (
+                    <option key={u._id} value={u._id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Pricing */}
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Markup (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  name="markup"
+                  value={formData.markup}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Selling Price (₱)
+                </label>
+                <input
+                  required
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  name="sellingPrice"
+                  value={formData.sellingPrice}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg outline-none font-bold text-brand-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Expiration
+                </label>
+                <input
+                  type="date"
+                  name="expirationDate"
+                  value={formData.expirationDate}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded-lg outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Suppliers */}
+            <div>
+              <h3 className="text-sm font-bold text-gray-800 mb-2">
+                Suppliers
+              </h3>
+              <div className="flex gap-2 mb-3">
+                <select
+                  value={tempSupplier.supplier}
+                  onChange={(e) =>
+                    setTempSupplier((p) => ({ ...p, supplier: e.target.value }))
+                  }
+                  className="flex-1 px-3 py-2 border rounded-lg outline-none bg-white"
+                >
+                  <option value="">Select Supplier</option>
+                  {suppliers.map((s) => (
+                    <option key={s._id} value={s._id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Cost"
+                  value={tempSupplier.purchasePrice}
+                  onChange={(e) =>
+                    setTempSupplier((p) => ({
+                      ...p,
+                      purchasePrice: Number(e.target.value),
+                    }))
+                  }
+                  className="w-32 px-3 py-2 border rounded-lg outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddSupplier}
+                  className="p-2 bg-brand-primary text-white rounded-lg hover:bg-brand-dark"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {formData.suppliers.map((s, idx) => (
+                  <div
+                    key={idx}
+                    className="flex justify-between items-center p-2 bg-gray-50 rounded-lg border border-gray-100 text-sm"
+                  >
+                    <span className="font-medium text-gray-700">
+                      {suppliers.find((sup) => sup._id === s.supplier)?.name ||
+                        "Unknown"}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-gray-600">₱{s.purchasePrice}</span>
+                      {s.isPreferred && (
+                        <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData((p) => ({
+                            ...p,
+                            suppliers: p.suppliers.filter((_, i) => i !== idx),
+                          }));
+                        }}
+                        className="text-red-400 hover:text-red-600"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {formData.suppliers.length === 0 && (
+                  <p className="text-sm text-gray-400 italic">
+                    No suppliers added.
+                  </p>
+                )}
+              </div>
+            </div>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-white border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="invForm"
+            disabled={loading}
+            className="px-4 py-2 bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-dark disabled:opacity-50"
+          >
+            {loading ? "Saving..." : "Save Item"}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import DashboardLayout from "../scripts/DashboardLayout";
-import { FaEye, FaUndo } from "react-icons/fa";
-import PopupMessage from "../components/PopupMessage";
-import RefundViewModal from "../components/RefundViewModal";
-import RefundModal from "../components/RefundModal";
-import { authFetch, API_BASE } from "../utils/tokenUtils";
+import { Search, RotateCcw, Eye } from "lucide-react"; // Modern Icons
 
-import "../styles/App.css";
-import "../styles/Refund.css";
+import ViewModal from "../components/ViewModal"; // Using generic ViewModal
+import RefundModal from "../components/RefundModal";
+import PopupMessage from "../components/PopupMessage";
+import { authFetch, API_BASE } from "../utils/tokenUtils";
 
 const Refund = () => {
   const navigate = useNavigate();
@@ -18,22 +15,18 @@ const Refund = () => {
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
+  // Removed unused totalItems state
   const [sortField, setSortField] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
 
-  // popups
+  // UI States
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("success");
-
-  // view modal
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
-
-  // refund modal
   const [refundModalOpen, setRefundModalOpen] = useState(false);
 
-  // authentication check
+  // Auth Check
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) navigate("/login");
@@ -45,7 +38,7 @@ const Refund = () => {
     setTimeout(() => setPopupMessage(""), 2000);
   };
 
-  // ---------------- FETCH SALES ----------------
+  // --- Fetch Data ---
   const fetchSales = useCallback(async () => {
     try {
       const params = new URLSearchParams({
@@ -60,10 +53,9 @@ const Refund = () => {
       if (!res.ok) throw new Error("Failed to fetch sales");
 
       const data = await res.json();
-
       setSales(data.items || []);
       setTotalPages(data.totalPages || 1);
-      setTotalItems(data.totalItems || 0);
+      // Removed setTotalItems call
     } catch (err) {
       console.error("Error fetching sales:", err);
       showPopup("Failed to fetch sales data.", "error");
@@ -74,7 +66,7 @@ const Refund = () => {
     fetchSales();
   }, [fetchSales]);
 
-  // ---------------- SORTING ----------------
+  // --- Handlers ---
   const handleSort = (field) => {
     if (sortField === field) {
       if (sortOrder === "asc") setSortOrder("desc");
@@ -89,34 +81,24 @@ const Refund = () => {
     setPage(1);
   };
 
-  // ---------------- REFUND MODAL ----------------
   const handleOpenRefund = (sale) => {
     setSelectedSale(sale);
     setRefundModalOpen(true);
   };
 
-  const closeRefundModal = () => {
-    setRefundModalOpen(false);
-    setSelectedSale(null);
-  };
-
-  // ---------------- SUBMIT REFUND ----------------
   const handleRefundSubmit = async (payload) => {
     try {
       const response = await authFetch(
         `${API_BASE}/api/sales/${selectedSale._id}/refund`,
-        {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        }
+        { method: "PUT", body: JSON.stringify(payload) }
       );
 
       const data = await response.json();
-
       if (!response.ok) throw new Error(data.message || "Refund failed");
 
       showPopup("Sale refunded successfully!", "success");
-      closeRefundModal();
+      setRefundModalOpen(false);
+      setSelectedSale(null);
       fetchSales();
     } catch (err) {
       console.error("Refund error:", err);
@@ -124,9 +106,24 @@ const Refund = () => {
     }
   };
 
+  const renderRefundBadge = (status) => {
+    if (!status) return <span className="text-gray-400 italic">None</span>;
+    let color = "bg-gray-100 text-gray-800";
+    if (status === "refunded") color = "bg-red-100 text-red-800";
+    if (status === "defective") color = "bg-amber-100 text-amber-800";
+    if (status === "replaced") color = "bg-blue-100 text-blue-800";
+
+    return (
+      <span
+        className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${color}`}
+      >
+        {status}
+      </span>
+    );
+  };
+
   return (
-    <>
-      {/* Popup Notification */}
+    <div className="space-y-6">
       {popupMessage && (
         <PopupMessage
           message={popupMessage}
@@ -138,157 +135,184 @@ const Refund = () => {
       {/* Refund Modal */}
       <RefundModal
         isOpen={refundModalOpen}
-        onClose={closeRefundModal}
+        onClose={() => setRefundModalOpen(false)}
         saleData={selectedSale}
         onSubmit={handleRefundSubmit}
       />
 
-      {/* Refund View Modal */}
-      <RefundViewModal
-        isOpen={isViewOpen && !!selectedSale?.refund}
-        onClose={() => {
-          setIsViewOpen(false);
-          setSelectedSale(null);
-        }}
-        refund={selectedSale?.refund}
-      />
+      {/* View Refund Details Modal */}
+      {isViewOpen && selectedSale?.refund && (
+        <ViewModal
+          item={selectedSale.refund}
+          fields={[
+            {
+              name: "status",
+              label: "Status",
+              render: (val) => (
+                <span className="uppercase font-bold">{val}</span>
+              ),
+            },
+            { name: "reason", label: "Reason" },
+            {
+              name: "totalRefundAmount",
+              label: "Refunded Amount",
+              render: (val) => `₱${Number(val).toFixed(2)}`,
+            },
+            {
+              name: "processedAt",
+              label: "Processed At",
+              formatter: (v) => new Date(v).toLocaleString(),
+            },
+          ]}
+          onClose={() => setIsViewOpen(false)}
+        />
+      )}
 
-      <DashboardLayout>
-        <main className="module-main-content refund-main">
-          <div className="module-header">
-            <h1 className="module-title">Refund Management</h1>
-          </div>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <RotateCcw className="w-8 h-8 text-brand-primary" />
+            Refund Management
+          </h1>
+          <p className="text-gray-500 text-sm">
+            Process returns, defects, and replacements.
+          </p>
+        </div>
+      </div>
 
-          {/* Actions */}
-          <div className="module-actions-container">
-            <input
-              type="text"
-              className="module-search-input"
-              placeholder="Search sales…"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
+      {/* Actions */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="relative w-full md:w-96">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search invoices..."
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-transparent outline-none"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+      </div>
 
-          {/* Table */}
-          <div className="module-table-container">
-            <table>
-              <thead>
-                <tr>
-                  {[
-                    { key: "invoiceNumber", label: "Invoice #" },
-                    { key: "customerName", label: "Customer" },
-                    { key: "orderType", label: "Order Type" },
-                    { key: "totalAmount", label: "Total Amount" },
-                    { key: "refund.status", label: "Refund Status" },
-                    { key: "createdAt", label: "Sale Created" },
-                  ].map(({ key, label }) => (
-                    <th
-                      key={key}
-                      onClick={() => handleSort(key)}
-                      style={{ cursor: "pointer", userSelect: "none" }}
-                    >
-                      {label}{" "}
-                      {sortField === key && (
-                        <span>{sortOrder === "asc" ? "▲" : "▼"}</span>
-                      )}
-                    </th>
-                  ))}
-
-                  <th>Actions</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {sales.length === 0 ? (
-                  <tr>
-                    <td colSpan="7">No sales found.</td>
-                  </tr>
-                ) : (
-                  sales.map((sale) => (
-                    <tr key={sale._id}>
-                      <td>{sale.invoiceNumber}</td>
-                      <td>{sale.customerName || "N/A"}</td>
-                      <td>{sale.orderType}</td>
-                      <td>₱{sale.totalAmount}</td>
-                      <td>{sale.refund?.status || "—"}</td>
-                      <td>{new Date(sale.createdAt).toLocaleString()}</td>
-
-                      <td>
-                        {/* VIEW BUTTON (only show if the sale has a refund) */}
-                        {sale.refund?.status && (
-                          <button
-                            className="module-action-btn module-view-btn"
-                            onClick={() => {
-                              setSelectedSale(sale);
-                              setIsViewOpen(true);
-                            }}
-                          >
-                            <FaEye />
-                          </button>
-                        )}
-
-                        {/* REFUND BUTTON (only show if no refund has happened) */}
-                        {sale.refund?.status === null && (
-                          <button
-                            className="module-action-btn module-edit-btn"
-                            onClick={() => handleOpenRefund(sale)}
-                          >
-                            <FaUndo />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <div className="pagination">
-            <p className="pagination-info">
-              Showing {(page - 1) * 10 + 1}–{Math.min(page * 10, totalItems)} of{" "}
-              {totalItems} sales
-            </p>
-
-            <div className="pagination-buttons">
-              <button
-                onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                disabled={page === 1}
-              >
-                Prev
-              </button>
-
-              {Array.from({ length: Math.min(7, totalPages) }).map((_, idx) => {
-                const start = Math.max(1, Math.min(page - 3, totalPages - 6));
-                const pageNum = start + idx;
-                if (pageNum > totalPages) return null;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setPage(pageNum)}
-                    className={page === pageNum ? "active" : ""}
+      {/* Table */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
+              <tr>
+                {[
+                  { key: "invoiceNumber", label: "Invoice #" },
+                  { key: "customerName", label: "Customer" },
+                  { key: "orderType", label: "Type" },
+                  { key: "totalAmount", label: "Total" },
+                  { key: "refund.status", label: "Refund Status" },
+                  { key: "createdAt", label: "Date" },
+                ].map(({ key, label }) => (
+                  <th
+                    key={key}
+                    className="px-6 py-4 cursor-pointer hover:text-brand-primary"
+                    onClick={() => handleSort(key)}
                   >
-                    {pageNum}
-                  </button>
-                );
-              })}
+                    {label}{" "}
+                    {sortField === key && (sortOrder === "asc" ? "▲" : "▼")}
+                  </th>
+                ))}
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {sales.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="7"
+                    className="px-6 py-12 text-center text-gray-400"
+                  >
+                    No sales found.
+                  </td>
+                </tr>
+              ) : (
+                sales.map((sale) => (
+                  <tr
+                    key={sale._id}
+                    className="hover:bg-gray-50/50 transition-colors"
+                  >
+                    <td className="px-6 py-4 font-mono text-xs text-gray-500 font-bold">
+                      #{sale.invoiceNumber}
+                    </td>
+                    <td className="px-6 py-4 font-medium text-gray-800">
+                      {sale.customerName || "N/A"}
+                    </td>
+                    <td className="px-6 py-4 text-gray-500">
+                      <span className="px-2 py-0.5 bg-gray-100 rounded text-xs">
+                        {sale.orderType}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 font-bold text-gray-700">
+                      ₱{sale.totalAmount.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4">
+                      {renderRefundBadge(sale.refund?.status)}
+                    </td>
+                    <td className="px-6 py-4 text-gray-400 text-xs">
+                      {new Date(sale.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 text-right flex justify-end gap-2">
+                      {sale.refund?.status ? (
+                        <button
+                          onClick={() => {
+                            setSelectedSale(sale);
+                            setIsViewOpen(true);
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md"
+                          title="View Refund Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleOpenRefund(sale)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"
+                          title="Process Refund"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-              <button
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-                disabled={page === totalPages}
-              >
-                Next
-              </button>
-            </div>
+        {/* Pagination */}
+        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+          <span className="text-sm text-gray-500">
+            Page {page} of {totalPages}
+          </span>
+          <div className="flex gap-2">
+            <button
+              disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <button
+              disabled={page === totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
+            >
+              Next
+            </button>
           </div>
-        </main>
-      </DashboardLayout>
-    </>
+        </div>
+      </div>
+    </div>
   );
 };
 

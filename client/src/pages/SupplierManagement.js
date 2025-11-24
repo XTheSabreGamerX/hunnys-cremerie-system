@@ -10,6 +10,7 @@ import {
   Trash2,
   Phone,
   Building,
+  Mail,
 } from "lucide-react"; // Modern Icons
 
 import EditModal from "../components/EditModal";
@@ -35,7 +36,7 @@ const SupplierManagement = () => {
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
+  // Removed unused totalItems state
   const [sortField, setSortField] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
 
@@ -49,16 +50,11 @@ const SupplierManagement = () => {
   }, [navigate]);
 
   const supplierFields = [
-<<<<<<< HEAD
-    { label: "Name", name: "name", required: "true" },
-    { label: "Contact", name: "contact" },
-    { label: "Company", name: "company" },
-=======
     { label: "Name", name: "name", required: true },
-    { label: "Email", name: "email" },
     { label: "Contact Person", name: "contactPerson" },
     { label: "Contact Number", name: "contactNumber" },
->>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
+    { label: "Email", name: "email", type: "email" },
+    { label: "Company", name: "company" },
   ];
 
   const showPopup = (message, type = "success") => {
@@ -86,7 +82,7 @@ const SupplierManagement = () => {
 
       setSuppliers(data.suppliers || []);
       setTotalPages(data.totalPages || 1);
-      setTotalItems(data.totalItems || 0);
+      // Removed setTotalItems call
     } catch (err) {
       console.error("Error fetching suppliers:", err);
       showPopup("Failed to load suppliers.", "error");
@@ -103,7 +99,6 @@ const SupplierManagement = () => {
       showPopup("Please fill out required fields.", "error");
       return false;
     }
-
     if (data.email) {
       const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       if (!emailRegex.test(data.email)) {
@@ -111,7 +106,6 @@ const SupplierManagement = () => {
         return false;
       }
     }
-
     return true;
   };
 
@@ -134,9 +128,8 @@ const SupplierManagement = () => {
       const result = await res.json();
 
       if (!res.ok) {
-        // API returned an error, show it
         showPopup(result.message || "Save failed.", "error");
-        return; // stop execution
+        return;
       }
 
       await fetchSuppliers();
@@ -265,10 +258,10 @@ const SupplierManagement = () => {
                 {[
                   { key: "supplierId", label: "ID" },
                   { key: "name", label: "Name" },
-                  { key: "contact", label: "Contact" },
+                  { key: "contactPerson", label: "Contact Person" },
+                  { key: "contactNumber", label: "Contact Number" },
+                  { key: "email", label: "Email" },
                   { key: "company", label: "Company" },
-                  { key: "createdAt", label: "Created" },
-                  { key: "updatedAt", label: "Updated" },
                 ].map(({ key, label }) => (
                   <th
                     key={key}
@@ -304,19 +297,21 @@ const SupplierManagement = () => {
                     <td className="px-6 py-4 font-medium text-gray-800">
                       {supplier.name}
                     </td>
+                    <td className="px-6 py-4 text-gray-500">
+                      {supplier.contactPerson || "—"}
+                    </td>
                     <td className="px-6 py-4 text-gray-500 flex items-center gap-2">
-                      <Phone className="w-3 h-3" /> {supplier.contact}
+                      <Phone className="w-3 h-3" />{" "}
+                      {supplier.contactNumber || "—"}
+                    </td>
+                    <td className="px-6 py-4 text-gray-500 flex items-center gap-2">
+                      <Mail className="w-3 h-3" /> {supplier.email || "—"}
                     </td>
                     <td className="px-6 py-4 text-gray-500">
                       <span className="flex items-center gap-2">
-                        <Building className="w-3 h-3" /> {supplier.company}
+                        <Building className="w-3 h-3" />{" "}
+                        {supplier.company || "—"}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-gray-400 text-xs">
-                      {new Date(supplier.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-gray-400 text-xs">
-                      {new Date(supplier.updatedAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-right flex justify-end gap-2">
                       <button
@@ -396,7 +391,9 @@ const SupplierManagement = () => {
           fields={[
             { name: "supplierId", label: "ID" },
             { name: "name", label: "Name" },
-            { name: "contact", label: "Contact" },
+            { name: "contactPerson", label: "Contact Person" },
+            { name: "contactNumber", label: "Contact Number" },
+            { name: "email", label: "Email" },
             { name: "company", label: "Company" },
             {
               name: "createdAt",
@@ -423,7 +420,6 @@ const SupplierManagement = () => {
         />
       )}
 
-<<<<<<< HEAD
       {isConfirmOpen && (
         <ConfirmationModal
           message={`Delete supplier "${supplierToDelete?.name}"?`}
@@ -435,140 +431,6 @@ const SupplierManagement = () => {
         />
       )}
     </div>
-=======
-            <input
-              type="text"
-              className="module-search-input"
-              placeholder="Search"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPage(1);
-              }}
-            />
-
-            <button
-              className="module-action-btn module-add-btn"
-              onClick={() => {
-                setModalMode("add");
-                setSelectedSupplier(null);
-              }}
-            >
-              Add Supplier
-            </button>
-          </div>
-
-          <div className="module-table-container">
-            <table>
-              <thead>
-                <tr>
-                  {[
-                    { key: "supplierId", label: "ID" },
-                    { key: "name", label: "Name" },
-                    { key: "contactPerson", label: "Contact Person" },
-                    { key: "contactNumber", label: "Contact Number" },
-                    { key: "email", label: "Email" },
-                    { key: "createdAt", label: "Created" },
-                    { key: "updatedAt", label: "Updated" },
-                  ].map(({ key, label }) => (
-                    <th
-                      key={key}
-                      onClick={() => handleSort(key)}
-                      style={{ cursor: "pointer", userSelect: "none" }}
-                    >
-                      {label}{" "}
-                      {sortField === key && (
-                        <span>{sortOrder === "asc" ? "▲" : "▼"}</span>
-                      )}
-                    </th>
-                  ))}
-                  <th style={{ cursor: "default" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {suppliers.length === 0 ? (
-                  <tr>
-                    <td colSpan="8">No suppliers found.</td>
-                  </tr>
-                ) : (
-                  suppliers.map((supplier) => (
-                    <tr key={supplier._id}>
-                      <td>{supplier.supplierId}</td>
-                      <td>{supplier.name}</td>
-                      <td>{supplier.contactPerson}</td>
-                      <td>{supplier.contactNumber}</td>
-                      <td>{supplier.email}</td>
-                      <td>{new Date(supplier.createdAt).toLocaleString()}</td>
-                      <td>{new Date(supplier.updatedAt).toLocaleString()}</td>
-                      <td>
-                        <button
-                          className="module-action-btn module-edit-btn"
-                          onClick={() => {
-                            setModalMode("edit");
-                            setSelectedSupplier(supplier);
-                          }}
-                        >
-                          <FaPencil />
-                        </button>
-                        <button
-                          className="module-action-btn module-view-btn"
-                          onClick={() => {
-                            setViewedSupplier(supplier);
-                            setIsViewOpen(true);
-                          }}
-                        >
-                          <FaEye />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Your pagination UI unchanged */}
-          <div className="pagination">
-            <p className="pagination-info">
-              Showing {(page - 1) * 10 + 1}–{Math.min(page * 10, totalItems)} of{" "}
-              {totalItems} suppliers
-            </p>
-
-            <div className="pagination-buttons">
-              <button
-                onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                disabled={page === 1}
-              >
-                Prev
-              </button>
-
-              {Array.from({ length: Math.min(7, totalPages) }).map((_, idx) => {
-                const start = Math.max(1, Math.min(page - 3, totalPages - 6));
-                const pageNumber = start + idx;
-                if (pageNumber > totalPages) return null;
-                return (
-                  <button
-                    key={pageNumber}
-                    onClick={() => setPage(pageNumber)}
-                    className={page === pageNumber ? "active" : ""}
-                  >
-                    {pageNumber}
-                  </button>
-                );
-              })}
-
-              <button
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-                disabled={page === totalPages}
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        </main>
-      </DashboardLayout>
-    </>
->>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
   );
 };
 

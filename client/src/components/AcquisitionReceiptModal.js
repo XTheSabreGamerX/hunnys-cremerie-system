@@ -1,7 +1,6 @@
-import React, { useState } from "react";
-import "../styles/ReceiptModal.css";
+import React, { useState, useMemo } from "react";
+import { X, CheckCircle, XCircle } from "lucide-react";
 import ConfirmationModal from "../components/ConfirmationModal";
-import PopupMessage from "../components/PopupMessage";
 
 const AcquisitionReceiptModal = ({
   acquisition,
@@ -10,30 +9,17 @@ const AcquisitionReceiptModal = ({
   onConfirm,
   onCancel,
 }) => {
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [actionType, setActionType] = useState(null);
 
-  const supplierMap = React.useMemo(() => {
+  const supplierMap = useMemo(() => {
     return (suppliers || []).reduce((acc, s) => {
       acc[s._id] = s.name;
       return acc;
     }, {});
   }, [suppliers]);
 
-  const [loading, setLoading] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [actionType, setActionType] = useState(null);
-  const [popupMessage, setPopupMessage] = useState("");
-  const [popupType, setPopupType] = useState("success");
-
   if (!acquisition) return null;
-
-  const showPopup = (message, type = "success") => {
-    setPopupMessage(message);
-    setPopupType(type);
-    setTimeout(() => {
-      setPopupMessage("");
-      setPopupType("success");
-    }, 2000);
-  };
 
   const handleAction = (type) => {
     setActionType(type);
@@ -41,139 +27,114 @@ const AcquisitionReceiptModal = ({
   };
 
   const handleConfirmAction = async () => {
-    setLoading(true);
     try {
       if (actionType === "confirm") {
         await onConfirm?.(acquisition);
-        showPopup("Acquisition confirmed successfully!");
-      } else if (actionType === "cancel") {
+      } else {
         await onCancel?.(acquisition);
-        showPopup("Acquisition cancelled.");
       }
       setShowConfirm(false);
-      setTimeout(() => onClose?.(), 1500);
+      onClose();
     } catch (err) {
-      console.error("[Acquisition Action Error]", err);
-      showPopup("Something went wrong.", "error");
-    } finally {
-      setLoading(false);
+      console.error(err);
     }
   };
 
-  const subtotal = acquisition.subtotal || 0;
-  const totalAmount = acquisition.totalAmount || subtotal;
-  const taxAmount = totalAmount - subtotal;
-  const taxRate = subtotal > 0 ? (taxAmount / subtotal) * 100 : 0;
-
   return (
     <>
-      {popupMessage && <PopupMessage message={popupMessage} type={popupType} />}
-
       {showConfirm && (
         <ConfirmationModal
           message={
             actionType === "confirm"
-              ? "Confirm this acquisition and add items to inventory?"
-              : "Cancel this acquisition request?"
+              ? "Confirm acquisition?"
+              : "Cancel acquisition?"
           }
           onConfirm={handleConfirmAction}
           onCancel={() => setShowConfirm(false)}
         />
       )}
 
-      <div className="receipt-overlay">
-        <div className="receipt-container">
-          <div id="receipt-content">
-            <h2 className="receipt-center">Hunnys Crémerie Baking Supplies</h2>
-            <p className="receipt-center">
-              12 Torres St. Burgos 1860 Rodriguez, Philippines
-            </p>
-
-            <p>
-              <strong>Acquisition ID:</strong> {acquisition.acquisitionId}
-            </p>
-            <p>
-              <strong>Supplier:</strong>{" "}
-              {supplierMap[acquisition.supplier] || acquisition.supplier}
-            </p>
-            <p>
-              <strong>Date:</strong>{" "}
-              {new Date(acquisition.createdAt).toLocaleDateString("en-PH", {
-                timeZone: "Asia/Manila",
-              })}
-            </p>
-            <p>
-              <strong>Status:</strong> {acquisition.status}
-            </p>
-            <hr />
-            <h3>Items</h3>
-
-            <table className="receipt-table">
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Qty</th>
-                  <th>Unit Cost</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {acquisition.items?.map((item, idx) => (
-                  <tr key={idx}>
-                    <td>{item.name}</td>
-                    <td>{item.quantity}</td>
-                    <td>₱{item.unitCost?.toFixed(2)}</td>
-                    <td>₱{(item.quantity * item.unitCost).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <hr />
-            <p>
-              <strong>Subtotal:</strong> ₱{subtotal.toFixed(2)}
-            </p>
-            {taxRate > 0 && (
-              <p>
-                <strong>Tax ({taxRate.toFixed(0)}%):</strong> ₱
-                {taxAmount.toFixed(2)}
-              </p>
-            )}
-            <p>
-              <strong>Total:</strong> ₱{totalAmount.toFixed(2)}
-            </p>
-            <p>
-              <strong>Payment Method:</strong> {acquisition.paymentMethod}
-            </p>
-          </div>
-
-          <div className="receipt-actions">
-            {acquisition.status === "Pending" && (
-              <>
-                <button
-                  onClick={() => handleAction("confirm")}
-                  disabled={loading}
-                  className={loading ? "loading-btn" : ""}
-                >
-                  {loading && actionType === "confirm"
-                    ? "Confirming..."
-                    : "Confirm"}
-                </button>
-                <button
-                  onClick={() => handleAction("cancel")}
-                  disabled={loading}
-                  className={loading ? "loading-btn" : ""}
-                >
-                  {loading && actionType === "cancel"
-                    ? "Cancelling..."
-                    : "Cancel"}
-                </button>
-              </>
-            )}
-            <button onClick={onClose} disabled={loading}>
-              Close
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="flex justify-between items-center px-6 py-4 border-b bg-gray-50">
+            <h2 className="font-bold text-gray-800">Acquisition Details</h2>
+            <button onClick={onClose}>
+              <X className="w-5 h-5 text-gray-500 hover:text-gray-700" />
             </button>
           </div>
+
+          <div className="p-6 overflow-y-auto space-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-gray-500">ID:</span>{" "}
+                <span className="font-medium">{acquisition.acquisitionId}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">Status:</span>{" "}
+                <span className="font-medium">{acquisition.status}</span>
+              </div>
+              <div className="col-span-2">
+                <span className="text-gray-500">Supplier:</span>{" "}
+                <span className="font-medium">
+                  {supplierMap[acquisition.supplier] || acquisition.supplier}
+                </span>
+              </div>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50 text-gray-600">
+                  <tr>
+                    <th className="px-3 py-2">Item</th>
+                    <th className="px-3 py-2 text-right">Qty</th>
+                    <th className="px-3 py-2 text-right">Cost</th>
+                    <th className="px-3 py-2 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {acquisition.items?.map((item, idx) => (
+                    <tr key={idx}>
+                      <td className="px-3 py-2">{item.name}</td>
+                      <td className="px-3 py-2 text-right">{item.quantity}</td>
+                      <td className="px-3 py-2 text-right">
+                        ₱{item.unitCost?.toFixed(2)}
+                      </td>
+                      <td className="px-3 py-2 text-right font-medium">
+                        ₱{(item.quantity * item.unitCost).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-between items-center pt-4 border-t font-bold text-lg">
+              <span>Total:</span>
+              <span>
+                ₱
+                {(acquisition.totalAmount || acquisition.subtotal || 0).toFixed(
+                  2
+                )}
+              </span>
+            </div>
+          </div>
+
+          {acquisition.status === "Pending" && (
+            <div className="p-4 border-t bg-gray-50 flex gap-3">
+              <button
+                onClick={() => handleAction("cancel")}
+                className="flex-1 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 flex justify-center items-center gap-2"
+              >
+                <XCircle className="w-4 h-4" /> Cancel
+              </button>
+              <button
+                onClick={() => handleAction("confirm")}
+                className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex justify-center items-center gap-2"
+              >
+                <CheckCircle className="w-4 h-4" /> Confirm
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>

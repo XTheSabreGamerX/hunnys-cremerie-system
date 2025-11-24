@@ -1,115 +1,65 @@
 import React from "react";
-import "../styles/CakeViewModal.css";
+import { X } from "lucide-react";
 
-const CakeViewModal = ({ cake, categories, onClose }) => {
+const CakeViewModal = ({ cake, onClose }) => {
   if (!cake) return null;
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "—";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-PH", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  console.log("CakeViewModal data:", {
-    cakeCategory: cake.category,
-    categories,
-  });
-
   return (
-    <div className="cake-view-overlay">
-      <div className="cake-view-content">
-        <h2 className="cake-view-title">{cake.name}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+        <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
+          <h2 className="text-xl font-bold text-gray-800">{cake.name}</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
 
-        <div className="cake-view-grid">
-          {/* LEFT COLUMN */}
-          <div className="cake-view-column">
-            <div className="cake-view-field">
-              <label>Category:</label>
-              <p>
-                {Array.isArray(categories?.cake)
-                  ? categories.cake.find(
-                      (c) => c._id.toString() === cake.category
-                    )?.name || `Unknown (${cake.category})`
-                  : `Unknown (${cake.category})`}
-              </p>
+        <div className="p-6 space-y-6">
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-gray-500">Status:</span>{" "}
+              <span className="font-medium">{cake.status}</span>
             </div>
-
-            <div className="cake-view-field">
-              <label>Size:</label>
-              <p>
-                {cake.size?.name ? cake.size.name : `(Size ID: ${cake.size})`}
-              </p>
+            <div>
+              <span className="text-gray-500">Price:</span>{" "}
+              <span className="font-bold text-brand-primary">
+                ₱{cake.price?.toFixed(2)}
+              </span>
             </div>
-
-            <div className="cake-view-field">
-              <label>Availability:</label>
-              <p>{cake.availability}</p>
-            </div>
-
-            {cake.availability === "Seasonal" && (
-              <div className="cake-view-field">
-                <label>Seasonal Period:</label>
-                <p>
-                  {formatDate(cake.seasonalPeriod?.startDate)} —{" "}
-                  {formatDate(cake.seasonalPeriod?.endDate)}
-                </p>
-              </div>
-            )}
-
-            <div className="cake-view-field">
-              <label>Status:</label>
-              <p>{cake.status}</p>
-            </div>
-
-            <div className="cake-view-field">
-              <label>Base Cost:</label>
-              <p>₱{cake.baseCost?.toFixed(2) ?? "0.00"}</p>
-            </div>
-
-            <div className="cake-view-field">
-              <label>Price:</label>
-              <p>₱{cake.price?.toFixed(2) ?? "0.00"}</p>
+            <div>
+              <span className="text-gray-500">Availability:</span>{" "}
+              <span className="font-medium">{cake.availability}</span>
             </div>
           </div>
 
-          {/* RIGHT COLUMN - INGREDIENTS */}
-          <div className="cake-view-column">
-            <h3 className="cake-view-subtitle">Ingredients</h3>
-            {cake.ingredients && cake.ingredients.length > 0 ? (
-              <table className="cake-view-ingredient-table">
-                <thead>
+          <div>
+            <h3 className="text-sm font-bold text-gray-800 mb-2">
+              Ingredients
+            </h3>
+            <div className="border border-gray-100 rounded-lg overflow-hidden">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-gray-50 text-gray-600">
                   <tr>
-                    <th>Ingredient</th>
-                    <th>Quantity</th>
+                    <th className="px-3 py-2">Item</th>
+                    <th className="px-3 py-2 text-right">Qty</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {cake.ingredients.map((ing, idx) => (
+                <tbody className="divide-y divide-gray-100">
+                  {cake.ingredients?.map((ing, idx) => (
                     <tr key={idx}>
-                      <td>
-                        {ing.inventoryItem?.name
-                          ? ing.inventoryItem.name
-                          : `(Item ID: ${ing.inventoryItem})`}
+                      <td className="px-3 py-2">
+                        {ing.inventoryItem?.name || "Unknown"}
                       </td>
-                      <td>{ing.quantity}</td>
+                      <td className="px-3 py-2 text-right">{ing.quantity}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            ) : (
-              <p className="cake-view-no-ingredients">No ingredients listed.</p>
-            )}
+            </div>
           </div>
-        </div>
-
-        <div className="cake-view-footer">
-          <button className="cake-view-close-btn" onClick={onClose}>
-            Close
-          </button>
         </div>
       </div>
     </div>

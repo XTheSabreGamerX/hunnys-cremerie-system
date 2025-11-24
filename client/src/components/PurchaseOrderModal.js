@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { FaTrash } from "react-icons/fa6";
+import { X, Plus, Trash2 } from "lucide-react";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
-import "../styles/PurchaseOrderModal.css";
 
 const PurchaseOrderModal = ({ onClose, onSave }) => {
   const [suppliers, setSuppliers] = useState([]);
@@ -15,149 +14,81 @@ const PurchaseOrderModal = ({ onClose, onSave }) => {
   });
   const [loading, setLoading] = useState(false);
 
-  // Filters inventory when a supplier is selected or not
+  useEffect(() => {
+    const init = async () => {
+      const [sup, inv] = await Promise.all([
+        authFetch(`${API_BASE}/api/suppliers`).then((r) => r.json()),
+        authFetch(`${API_BASE}/api/inventory?all=true`).then((r) => r.json()),
+      ]);
+      setSuppliers(sup);
+      setInventory(inv.items || []);
+    };
+    init();
+  }, []);
+
+  // Filter items based on supplier
   const filteredInventory = inventory.filter((item) => {
-    const hasSuppliers = item.suppliers && item.suppliers.length > 0;
-
-    if (!selectedSupplier) {
-      return !hasSuppliers;
-    }
-
+    if (!selectedSupplier) return item.suppliers.length === 0;
     return item.suppliers.some((s) => s.supplier?._id === selectedSupplier);
   });
 
-  // Clear items table whenever supplier changes
-  useEffect(() => {
-    setAddedItems([]);
-  }, [selectedSupplier]);
-
-  // Automatically fill in purchase price field if a supplier is selected
-  useEffect(() => {
-    if (!itemInput.itemId) {
-      setItemInput((prev) => ({ ...prev, purchasePrice: "" }));
-      return;
-    }
-
+  const handleAddItem = () => {
     const item = inventory.find((i) => i._id === itemInput.itemId);
     if (!item) return;
-
-    // Try to get supplier-specific purchase price
-    let supplierPrice = "";
-    if (selectedSupplier && item.suppliers?.length) {
-      const supplierData = item.suppliers.find(
-        (s) => s.supplier?._id === selectedSupplier
-      );
-      if (supplierData && supplierData.purchasePrice != null) {
-        supplierPrice = supplierData.purchasePrice;
-      }
-    }
-
-    setItemInput((prev) => ({
-      ...prev,
-      purchasePrice: supplierPrice || prev.purchasePrice || "",
-    }));
-  }, [itemInput.itemId, selectedSupplier, inventory]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const supRes = await authFetch(`${API_BASE}/api/suppliers`);
-        const supData = await supRes.json();
-        setSuppliers(supData);
-
-        const invRes = await authFetch(`${API_BASE}/api/inventory?all=true`);
-        const invData = await invRes.json();
-        setInventory(invData.items || []);
-      } catch (err) {
-        console.error("Failed to fetch suppliers or inventory:", err);
-      }
-    };
-    fetchData();
-  }, []);
-
-  const handleAddItem = () => {
-    const { itemId, orderedQty, purchasePrice } = itemInput;
-    if (!itemId || !orderedQty) return; // purchasePrice might come from supplier
-
-    const item = inventory.find((i) => i._id === itemId);
-    if (!item) return;
-
-    // Get purchase price for selected supplier if available
-    let finalPrice = Number(purchasePrice);
-    if (selectedSupplier && item.suppliers?.length) {
-      const supplierData = item.suppliers.find(
-        (s) => s.supplier?._id === selectedSupplier
-      );
-      if (supplierData && supplierData.purchasePrice != null) {
-        finalPrice = supplierData.purchasePrice;
-      }
-    }
 
     setAddedItems((prev) => [
       ...prev,
       {
-        itemId,
+        itemId: item._id,
         name: item.name,
-        orderedQty: Number(orderedQty),
-        purchasePrice: finalPrice,
+        orderedQty: Number(itemInput.orderedQty),
+        purchasePrice: Number(itemInput.purchasePrice),
       },
     ]);
-
-    setItemInput({
-      itemId: "",
-      orderedQty: "",
-      purchasePrice: "",
-    });
+    setItemInput({ itemId: "", orderedQty: "", purchasePrice: "" });
   };
 
-  const handleRemoveItem = (index) => {
-    setAddedItems((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSave = async () => {
-    if (addedItems.length === 0) {
-      alert("Add at least one item.");
-      return;
-    }
-
-    const payload = {
+  const handleSubmit = async () => {
+    if (addedItems.length === 0) return;
+    setLoading(true);
+    await onSave({
       supplier: selectedSupplier || null,
       items: addedItems.map((i) => ({
         item: i.itemId,
         orderedQty: i.orderedQty,
         purchasePrice: i.purchasePrice,
       })),
-    };
-
-    setLoading(true);
-    try {
-      await onSave(payload);
-      onClose();
-    } catch (err) {
-      console.error("Failed to create PO:", err);
-      alert("Failed to create Purchase Order.");
-    } finally {
-      setLoading(false);
-    }
+    });
+    setLoading(false);
+    onClose();
   };
 
   return (
-    <div className="po-modal-overlay">
-      <div className="po-modal">
-        {/* Header */}
-        <div className="po-modal-header">
-          <h2>Create Purchase Order</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="flex justify-between items-center px-6 py-4 border-b">
+          <h2 className="text-xl font-bold text-gray-800">
+            Create Purchase Order
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-6 h-6" />
+          </button>
         </div>
 
-        {/* Supplier Section */}
-        <div className="po-modal-body">
-          <div className="po-modal-section">
-            <label>Supplier:</label>
+        <div className="p-6 space-y-6 overflow-y-auto">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Supplier
+            </label>
             <select
               value={selectedSupplier}
               onChange={(e) => setSelectedSupplier(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg bg-white"
             >
-              <option value="">Non Supplier Items</option>
+              <option value="">Non-Supplier (Generic)</option>
               {suppliers.map((s) => (
                 <option key={s._id} value={s._id}>
                   {s.name}
@@ -166,109 +97,99 @@ const PurchaseOrderModal = ({ onClose, onSave }) => {
             </select>
           </div>
 
-          {/* Add Items Section */}
-          <div className="po-modal-section add-items-section">
-            <h3>Add Items</h3>
-
-            {/* Input Row */}
-            <div className="po-item-inputs">
-              <select
-                value={itemInput.itemId}
-                onChange={(e) =>
-                  setItemInput((prev) => ({ ...prev, itemId: e.target.value }))
-                }
-              >
-                <option value="">-- Select Item --</option>
-                {filteredInventory.map((item) => (
-                  <option key={item._id} value={item._id}>
-                    {item.name} (Stock: {item.currentStock})
-                  </option>
-                ))}
-              </select>
-
-              <input
-                type="number"
-                placeholder="Qty"
-                min="1"
-                value={itemInput.orderedQty}
-                onChange={(e) =>
-                  setItemInput((prev) => ({
-                    ...prev,
-                    orderedQty: e.target.value,
-                  }))
-                }
-              />
-
-              <input
-                type="number"
-                placeholder="Purchase Price"
-                min="0"
-                step="0.01"
-                value={itemInput.purchasePrice}
-                onChange={(e) =>
-                  setItemInput((prev) => ({
-                    ...prev,
-                    purchasePrice: e.target.value,
-                  }))
-                }
-              />
-
-              <button
-                type="button"
-                className="po-add-item-btn"
-                onClick={handleAddItem}
-              >
-                Add
-              </button>
+          <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+            <h3 className="text-sm font-bold text-gray-800 mb-3">Add Items</h3>
+            <div className="grid grid-cols-12 gap-2 mb-2">
+              <div className="col-span-5">
+                <select
+                  value={itemInput.itemId}
+                  onChange={(e) =>
+                    setItemInput((p) => ({ ...p, itemId: e.target.value }))
+                  }
+                  className="w-full px-3 py-2 border rounded-lg text-sm bg-white"
+                >
+                  <option value="">Select Item</option>
+                  {filteredInventory.map((i) => (
+                    <option key={i._id} value={i._id}>
+                      {i.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-span-2">
+                <input
+                  type="number"
+                  placeholder="Qty"
+                  value={itemInput.orderedQty}
+                  onChange={(e) =>
+                    setItemInput((p) => ({ ...p, orderedQty: e.target.value }))
+                  }
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                />
+              </div>
+              <div className="col-span-3">
+                <input
+                  type="number"
+                  placeholder="Price"
+                  value={itemInput.purchasePrice}
+                  onChange={(e) =>
+                    setItemInput((p) => ({
+                      ...p,
+                      purchasePrice: e.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 border rounded-lg text-sm"
+                />
+              </div>
+              <div className="col-span-2">
+                <button
+                  onClick={handleAddItem}
+                  className="w-full py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-dark flex justify-center"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            {/* Table */}
-            {addedItems.length > 0 && (
-              <div className="po-items-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Item</th>
-                      <th>Qty</th>
-                      <th>Price</th>
-                      <th>Remove</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {addedItems.map((i, idx) => (
-                      <tr key={idx}>
-                        <td>{i.name}</td>
-                        <td>{i.orderedQty}</td>
-                        <td>{i.purchasePrice}</td>
-                        <td>
-                          <button
-                            type="button"
-                            className="po-remove-item-btn"
-                            onClick={() => handleRemoveItem(idx)}
-                          >
-                            <FaTrash />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            {/* List */}
+            <div className="space-y-2 mt-4">
+              {addedItems.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="flex justify-between items-center p-2 bg-white border rounded-lg text-sm"
+                >
+                  <span className="font-medium">{item.name}</span>
+                  <div className="flex items-center gap-4">
+                    <span className="text-gray-500">x{item.orderedQty}</span>
+                    <span className="font-mono">₱{item.purchasePrice}</span>
+                    <button
+                      onClick={() =>
+                        setAddedItems((p) => p.filter((_, i) => i !== idx))
+                      }
+                      className="text-red-400 hover:text-red-600"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="po-modal-footer">
+        <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
           <button
-            className="po-save-btn"
-            onClick={handleSave}
-            disabled={loading}
+            onClick={onClose}
+            className="px-4 py-2 bg-white border rounded-lg text-gray-700 hover:bg-gray-50"
           >
-            {loading ? "Saving..." : "Create PO"}
-          </button>
-          <button className="po-cancel-btn" onClick={onClose}>
             Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading || addedItems.length === 0}
+            className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-dark disabled:opacity-50"
+          >
+            {loading ? "Creating..." : "Create PO"}
           </button>
         </div>
       </div>

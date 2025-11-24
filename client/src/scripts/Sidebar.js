@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
-<<<<<<< HEAD
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Menu,
-  X, // Added Close icon
+  X,
   LogOut,
   LayoutDashboard,
   Users,
@@ -18,32 +17,12 @@ import {
   Save,
   Bell,
   Settings,
+  RotateCcw,
+  Box,
 } from "lucide-react";
 
+import { authFetch, API_BASE } from "../utils/tokenUtils";
 import Logo from "../elements/images/icon32x32.png";
-=======
-import "../styles/Sidebar.css";
-import { API_BASE, authFetch } from "../utils/tokenUtils";
-import Logo from "../elements/images/icon32x32.png";
-import { Menu } from "lucide-react";
-import { useNavigate, Link, useLocation } from "react-router-dom";
-import { ImHome, ImUsers, ImList } from "react-icons/im";
-import { CgBox } from "react-icons/cg";
-import { RiRefundLine } from "react-icons/ri";
-import {
-  FaCashRegister,
-  /* FaMoneyBillWave, */
-  FaChartLine,
-  /* FaCalculator, */
-  FaBox,
-  FaTruck,
-  FaUserTag,
-  FaDownload,
-  FaEnvelope,
-  FaCog,
-  FaClipboard,
-} from "react-icons/fa";
->>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
 
 const Sidebar = ({ isCollapsed, toggleSidebar }) => {
   const navigate = useNavigate();
@@ -53,6 +32,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
 
   // --- Responsive Check Hook ---
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const handleResize = () => {
@@ -60,6 +40,26 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Fetch Unread Notification Count
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const res = await authFetch(
+          `${API_BASE}/api/notifications/unread-count`
+        );
+        if (!res.ok) throw new Error("Failed to fetch unread notifications");
+        const data = await res.json();
+        setUnreadCount(data.unreadCount);
+      } catch (err) {
+        console.error("Error fetching unread count:", err);
+      }
+    };
+    fetchUnread();
+    // Optional: Set up an interval to poll for notifications
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const logout = () => {
@@ -106,13 +106,13 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     },
     {
       label: "Refund",
-      icon: <RiRefundLine />,
+      icon: RotateCcw,
       path: "/refund",
       roles: ["admin", "owner"],
     },
     {
       label: "Purchase Order",
-      icon: <FaBox />,
+      icon: Box,
       path: "/purchase-order",
       roles: ["admin", "owner", "manager"],
     },
@@ -121,17 +121,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
       icon: FileText,
       path: "/report",
       roles: ["admin", "owner"],
-<<<<<<< HEAD
     },
-=======
-    } /* 
-    {
-      label: "Profitability Dashboard",
-      icon: <FaCalculator />,
-      path: "/dashboard",
-      roles: ["admin", "owner"],
-    }, */,
->>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
     {
       label: "Supplier Management",
       icon: Truck,
@@ -155,6 +145,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
       icon: Bell,
       path: "/notifications",
       roles: ["admin", "owner", "manager", "staff"],
+      badge: true,
     },
     {
       label: "Settings",
@@ -164,10 +155,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
     },
   ];
 
-<<<<<<< HEAD
   // --- Variants Logic ---
-  // Mobile: Fixed Fullscreen (100vw) or Hidden Off-screen (-100%)
-  // Desktop: Relative Flex, 16rem or 5rem
   const sidebarVariants = {
     mobileOpen: {
       x: 0,
@@ -190,43 +178,14 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
       transition: { duration: 0.3, ease: "easeInOut" },
     },
   };
-=======
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    const fetchUnread = async () => {
-      try {
-        const res = await authFetch(
-          `${API_BASE}/api/notifications/unread-count`
-        );
-        if (!res.ok) throw new Error("Failed to fetch unread notifications");
-        const data = await res.json();
-        setUnreadCount(data.unreadCount);
-      } catch (err) {
-        console.error("Error fetching unread count:", err);
-      }
-    };
-
-    fetchUnread();
-  }, []);
-
-  return (
-    <div className={`sidebar ${isCollapsed ? "collapsed" : ""}`}>
-      <div className="sidebar-header">
-        <img src={Logo} alt="Logo" className="sidebar-logo" />
-        <button onClick={toggleSidebar} className="sidebar-toggle">
-          <Menu />
-        </button>
-      </div>
->>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
 
   return (
     <>
-      {/* Mobile Overlay (Darkens background when menu is open) */}
+      {/* Mobile Overlay */}
       {isMobile && !isCollapsed && (
         <div
           className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
-          onClick={toggleSidebar} // Close when clicking outside
+          onClick={toggleSidebar}
         />
       )}
 
@@ -242,14 +201,12 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
             : "desktopOpen"
         }
         variants={sidebarVariants}
-        // Mobile uses fixed positioning to cover screen, Desktop uses relative
         className={`bg-brand-dark h-screen flex flex-col shadow-2xl z-50 text-white ${
           isMobile ? "fixed top-0 left-0" : "relative"
         }`}
       >
         {/* --- Sidebar Header --- */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-rose-800 shrink-0">
-          {/* Logo Area */}
           <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap">
             {(!isCollapsed || isMobile) && (
               <motion.div
@@ -265,7 +222,6 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                 <span className="font-bold text-lg tracking-wide">Hunny's</span>
               </motion.div>
             )}
-            {/* Show just logo icon if collapsed on desktop */}
             {isCollapsed && !isMobile && (
               <img
                 src={Logo}
@@ -275,12 +231,10 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
             )}
           </div>
 
-          {/* Toggle Button */}
           <button
             onClick={toggleSidebar}
             className="p-2 rounded-lg hover:bg-rose-800 transition-colors"
           >
-            {/* On Mobile: Show X to close. On Desktop: Show Menu to toggle */}
             {isMobile ? (
               <X className="w-6 h-6 text-white" />
             ) : (
@@ -294,26 +248,24 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
           <nav className="flex flex-col gap-1 px-2">
             {sidebarItems.map((item) => {
               if (!item.roles.includes(role)) return null;
-
               const isActive = location.pathname === item.path;
 
               return (
                 <Link
                   to={item.path}
                   key={item.label}
-                  onClick={() => isMobile && toggleSidebar()} // Auto-close on mobile click
+                  onClick={() => isMobile && toggleSidebar()}
                   className={`group flex items-center px-3 py-3 rounded-xl transition-all duration-200 relative ${
                     isActive
                       ? "bg-rose-600 text-white shadow-md"
                       : "text-rose-100 hover:bg-rose-800/50 hover:text-white"
                   }`}
                 >
-<<<<<<< HEAD
                   {/* Icon */}
                   <div
                     className={`${
                       isCollapsed && !isMobile ? "mx-auto" : ""
-                    } min-w-[24px]`}
+                    } min-w-[24px] relative`}
                   >
                     <item.icon
                       className={`w-6 h-6 ${
@@ -322,29 +274,32 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
                           : "text-rose-200 group-hover:text-white"
                       }`}
                     />
+
+                    {/* Mini Badge for Collapsed View */}
+                    {isCollapsed &&
+                      !isMobile &&
+                      item.badge &&
+                      unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-brand-dark"></span>
+                      )}
                   </div>
-=======
-                  {item.icon}
-                  <span className="label">{item.label}</span>
 
-                  {/* Only show badge for Notifications */}
-                  {item.label === "Notifications" && unreadCount > 0 && (
-                    <span className="sidebar-badge">{unreadCount}</span>
-                  )}
-                </Link>
-              )
-          )}
-        </nav>
->>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
-
-                  {/* Label - Visible if Expanded OR on Mobile (since mobile is always full width when open) */}
+                  {/* Label */}
                   {(!isCollapsed || isMobile) && (
-                    <span className="ml-3 font-medium whitespace-nowrap overflow-hidden">
-                      {item.label}
-                    </span>
+                    <div className="ml-3 flex-1 flex items-center justify-between overflow-hidden">
+                      <span className="font-medium whitespace-nowrap">
+                        {item.label}
+                      </span>
+                      {/* Full Badge */}
+                      {item.badge && unreadCount > 0 && (
+                        <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </span>
+                      )}
+                    </div>
                   )}
 
-                  {/* Tooltip for collapsed Desktop state */}
+                  {/* Tooltip */}
                   {isCollapsed && !isMobile && (
                     <div className="absolute left-full ml-4 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-lg">
                       {item.label}
@@ -356,7 +311,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
           </nav>
         </div>
 
-        {/* --- Footer / Logout --- */}
+        {/* --- Footer --- */}
         <div className="p-4 border-t border-rose-800 shrink-0">
           <button
             onClick={logout}

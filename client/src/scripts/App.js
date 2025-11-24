@@ -49,7 +49,8 @@ const AppRoutes = () => {
           }
         />
 
-        {/* Protected Routes (Wrapped in DashboardLayout) */}
+        {/* --- Protected Routes --- */}
+
         <Route
           path="/dashboard"
           element={
@@ -116,35 +117,29 @@ const AppRoutes = () => {
           }
         />
 
-<<<<<<< HEAD
         <Route
-=======
-        <Route //Refund route
           path="/refund"
           element={
-            <>
-              <ProtectedRoute>
-                <DashboardHeader />
+            <ProtectedRoute>
+              <DashboardLayout>
                 <Refund />
-              </ProtectedRoute>
-            </>
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
 
-        <Route //Purchase Order route
+        <Route
           path="/purchase-order"
           element={
-            <>
-              <ProtectedRoute>
-                <DashboardHeader />
+            <ProtectedRoute>
+              <DashboardLayout>
                 <PurchaseOrder />
-              </ProtectedRoute>
-            </>
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
 
-        <Route //Report route
->>>>>>> 46cb823d91126f61c4d5dd6f141edf288e168161
+        <Route
           path="/report"
           element={
             <ProtectedRoute>
