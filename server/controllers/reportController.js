@@ -1,47 +1,80 @@
-const ActivityLog = require("../models/ActivityLog");
+// controllers/reportController.js
+const Sale = require("../models/Sale");
+const PurchaseOrder = require("../models/PurchaseOrder");
 
-const getActivitySummary = async (req, res) => {
+const getBusinessReport = async (req, res) => {
   try {
-    let { startDate, endDate } = req.query;
+    const { startDate, endDate } = req.query;
 
-    // If no dates provided, default to all time
-    if (!startDate || !endDate || startDate === "All" || endDate === "All") {
-      startDate = "2000-01-01";
-      endDate = new Date().toISOString();
+    // Build date filter
+    const filter = {};
+    if (startDate && endDate && startDate !== "All" && endDate !== "All") {
+      filter.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
     }
 
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999); // include full end day
+    // Fetch Sales
+    const sales = await Sale.find(filter).lean();
 
-    // Aggregate: count actions per module
-    const summary = await ActivityLog.aggregate([
-      { $match: { createdAt: { $gte: start, $lte: end } } },
-      {
-        $group: {
-          _id: { module: "$module", action: "$action" },
-          count: { $sum: 1 },
-        },
-      },
-      {
-        $group: {
-          _id: "$_id.module",
-          actions: {
-            $push: { action: "$_id.action", count: "$count" },
-          },
-          total: { $sum: "$count" },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]);
+    // Fetch Purchase Orders, populate items if needed
+    const pos = await PurchaseOrder.find(filter)
+      .populate("items.item", "name")
+      .populate("supplier", "name")
+      .lean();
 
-    return res.status(200).json({ summary });
-  } catch (error) {
-    console.error("Error generating activity summary:", error);
-    return res
-      .status(500)
-      .json({ message: "Server error while generating report." });
+    // Calculate totals
+    const totalSales = sales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+    const totalDiscounts = sales.reduce((sum, s) => sum + (s.discount || 0), 0);
+    const totalTax = sales.reduce((sum, s) => sum + (s.taxAmount || 0), 0);
+
+    // Refunds: only count if status is set (e.g., refunded/replaced/defective)
+    const refundRows = [];
+    let totalRefunds = 0;
+    sales.forEach((s) => {
+      if (s.refund?.status) {
+        refundRows.push({
+          invoiceNumber: s.invoiceNumber,
+          customerName: s.customerName,
+          totalRefundAmount: s.refund.totalRefundAmount || 0,
+          refundedItems: s.refund.refundedItems || [],
+          refundDate: s.refund.processedAt || s.updatedAt,
+        });
+        totalRefunds += s.refund.totalRefundAmount || 0;
+      }
+    });
+
+    // Purchase Orders total cost
+    const totalPurchaseCost = pos.reduce((sum, po) => {
+      const poTotal =
+        po.items?.reduce(
+          (itemSum, i) =>
+            itemSum + (i.purchasePrice || 0) * (i.receivedQty || 0),
+          0
+        ) || 0;
+      return sum + poTotal;
+    }, 0);
+
+    const grossProfit = totalSales - totalPurchaseCost - totalRefunds;
+
+    res.json({
+      sales,
+      refunds: refundRows,
+      purchaseOrders: pos,
+      totals: {
+        totalSales,
+        totalDiscounts,
+        totalTax,
+        totalRefunds,
+        totalPurchaseCost,
+        grossProfit,
+      },
+    });
+  } catch (err) {
+    console.error("[REPORT] Error generating business report:", err.message);
+    res.status(500).json({ message: "Failed to generate business report" });
   }
 };
 
-module.exports = { getActivitySummary };
+module.exports = { getBusinessReport };

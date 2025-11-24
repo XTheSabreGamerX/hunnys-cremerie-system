@@ -213,7 +213,7 @@ const Refund = () => {
                       <td>{sale.invoiceNumber}</td>
                       <td>{sale.customerName || "N/A"}</td>
                       <td>{sale.orderType}</td>
-                      <td>{sale.totalAmount}</td>
+                      <td>₱{sale.totalAmount}</td>
                       <td>{sale.refund?.status || "—"}</td>
                       <td>{new Date(sale.createdAt).toLocaleString()}</td>
 

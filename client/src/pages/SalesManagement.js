@@ -14,6 +14,7 @@ const SalesManagement = () => {
   const [orderType, setOrderType] = useState("Walk-in");
   const [isUnregistered, setIsUnregistered] = useState(false);
   const [customerName, setCustomerName] = useState("");
+  const [discount, setDiscount] = useState(0); // flat amount in PHP
   const [taxRate] = useState(12);
   const [searchQuery, setSearchQuery] = useState("");
   const [popupMessage, setPopupMessage] = useState("");
@@ -167,6 +168,21 @@ const SalesManagement = () => {
     setCartItems((prevCart) => prevCart.filter((i) => i._id !== itemId));
   };
 
+  // ---------------------------
+  // Calculations used by UI
+  // ---------------------------
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + item.sellingPrice * item.quantity,
+    0
+  );
+
+// Ensure discount is numeric and non-negative
+  const safeDiscount = Number.isFinite(Number(discount)) ? Number(discount) : 0;
+  const effectiveSubtotal = Math.max(subtotal - Math.max(0, safeDiscount), 0);
+
+  const taxAmount = (effectiveSubtotal * Number(taxRate)) / 100;
+  const total = effectiveSubtotal + taxAmount;
+
   const handleSaveSale = async () => {
     if (cartItems.length === 0) {
       showPopup("Please add at least one item.", "error");
@@ -180,14 +196,20 @@ const SalesManagement = () => {
 
     setLoading(true);
 
-    const taxRatePercent = Number(taxRate) || 0;
     try {
-      const subtotal = cartItems.reduce(
-        (sum, i) => sum + i.sellingPrice * i.quantity,
+      // Recompute server-safe values the same way UI does
+      const subtotalLocal = cartItems.reduce(
+        (sum, item) => sum + item.sellingPrice * item.quantity,
         0
       );
-      const taxAmount = (subtotal * taxRatePercent) / 100;
-      const totalAmount = subtotal + taxAmount;
+
+      const discountAmount = Number.isFinite(Number(discount))
+        ? Number(discount)
+        : 0;
+
+      const effective = Math.max(subtotalLocal - Math.max(0, discountAmount), 0);
+      const taxAmt = (effective * Number(taxRate)) / 100;
+      const totalAmount = effective + taxAmt;
 
       const saleToSend = {
         customerName: isUnregistered
@@ -199,9 +221,10 @@ const SalesManagement = () => {
           quantity: i.quantity,
           sellingPrice: Number(i.sellingPrice.toFixed(2)),
         })),
-        subtotal: Number(subtotal.toFixed(2)),
-        taxRate: taxRatePercent,
-        taxAmount: Number(taxAmount.toFixed(2)),
+        subtotal: Number(subtotalLocal.toFixed(2)),
+        taxRate: Number(taxRate),
+        taxAmount: Number(taxAmt.toFixed(2)),
+        discount: Number(discountAmount.toFixed(2)),
         totalAmount: Number(totalAmount.toFixed(2)),
       };
 
@@ -209,7 +232,10 @@ const SalesManagement = () => {
         method: "POST",
         body: JSON.stringify(saleToSend),
       });
-      if (!res.ok) throw new Error("Failed to create sale.");
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.message || "Failed to create sale.");
+      }
 
       const resData = await res.json();
       showPopup(
@@ -217,6 +243,7 @@ const SalesManagement = () => {
         "success"
       );
 
+      // Update inventory via your endpoint (keeps your original approach)
       await Promise.all(
         cartItems.map((item) =>
           authFetch(`${API_BASE}/api/inventory/${item._id}`, {
@@ -230,6 +257,7 @@ const SalesManagement = () => {
       setOrderType("Walk-in");
       setCustomerName("");
       setIsUnregistered(false);
+      setDiscount(0);
     } catch (err) {
       showPopup(err.message || "Something went wrong.", "error");
     } finally {
@@ -447,6 +475,20 @@ const SalesManagement = () => {
                 />
                 Unregistered Customer
               </label>
+              <label className="pos-discount-input">
+                Discount (₱):
+                <input
+                  type="number"
+                  min="0"
+                  value={discount}
+                  onChange={(e) =>
+                    setDiscount(
+                      e.target.value === "" ? 0 : Number(parseFloat(e.target.value))
+                    )
+                  }
+                  placeholder="0.00"
+                />
+              </label>
             </div>
 
             <div className="pos-cart-items">
@@ -486,15 +528,12 @@ const SalesManagement = () => {
             </div>
 
             <div className="pos-cart-summary">
+              <p>Subtotal: ₱{subtotal.toFixed(2)}</p>
+              <p>Discount: ₱{Number(safeDiscount).toFixed(2)}</p>
               <p>
-                Subtotal: ₱
-                {cartItems
-                  .reduce(
-                    (sum, item) => sum + item.sellingPrice * item.quantity,
-                    0
-                  )
-                  .toFixed(2)}
+                Tax ({taxRate}%): ₱{taxAmount.toFixed(2)}
               </p>
+              <p>Total: ₱{total.toFixed(2)}</p>
 
               <button
                 className="pos-checkout-btn"

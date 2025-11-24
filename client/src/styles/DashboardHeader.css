@@ -48,8 +48,9 @@
   margin-left: 50px;
 }
 
-.dashboard-container.collapsed .reports-container {
-  margin-left: 30px;
+.dashboard-container.collapsed .reports-new-container {
+  width: calc(100% - 30px - 20px);
+  margin-left: 40px;
 }
 
 .dashboard-container.collapsed .notifications-main {

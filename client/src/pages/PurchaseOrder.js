@@ -257,7 +257,7 @@ const PurchaseOrderManagement = () => {
                       <td>{po.poNumber}</td>
                       <td>{po.supplier?.name || "N/A"}</td>
                       <td>{po.status}</td>
-                      <td>{po.totalAmount}</td>
+                      <td>₱{po.totalAmount}</td>
                       <td>{new Date(po.createdAt).toLocaleString()}</td>
                       <td>{new Date(po.updatedAt).toLocaleString()}</td>
                       <td>

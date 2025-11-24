@@ -179,6 +179,7 @@ const createSale = async (req, res) => {
       taxRate: req.body.taxRate,
       taxAmount: req.body.taxAmount,
       totalAmount: req.body.totalAmount,
+      discount: req.body.discount,
     });
 
     await newSale.save();

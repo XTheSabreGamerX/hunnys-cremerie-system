@@ -21,6 +21,7 @@ const saleSchema = new mongoose.Schema(
     subtotal: { type: Number },
     taxRate: { type: Number },
     taxAmount: { type: Number },
+    discount: { type: Number },
     totalAmount: { type: Number, required: true },
     refund: {
       status: {
