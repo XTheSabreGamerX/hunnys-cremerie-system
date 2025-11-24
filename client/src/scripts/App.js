@@ -4,16 +4,21 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
-import Header from "./Header";
+import { AnimatePresence } from "framer-motion";
+
+// Layouts & Components
+import DashboardLayout from "./DashboardLayout";
 import Footer from "./Footer";
+import ProtectedRoute from "../components/ProtectedRoute";
+
+// Pages
 import Login from "../pages/Login";
 import Dashboard from "../pages/Dashboard";
 import UserManagement from "../pages/UserManagement";
 import ActivityLog from "../pages/ActivityLog";
 import Inventory from "../pages/Inventory";
-import DashboardHeader from "./DashboardHeader";
-import ProtectedRoute from "../components/ProtectedRoute";
 import SupplierManagement from "../pages/SupplierManagement";
 import CustomerManagement from "../pages/CustomerManagement";
 import SalesManagement from "../pages/SalesManagement";
@@ -23,168 +28,168 @@ import Notifications from "../pages/Notifications";
 import BackupRestore from "../pages/BackupRestore";
 import Settings from "../pages/Settings";
 
-function App() {
+const AppRoutes = () => {
+  const location = useLocation();
+
   return (
-    <Router>
-      <Routes>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
         <Route path="/" element={<Navigate to="/login" />} />
 
-        <Route //Login Route
+        {/* Login Route (No Sidebar) */}
+        <Route
           path="/login"
           element={
             <>
-              <Header />
               <Login />
               <Footer />
             </>
           }
         />
 
-        <Route //Dashboard route
+        {/* Protected Routes (Wrapped in DashboardLayout) */}
+        <Route
           path="/dashboard"
           element={
-            <>
-              <ProtectedRoute>
-                <DashboardHeader />
+            <ProtectedRoute>
+              <DashboardLayout>
                 <Dashboard />
-              </ProtectedRoute>
-            </>
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
 
-        <Route //User Management route
+        <Route
           path="/user-management"
           element={
-            <>
-              <ProtectedRoute>
-                <DashboardHeader />
+            <ProtectedRoute>
+              <DashboardLayout>
                 <UserManagement />
-              </ProtectedRoute>
-            </>
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
 
-        <Route //User Management route
+        <Route
           path="/activity-log"
           element={
-            <>
-              <ProtectedRoute>
-                <DashboardHeader />
+            <ProtectedRoute>
+              <DashboardLayout>
                 <ActivityLog />
-              </ProtectedRoute>
-            </>
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
 
-        <Route //Inventory route
+        <Route
           path="/inventory"
           element={
-            <>
-              <ProtectedRoute>
-                <DashboardHeader />
+            <ProtectedRoute>
+              <DashboardLayout>
                 <Inventory />
-              </ProtectedRoute>
-            </>
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
 
-        <Route //Sales Management route
+        <Route
           path="/sales-management"
           element={
-            <>
-              <ProtectedRoute>
-                <DashboardHeader />
+            <ProtectedRoute>
+              <DashboardLayout>
                 <SalesManagement />
-              </ProtectedRoute>
-            </>
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
 
-        <Route //Sales Report route
+        <Route
           path="/sales-report"
           element={
-            <>
-              <ProtectedRoute>
-                <DashboardHeader />
+            <ProtectedRoute>
+              <DashboardLayout>
                 <SalesReport />
-              </ProtectedRoute>
-            </>
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
 
-        <Route //Sales Report route
+        <Route
           path="/report"
           element={
-            <>
-              <ProtectedRoute>
-                <DashboardHeader />
+            <ProtectedRoute>
+              <DashboardLayout>
                 <Report />
-              </ProtectedRoute>
-            </>
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
 
-        <Route //Supplier Management route
+        <Route
           path="/supplier-management"
           element={
-            <>
-              <ProtectedRoute>
-                <DashboardHeader />
+            <ProtectedRoute>
+              <DashboardLayout>
                 <SupplierManagement />
-              </ProtectedRoute>
-            </>
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
 
-        <Route //Customer Management route
+        <Route
           path="/customer-management"
           element={
-            <>
-              <ProtectedRoute>
-                <DashboardHeader />
+            <ProtectedRoute>
+              <DashboardLayout>
                 <CustomerManagement />
-              </ProtectedRoute>
-            </>
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
 
-        <Route //Notification route
+        <Route
           path="/notifications"
           element={
-            <>
-              <ProtectedRoute>
-                <DashboardHeader />
+            <ProtectedRoute>
+              <DashboardLayout>
                 <Notifications />
-              </ProtectedRoute>
-            </>
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
 
-        <Route //Notification route
+        <Route
           path="/backuprestore"
           element={
-            <>
-              <ProtectedRoute>
-                <DashboardHeader />
+            <ProtectedRoute>
+              <DashboardLayout>
                 <BackupRestore />
-              </ProtectedRoute>
-            </>
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
 
-        <Route //Settings route
+        <Route
           path="/settings"
           element={
-            <>
-              <ProtectedRoute>
-                <DashboardHeader />
+            <ProtectedRoute>
+              <DashboardLayout>
                 <Settings />
-              </ProtectedRoute>
-            </>
+              </DashboardLayout>
+            </ProtectedRoute>
           }
         />
       </Routes>
+    </AnimatePresence>
+  );
+};
+
+function App() {
+  return (
+    <Router>
+      <AppRoutes />
     </Router>
   );
 }
+
 export default App;

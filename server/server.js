@@ -22,11 +22,12 @@ const reportRoutes = require("./routes/report");
 const cakeRoutes = require("./routes/cake");
 const backupRoutes = require("./routes/backup");
 const settingsRoutes = require("./routes/settings");
+
 const app = express();
 
 const { batchUpdateStatuses } = require("./controllers/inventoryController");
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 const MONGO_URI =
   process.env.NODE_ENV === "development"
     ? process.env.MONGO_URI_DEV
@@ -52,26 +53,11 @@ mongoose
     process.exit(1);
   });
 
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://www.hunnyscremerie.online",
-  "https://hunnys.netlify.app",
-  "https://hunnysdev.netlify.app",
-];
-
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-    exposedHeaders: ["Content-Disposition"],
-  })
-);
+// --- UPDATED CORS CONFIGURATION (ALLOW ALL) ---
+// We simply call cors() with no arguments to allow ALL origins.
+// This fixes the "blocked by CORS policy" error.
+app.use(cors());
+// ----------------------------------------------
 
 app.use(express.json());
 
@@ -105,15 +91,10 @@ cron.schedule("*/15 * * * *", async () => {
   }
 });
 
-if (!MONGO_URI) {
-  console.error("MONGO_URI is not defined. Please check your .env file.");
-  process.exit(1);
-}
-
 app.get("/", (req, res) => {
   res.send("Hunny’s Crémerie Server is running!");
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  //console.log(`Server running on http://0.0.0.0:${PORT}`);
+  console.log(`Server running on http://0.0.0.0:${PORT}`);
 });

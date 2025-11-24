@@ -1,18 +1,17 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { authFetch, API_BASE } from "../utils/tokenUtils";
-import DashboardLayout from "../scripts/DashboardLayout";
-import "../styles/Notifications.css";
 import {
-  FiInfo,
-  FiAlertTriangle,
-  FiCheckCircle,
-  FiXCircle,
-} from "react-icons/fi";
+  Bell,
+  Info,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Clock,
+} from "lucide-react"; // Modern Icons
+import { authFetch, API_BASE } from "../utils/tokenUtils";
 
 const Notifications = () => {
   const PAGE_SIZE = 12;
-
   const [notifications, setNotifications] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -21,7 +20,6 @@ const Notifications = () => {
   const navigate = useNavigate();
   const containerRef = useRef(null);
 
-  // Redirect if no token
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) navigate("/login");
@@ -30,24 +28,36 @@ const Notifications = () => {
   const getIcon = (type) => {
     switch (type) {
       case "info":
-        return <FiInfo className="icon info" />;
+        return <Info className="w-6 h-6 text-blue-500" />;
       case "warning":
-        return <FiAlertTriangle className="icon warning" />;
+        return <AlertTriangle className="w-6 h-6 text-amber-500" />;
       case "success":
-        return <FiCheckCircle className="icon success" />;
+        return <CheckCircle className="w-6 h-6 text-green-500" />;
       case "error":
-        return <FiXCircle className="icon error" />;
+        return <XCircle className="w-6 h-6 text-red-500" />;
       default:
-        return <FiInfo className="icon" />;
+        return <Bell className="w-6 h-6 text-gray-500" />;
     }
   };
 
-  // Fetch notifications for the current page
+  const getBgColor = (type) => {
+    switch (type) {
+      case "info":
+        return "bg-blue-50 border-blue-100";
+      case "warning":
+        return "bg-amber-50 border-amber-100";
+      case "success":
+        return "bg-green-50 border-green-100";
+      case "error":
+        return "bg-red-50 border-red-100";
+      default:
+        return "bg-gray-50 border-gray-100";
+    }
+  };
+
   useEffect(() => {
     if (page < 1) return;
-
     const controller = new AbortController();
-    const signal = controller.signal;
 
     const fetchNotifications = async () => {
       setIsLoading(true);
@@ -59,10 +69,9 @@ const Notifications = () => {
 
         const res = await authFetch(
           `${API_BASE}/api/notifications?page=${page}&limit=${PAGE_SIZE}`,
-          { signal }
+          { signal: controller.signal }
         );
-
-        if (!res.ok) throw new Error("Failed to fetch notifications");
+        if (!res.ok) throw new Error("Failed");
 
         const data = await res.json();
         const pageRecords = Array.isArray(data.notifications)
@@ -81,127 +90,86 @@ const Notifications = () => {
     };
 
     fetchNotifications();
-
     return () => controller.abort();
   }, [page]);
 
-  // Infinite scroll handler
+  // Infinite Scroll
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
     let timeoutId = null;
 
     const handleScroll = () => {
       if (timeoutId) return;
-
       timeoutId = setTimeout(() => {
-        if (!hasMore || isLoading) {
-          timeoutId = null;
-          return;
-        }
-
+        if (!hasMore || isLoading) return;
         if (
           container.scrollTop + container.clientHeight >=
           container.scrollHeight - 80
         ) {
           setPage((prev) => prev + 1);
         }
-
         timeoutId = null;
       }, 100);
     };
 
     container.addEventListener("scroll", handleScroll);
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      container.removeEventListener("scroll", handleScroll);
-    };
+    return () => container.removeEventListener("scroll", handleScroll);
   }, [hasMore, isLoading]);
 
-  useEffect(() => {
-    setNotifications([]);
-    setPage(1);
-    setHasMore(true);
-  }, []);
-
-  const formatPH = (iso) =>
-    new Date(iso).toLocaleString("en-PH", { timeZone: "Asia/Manila" });
-
   return (
-    <>
-      <DashboardLayout>
-        <main className="notifications-main">
-          <div className="notifications-content">
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 12,
-              }}
-            >
-              <h1 className="notifications-title">Notifications</h1>
-            </div>
+    <div className="h-[calc(100vh-100px)] flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6 shrink-0">
+        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <Bell className="w-8 h-8 text-brand-primary" />
+          Notifications
+        </h1>
+      </div>
 
-            <div
-              className="notifications-list-wrapper"
-              ref={containerRef}
-              style={{ maxHeight: "65vh", overflowY: "auto", paddingRight: 8 }}
-            >
-              <div className="notifications-list">
-                {isLoading && notifications.length === 0 ? (
-                  <p style={{ padding: 12, textAlign: "center" }}>Loading...</p>
-                ) : notifications.length === 0 ? (
-                  <p style={{ padding: 12 }}>No notifications yet.</p>
-                ) : (
-                  notifications.map((notif) => (
-                    <div
-                      key={notif._id}
-                      className={`notification-card ${notif.type}`}
-                    >
-                      <div className="notification-icon">
-                        {getIcon(notif.type)}
-                      </div>
-                      <div className="notification-body">
-                        <p className="message">{notif.message}</p>
-                        <span className="date">
-                          {formatPH(notif.createdAt)}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {isLoading && notifications.length > 0 && (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "8px 0",
-                    color: "#666",
-                  }}
-                >
-                  Loading...
-                </div>
-              )}
-
-              {!hasMore && notifications.length > 0 && (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "8px 0",
-                    color: "#666",
-                  }}
-                >
-                  No more notifications
-                </div>
-              )}
-            </div>
+      {/* Scrollable List */}
+      <div className="flex-1 overflow-y-auto pr-2 space-y-3" ref={containerRef}>
+        {notifications.length === 0 && !isLoading ? (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+            <Bell className="w-12 h-12 mb-2 opacity-20" />
+            <p>No new notifications</p>
           </div>
-        </main>
-      </DashboardLayout>
-    </>
+        ) : (
+          notifications.map((notif) => (
+            <div
+              key={notif._id}
+              className={`p-4 rounded-xl border flex items-start gap-4 transition-all hover:shadow-sm ${getBgColor(
+                notif.type
+              )}`}
+            >
+              <div className="shrink-0 mt-1">{getIcon(notif.type)}</div>
+              <div className="flex-1">
+                <p className="text-gray-800 text-sm font-medium leading-relaxed">
+                  {notif.message}
+                </p>
+                <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
+                  <Clock className="w-3 h-3" />
+                  <span>
+                    {new Date(notif.createdAt).toLocaleString("en-PH", {
+                      timeZone: "Asia/Manila",
+                    })}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+
+        {isLoading && (
+          <p className="text-center text-sm text-gray-500 py-4">Loading...</p>
+        )}
+        {!hasMore && notifications.length > 0 && (
+          <p className="text-center text-xs text-gray-400 py-4">
+            No more notifications
+          </p>
+        )}
+      </div>
+    </div>
   );
 };
 

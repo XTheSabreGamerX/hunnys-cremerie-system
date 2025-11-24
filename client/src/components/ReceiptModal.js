@@ -9,7 +9,7 @@ const ReceiptModal = ({ sale, onClose, onRefund }) => {
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("success");
 
-  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5001";
   const token = localStorage.getItem("token");
 
   const showPopup = (message, type = "success") => {

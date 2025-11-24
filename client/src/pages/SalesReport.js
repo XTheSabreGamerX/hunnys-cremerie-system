@@ -1,8 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import DashboardLayout from "../scripts/DashboardLayout";
-import ReceiptModal from "../components/ReceiptModal";
-import AcquisitionReceiptModal from "../components/AcquisitionReceiptModal";
 import {
   LineChart,
   Line,
@@ -18,20 +15,32 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import {
+  TrendingUp,
+  DollarSign,
+  CreditCard,
+  Award,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+} from "lucide-react";
+
+import ReceiptModal from "../components/ReceiptModal";
+import AcquisitionReceiptModal from "../components/AcquisitionReceiptModal";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
-import "../styles/SalesReport.css";
 
 const SalesReport = () => {
   const COLORS = [
-    "#2E8B57",
-    "#FF6347",
-    "#1E90FF",
-    "#FFD700",
-    "#8A2BE2",
-    "#FF69B4",
+    "#10b981",
+    "#f43f5e",
+    "#3b82f6",
+    "#f59e0b",
+    "#8b5cf6",
+    "#ec4899",
   ];
   const PAGE_SIZE = 6;
 
+  // --- States ---
   const [records, setRecords] = useState([]);
   const [fullSales, setFullSales] = useState([]);
   const [page, setPage] = useState(1);
@@ -51,10 +60,7 @@ const SalesReport = () => {
   const [acquisitionPage, setAcquisitionPage] = useState(1);
   const [acquisitionTotalPages, setAcquisitionTotalPages] = useState(1);
   const [acquisitionTotalItems, setAcquisitionTotalItems] = useState(0);
-  const [acquisitionSort /* setAcquisitionSort */] = useState({
-    field: "",
-    order: "",
-  });
+  const [acquisitionSort] = useState({ field: "", order: "" });
   const [selectedAcquisition, setSelectedAcquisition] = useState(null);
   const [totalProfit, setTotalProfit] = useState(0);
 
@@ -62,6 +68,7 @@ const SalesReport = () => {
   const navigate = useNavigate();
   const containerRef = useRef(null);
 
+  // --- Auth Check ---
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -71,58 +78,50 @@ const SalesReport = () => {
     }
   }, [user.role, navigate]);
 
-  // Fetch all sales for analytics and charts
+  // --- Fetchers ---
+
+  // 1. All Sales (for Analytics)
   useEffect(() => {
     const controller = new AbortController();
-    const signal = controller.signal;
-
     const fetchAllSales = async () => {
       try {
         const res = await authFetch(`${API_BASE}/api/sales/all`, {
-          signal,
+          signal: controller.signal,
         });
-        if (!res.ok) throw new Error("Failed to fetch all sales");
+        if (!res.ok) throw new Error("Failed");
         const data = await res.json();
         setFullSales(data.sales || data);
       } catch (err) {
-        if (err.name !== "AbortError")
-          console.error("Failed to fetch all sales:", err);
+        if (err.name !== "AbortError") console.error("Sales fetch error:", err);
       }
     };
-
     fetchAllSales();
     return () => controller.abort();
   }, []);
 
-  // Fetch suppliers
+  // 2. Suppliers
   useEffect(() => {
     authFetch(`${API_BASE}/api/suppliers?page=1&limit=1000`)
       .then((res) => res.json())
       .then((data) => {
-        const allSuppliers = Array.isArray(data.suppliers)
-          ? data.suppliers
-          : data;
-        setSuppliers(allSuppliers);
+        setSuppliers(Array.isArray(data.suppliers) ? data.suppliers : data);
       })
-      .catch((err) => console.error("Failed to fetch suppliers:", err));
+      .catch((err) => console.error("Suppliers fetch error:", err));
   }, []);
 
-  // Paginated fetch
+  // 3. Paginated Sales (Table)
   useEffect(() => {
     if (page < 1) return;
-
     const controller = new AbortController();
-    const signal = controller.signal;
 
     const fetchPage = async (pageNumber) => {
       setIsLoading(true);
       try {
         const res = await authFetch(
           `${API_BASE}/api/salesReport/sales?page=${pageNumber}&limit=${PAGE_SIZE}`,
-          { signal }
+          { signal: controller.signal }
         );
-        if (!res.ok) throw new Error("Failed to fetch sales data");
-
+        if (!res.ok) throw new Error("Failed");
         const data = await res.json();
         const pageRecords = Array.isArray(data.records) ? data.records : [];
 
@@ -136,93 +135,67 @@ const SalesReport = () => {
         setIsLoading(false);
       }
     };
-
     fetchPage(page);
     return () => controller.abort();
   }, [page]);
 
-  // Infinite scroll
+  // 4. Profit
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    let timeoutId = null;
-
-    const handleScroll = () => {
-      if (timeoutId) return;
-
-      timeoutId = setTimeout(() => {
-        if (!hasMore || isLoading) return;
-        if (
-          container.scrollTop + container.clientHeight >=
-          container.scrollHeight - 80
-        ) {
-          setPage((prev) => prev + 1);
+    const fetchProfit = async () => {
+      try {
+        const res = await authFetch(`${API_BASE}/api/salesReport/profit`);
+        if (res.ok) {
+          const data = await res.json();
+          setTotalProfit(data.totalProfit || 0);
         }
-        timeoutId = null;
-      }, 100);
+      } catch (err) {
+        console.error(err);
+      }
     };
-
-    container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
-  }, [hasMore, isLoading]);
-
-  // Reset on token change
-  useEffect(() => {
-    setRecords([]);
-    setPage(1);
-    setHasMore(true);
+    fetchProfit();
   }, []);
 
-  // Refresh function (currently used in sale refunds)
-  const refreshSales = async () => {
-    setRecords([]);
-    setPage(1);
-
+  // 5. Acquisitions
+  const fetchAcquisitions = useCallback(async () => {
     try {
-      const response = await authFetch(
-        `${API_BASE}/api/salesReport/sales?page=1&limit=${PAGE_SIZE}`
+      setIsLoading(true);
+      const res = await authFetch(
+        `${API_BASE}/api/acquisitions?page=${acquisitionPage}&limit=5`
       );
-      const data = await response.json();
-
-      const pageRecords = Array.isArray(data.records) ? data.records : [];
-      setRecords(pageRecords);
-      setHasMore(pageRecords.length === PAGE_SIZE);
+      const data = await res.json();
+      setAcquisitions(data.acquisitions || []);
+      setAcquisitionTotalPages(data.totalPages || 1);
+      setAcquisitionTotalItems(data.totalItems || 0);
     } catch (err) {
-      console.error("Failed to refresh sales:", err);
+      console.error("Acquisitions error:", err);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [acquisitionPage]);
 
-  // Analytics + chart data
+  useEffect(() => {
+    fetchAcquisitions();
+  }, [fetchAcquisitions]);
+
+  // --- Calculation Logic ---
   useEffect(() => {
     if (!fullSales || fullSales.length === 0) {
       setAnalytics(null);
-      setLineData([]);
-      setBarData([]);
-      setPieData([]);
       return;
     }
 
-    const allRecords = fullSales;
-
-    const totalSales = allRecords.reduce(
+    const totalSales = fullSales.reduce(
       (sum, s) => sum + Number(s.totalAmount || 0),
       0
     );
-
-    const totalTransactions = allRecords.length;
-
+    const totalTransactions = fullSales.length;
     const bestSelling = {};
-    const paymentBreakdown = {};
 
-    allRecords.forEach((sale) => {
+    fullSales.forEach((sale) => {
       (sale.items || []).forEach((item) => {
         bestSelling[item.name] =
           (bestSelling[item.name] || 0) + Number(item.quantity || 0);
       });
-      const method = sale.paymentMethod || "Unknown";
-      paymentBreakdown[method] =
-        (paymentBreakdown[method] || 0) + Number(sale.totalAmount || 0);
     });
 
     const bestSellingArray = Object.entries(bestSelling)
@@ -230,19 +203,14 @@ const SalesReport = () => {
       .sort((a, b) => b.totalSold - a.totalSold)
       .slice(0, 5);
 
-    const paymentArray = Object.entries(paymentBreakdown).map(
-      ([method, total]) => ({ _id: method, total })
-    );
-
     setAnalytics({
       totalSales,
       totalTransactions,
       bestSelling: bestSellingArray,
-      paymentBreakdown: paymentArray,
     });
 
-    // Line chart data
-    const aggregatedLineData = allRecords
+    // Charts Data
+    const aggregatedLine = fullSales
       .map((s) => ({
         date: new Date(s.createdAt).toLocaleDateString("en-PH", {
           timeZone: "Asia/Manila",
@@ -257,11 +225,10 @@ const SalesReport = () => {
       }, [])
       .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    setLineData(aggregatedLineData);
+    setLineData(aggregatedLine);
 
-    // Bar & Pie chart data
     const categoryTotals = {};
-    allRecords.forEach((sale) => {
+    fullSales.forEach((sale) => {
       (sale.items || []).forEach((item) => {
         const name = item.name || "Uncategorized";
         categoryTotals[name] =
@@ -269,91 +236,65 @@ const SalesReport = () => {
           Number(item.price || 0) * Number(item.quantity || 0);
       });
     });
-
-    const barPieData = Object.entries(categoryTotals).map(([name, total]) => ({
+    const barPie = Object.entries(categoryTotals).map(([name, total]) => ({
       name,
       total,
     }));
-    setBarData(barPieData);
-    setPieData(barPieData);
-  }, [fullSales, acquisitions]);
+    setBarData(barPie);
+    setPieData(barPie);
+  }, [fullSales]);
 
+  // Infinite Scroll Logic
   useEffect(() => {
-    const fetchProfit = async () => {
-      try {
-        const res = await authFetch(`${API_BASE}/api/salesReport/profit`);
-        if (!res.ok) throw new Error("Failed to fetch profit");
-        const data = await res.json();
-        setTotalProfit(data.totalProfit || 0);
-      } catch (err) {
-        console.error("Profit fetch error:", err);
-        setTotalProfit(0);
-      }
+    const container = containerRef.current;
+    if (!container) return;
+    let timeoutId = null;
+    const handleScroll = () => {
+      if (timeoutId) return;
+      timeoutId = setTimeout(() => {
+        if (!hasMore || isLoading) return;
+        if (
+          container.scrollTop + container.clientHeight >=
+          container.scrollHeight - 80
+        ) {
+          setPage((prev) => prev + 1);
+        }
+        timeoutId = null;
+      }, 100);
     };
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [hasMore, isLoading]);
 
-    fetchProfit();
-  }, []);
-
-  const openReceipt = (sale) => setSelectedSale(sale);
-  const closeReceipt = () => setSelectedSale(null);
-
-  // Acquisition Section
-
-  const fetchAcquisitions = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const res = await authFetch(
-        `${API_BASE}/api/acquisitions?page=${acquisitionPage}&limit=5&field=${encodeURIComponent(
-          acquisitionSort.field || ""
-        )}&order=${encodeURIComponent(acquisitionSort.order || "")}`
-      );
-
-      const data = await res.json();
-      console.log("Fetched acquisitions:", data);
-      setAcquisitions(data.acquisitions || []);
-      setAcquisitionTotalPages(data.totalPages || 1);
-      setAcquisitionTotalItems(data.totalItems || 0);
-    } catch (err) {
-      console.error("Error fetching acquisitions:", err);
-      setAcquisitions([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [acquisitionPage, acquisitionSort]);
-
-  useEffect(() => {
-    fetchAcquisitions();
-  }, [fetchAcquisitions]);
+  // --- Handlers ---
+  const refreshSales = async () => {
+    setRecords([]);
+    setPage(1);
+    // Re-trigger fetch via effect by resetting
+  };
 
   const handleConfirmAcquisition = async (acq) => {
     try {
-      const res = await authFetch(
-        `${API_BASE}/api/acquisitions/confirm/${acq._id}`,
-        {
-          method: "PUT",
-        }
-      );
-      if (res.ok) fetchAcquisitions(acquisitionPage);
+      await authFetch(`${API_BASE}/api/acquisitions/confirm/${acq._id}`, {
+        method: "PUT",
+      });
+      fetchAcquisitions();
     } catch (err) {
-      console.error("Confirm error:", err);
+      console.error(err);
     }
   };
 
   const handleCancelAcquisition = async (acq) => {
     try {
-      const res = await authFetch(
-        `${API_BASE}/api/acquisitions/cancel/${acq._id}`,
-        {
-          method: "PUT",
-        }
-      );
-      if (res.ok) fetchAcquisitions(acquisitionPage);
+      await authFetch(`${API_BASE}/api/acquisitions/cancel/${acq._id}`, {
+        method: "PUT",
+      });
+      fetchAcquisitions();
     } catch (err) {
-      console.error("Cancel error:", err);
+      console.error(err);
     }
   };
 
-  // Map supplier _id to name
   const supplierMap = React.useMemo(() => {
     return suppliers.reduce((acc, s) => {
       acc[s._id] = s.name;
@@ -362,15 +303,14 @@ const SalesReport = () => {
   }, [suppliers]);
 
   return (
-    <>
+    <div className="space-y-6">
       {selectedSale && (
         <ReceiptModal
           sale={selectedSale}
-          onClose={closeReceipt}
+          onClose={() => setSelectedSale(null)}
           onRefund={refreshSales}
         />
       )}
-
       {selectedAcquisition && (
         <AcquisitionReceiptModal
           acquisition={selectedAcquisition}
@@ -381,282 +321,318 @@ const SalesReport = () => {
         />
       )}
 
-      <DashboardLayout>
-        <main className="sales-report-main">
-          <h1 className="sales-report-title">Sales Report</h1>
+      {/* --- Header --- */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <TrendingUp className="w-8 h-8 text-brand-primary" />
+          Sales Report & Analytics
+        </h1>
+        {/* <button className="flex items-center gap-2 bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium shadow-sm">
+            <Download className="w-4 h-4" /> Export Report
+        </button> */}
+      </div>
 
-          <section className="sales-report-analytics">
-            <div className="sales-card highlight">
-              <h3>Total Sales</h3>
-              <p>₱{(analytics?.totalSales ?? 0).toFixed(2)}</p>
+      {/* --- KPI Cards --- */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Total Sales */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Total Sales</p>
+              <h3 className="text-2xl font-bold text-gray-800 mt-1">
+                ₱{(analytics?.totalSales ?? 0).toFixed(2)}
+              </h3>
             </div>
-            <div className="sales-card">
-              <h3>Total Profit</h3>
-              <p
-                style={{
-                  color: totalProfit < 0 ? "red" : "inherit",
-                  fontWeight: totalProfit < 0 ? "bold" : "normal",
-                }}
+            <div className="p-3 bg-green-50 rounded-xl">
+              <DollarSign className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Total Profit */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Total Profit</p>
+              <h3
+                className={`text-2xl font-bold mt-1 ${
+                  totalProfit < 0 ? "text-red-500" : "text-gray-800"
+                }`}
               >
                 ₱{(totalProfit ?? 0).toFixed(2)}
-              </p>
+              </h3>
             </div>
-            <div className="sales-card">
-              <h3>Total Transactions</h3>
-              <p>{analytics?.totalTransactions ?? 0}</p>
+            <div className="p-3 bg-blue-50 rounded-xl">
+              <TrendingUp className="w-6 h-6 text-blue-600" />
             </div>
-            <div className="sales-card">
-              <h3>Best-Selling Items</h3>
-              <ul>
-                {analytics?.bestSelling?.map((item) => (
-                  <li key={item._id}>
-                    {item._id} – <span>{item.totalSold}</span>
-                  </li>
-                )) ?? <li>No data</li>}
-              </ul>
-            </div>
-            {/* <div className="sales-card">
-              <h3>Payment Breakdown</h3>
-              <ul>
-                {analytics?.paymentBreakdown?.map((p) => (
-                  <li key={p._id}>
-                    {p._id}: <span>₱{p.total.toFixed(2)}</span>
-                  </li>
-                )) ?? <li>No data</li>}
-              </ul>
-            </div> */}
-          </section>
+          </div>
+        </div>
 
-          <section className="sales-report-records">
-            <h2>Transaction Records</h2>
-            <div className="records-table-wrapper" ref={containerRef}>
-              <table className="records-table">
-                <thead>
-                  <tr>
-                    <th>Sale ID</th>
-                    <th>Customer</th>
-                    <th>Order Type</th>
-                    <th>Total Amount</th>
-                    {/* <th>Payment Method</th> */}
-                    <th>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {records.length === 0 && !isLoading ? (
-                    <tr>
-                      <td colSpan="5">No sales records found.</td>
-                    </tr>
-                  ) : (
-                    records.map((r) => (
-                      <tr
-                        key={r.saleId}
-                        onClick={() => openReceipt(r)}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <td>{r.saleId}</td>
-                        <td>{r.customerName}</td>
-                        <td>{r.orderType}</td>
-                        <td>₱{r.totalAmount.toFixed(2)}</td>
-                        {/* <td>{r.paymentMethod}</td> */}
-                        <td>
-                          {new Date(r.createdAt).toLocaleDateString("en-PH", {
-                            timeZone: "Asia/Manila",
-                          })}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                  {isLoading && (
-                    <tr>
-                      <td colSpan="5" style={{ textAlign: "center" }}>
-                        Loading...
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-              {!hasMore && records.length > 0 && (
-                <div
-                  style={{
-                    textAlign: "center",
-                    padding: "8px 0",
-                    color: "#666",
-                  }}
-                >
-                  No more records
+        {/* Transactions */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Transactions</p>
+              <h3 className="text-2xl font-bold text-gray-800 mt-1">
+                {analytics?.totalTransactions ?? 0}
+              </h3>
+            </div>
+            <div className="p-3 bg-purple-50 rounded-xl">
+              <CreditCard className="w-6 h-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Best Seller */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <div className="flex justify-between items-start">
+            <div className="w-full">
+              <p className="text-sm text-gray-500 font-medium mb-2">Top Item</p>
+              {analytics?.bestSelling && analytics.bestSelling.length > 0 ? (
+                <div>
+                  <h3 className="text-lg font-bold text-gray-800 truncate">
+                    {analytics.bestSelling[0]._id}
+                  </h3>
+                  <p className="text-xs text-brand-primary font-medium">
+                    {analytics.bestSelling[0].totalSold} sold
+                  </p>
                 </div>
+              ) : (
+                <p className="text-sm text-gray-400">No data</p>
               )}
             </div>
-          </section>
+            <div className="p-3 bg-amber-50 rounded-xl shrink-0">
+              <Award className="w-6 h-6 text-amber-600" />
+            </div>
+          </div>
+        </div>
+      </div>
 
-          <section className="sales-report-records">
-            <h2>Acquisition Records</h2>
-
-            <div className="records-table-wrapper">
-              <table className="records-table">
-                <thead>
-                  <tr>
-                    <th>Acquisition ID</th>
-                    <th>Supplier</th>
-                    <th>Item Count</th>
-                    <th>Total Cost</th>
-                    {/* <th>Payment Method</th> */}
-                    <th>Date</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {acquisitions.length === 0 && !isLoading ? (
-                    <tr>
-                      <td colSpan="6">No acquisition records found.</td>
-                    </tr>
-                  ) : (
-                    acquisitions.map((a) => (
-                      <tr
-                        key={a.acquisitionId}
-                        onClick={() => setSelectedAcquisition(a)}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <td>{a.acquisitionId}</td>
-                        <td>
-                          {supplierMap[a.supplier] ||
-                            a.supplier ||
-                            "Unknown Supplier"}
-                        </td>
-                        <td>{a.items?.length || 0}</td>
-                        <td>₱{a.totalAmount?.toFixed(2)}</td>
-                        {/* <td>{a.paymentMethod}</td> */}
-                        <td>
-                          {new Date(a.createdAt).toLocaleDateString("en-PH", {
-                            timeZone: "Asia/Manila",
-                          })}
-                        </td>
-                        <td>{a.status}</td>
-                      </tr>
-                    ))
-                  )}
-
-                  {isLoading && (
-                    <tr>
-                      <td colSpan="6" style={{ textAlign: "center" }}>
-                        Loading...
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-
-              {acquisitionPage >= acquisitionTotalPages &&
-                acquisitions.length > 0 && (
-                  <div
-                    style={{
-                      textAlign: "center",
-                      padding: "8px 0",
-                      color: "#666",
-                    }}
+      {/* --- Layout Grid for Tables & Charts --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 1. Transactions Table (Scrollable) */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[400px]">
+          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <h2 className="font-bold text-gray-800">Recent Sales</h2>
+          </div>
+          <div className="flex-1 overflow-y-auto" ref={containerRef}>
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-50 text-gray-600 sticky top-0 z-10">
+                <tr>
+                  <th className="px-6 py-3">ID</th>
+                  <th className="px-6 py-3">Customer</th>
+                  <th className="px-6 py-3">Type</th>
+                  <th className="px-6 py-3 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {records.map((r) => (
+                  <tr
+                    key={r.saleId}
+                    onClick={() => setSelectedSale(r)}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
                   >
-                    No more records
-                  </div>
-                )}
-            </div>
-
-            <div className="pagination">
-              <p className="pagination-info">
-                Showing {(acquisitionPage - 1) * 5 + 1}–
-                {Math.min(acquisitionPage * 5, acquisitionTotalItems)} of{" "}
-                {acquisitionTotalItems} acquisitions
-              </p>
-
-              <div className="pagination-buttons">
-                <button
-                  onClick={() =>
-                    setAcquisitionPage((prev) => Math.max(prev - 1, 1))
-                  }
-                  disabled={acquisitionPage === 1}
-                >
-                  Prev
-                </button>
-
-                {Array.from({ length: Math.min(7, acquisitionTotalPages) }).map(
-                  (_, idx) => {
-                    const start = Math.max(
-                      1,
-                      Math.min(acquisitionPage - 3, acquisitionTotalPages - 6)
-                    );
-                    const pageNumber = start + idx;
-                    if (pageNumber > acquisitionTotalPages) return null;
-                    return (
-                      <button
-                        key={pageNumber}
-                        onClick={() => setAcquisitionPage(pageNumber)}
-                        className={
-                          acquisitionPage === pageNumber ? "active" : ""
-                        }
+                    <td className="px-6 py-3 font-mono text-xs text-gray-500">
+                      {r.saleId}
+                    </td>
+                    <td className="px-6 py-3 font-medium text-gray-800">
+                      {r.customerName}
+                    </td>
+                    <td className="px-6 py-3 text-xs">
+                      <span
+                        className={`px-2 py-0.5 rounded-full ${
+                          r.orderType === "Online"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}
                       >
-                        {pageNumber}
-                      </button>
-                    );
-                  }
+                        {r.orderType}
+                      </span>
+                    </td>
+                    <td className="px-6 py-3 text-right font-bold text-brand-primary">
+                      ₱{Number(r.totalAmount).toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+                {!isLoading && records.length === 0 && (
+                  <tr>
+                    <td colSpan="4" className="text-center py-12 text-gray-400">
+                      No sales found
+                    </td>
+                  </tr>
                 )}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-                <button
-                  onClick={() =>
-                    setAcquisitionPage((prev) =>
-                      Math.min(prev + 1, acquisitionTotalPages)
-                    )
-                  }
-                  disabled={acquisitionPage === acquisitionTotalPages}
-                >
-                  Next
-                </button>
-              </div>
+        {/* 2. Acquisitions Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[400px]">
+          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+            <h2 className="font-bold text-gray-800">Acquisitions</h2>
+            <div className="flex gap-2">
+              <button
+                disabled={acquisitionPage === 1}
+                onClick={() => setAcquisitionPage((p) => p - 1)}
+                className="p-1 rounded hover:bg-gray-200 disabled:opacity-30"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                disabled={acquisitionPage === acquisitionTotalPages}
+                onClick={() => setAcquisitionPage((p) => p + 1)}
+                className="p-1 rounded hover:bg-gray-200 disabled:opacity-30"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
-          </section>
+          </div>
+          <div className="flex-1 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-50 text-gray-600">
+                <tr>
+                  <th className="px-6 py-3">Supplier</th>
+                  <th className="px-6 py-3">Items</th>
+                  <th className="px-6 py-3">Cost</th>
+                  <th className="px-6 py-3">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {acquisitions.map((a) => (
+                  <tr
+                    key={a.acquisitionId}
+                    onClick={() => setSelectedAcquisition(a)}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    <td className="px-6 py-3 font-medium text-gray-800 truncate max-w-[120px]">
+                      {supplierMap[a.supplier] || a.supplier || "Unknown"}
+                    </td>
+                    <td className="px-6 py-3 text-gray-500">
+                      {a.items?.length || 0}
+                    </td>
+                    <td className="px-6 py-3 font-bold text-gray-700">
+                      ₱{Number(a.totalAmount).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-3">
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                          a.status === "Completed"
+                            ? "bg-green-100 text-green-700"
+                            : a.status === "Cancelled"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {a.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {!isLoading && acquisitions.length === 0 && (
+                  <tr>
+                    <td colSpan="4" className="text-center py-12 text-gray-400">
+                      No acquisitions found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-          <div className="sales-chart-container">
-            <h2 className="sales-chart-title">Daily Sales Trend</h2>
-            <ResponsiveContainer width="100%" height={300}>
+        {/* 3. Daily Sales Chart */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 lg:col-span-2">
+          <h2 className="font-bold text-gray-800 mb-6">Daily Sales Trend</h2>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
               <LineChart data={lineData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ccc" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="#f0f0f0"
+                />
+                <XAxis
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: "#9ca3af" }}
+                  dy={10}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 12, fill: "#9ca3af" }}
+                  tickFormatter={(val) => `₱${val}`}
+                />
+                <Tooltip
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "none",
+                    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
+                  }}
+                />
                 <Line
                   type="monotone"
                   dataKey="total"
-                  name="Total Sale"
-                  stroke="#2ecc71"
+                  stroke="#ec4899"
                   strokeWidth={3}
-                  dot={{ r: 5 }}
+                  dot={{
+                    r: 4,
+                    fill: "#ec4899",
+                    stroke: "#fff",
+                    strokeWidth: 2,
+                  }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
+        </div>
 
-          <div className="sales-chart-container">
-            <h2 className="sales-chart-title">Sales by Category</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={barData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
+        {/* 4. Sales by Category (Bar) */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="font-bold text-gray-800 mb-6">Sales by Category</h2>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={barData} layout="vertical">
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  horizontal={false}
+                  stroke="#f0f0f0"
+                />
+                <XAxis type="number" hide />
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  width={100}
+                  tick={{ fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  cursor={{ fill: "transparent" }}
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "none",
+                    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
+                  }}
+                />
                 <Bar
                   dataKey="total"
-                  name="Total Sale Made"
-                  fill="#27ae60"
-                  barSize={40}
+                  fill="#be123c"
+                  radius={[0, 4, 4, 0]}
+                  barSize={20}
                 />
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
 
-          <div className="sales-chart-container">
-            <h2 className="sales-chart-title">
-              Sales Distribution by Category
-            </h2>
+        {/* 5. Sales Distribution (Pie) */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="font-bold text-gray-800 mb-6">
+            Category Distribution
+          </h2>
+          <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -665,8 +641,9 @@ const SalesReport = () => {
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  outerRadius={120}
-                  label
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={5}
                 >
                   {pieData.map((entry, index) => (
                     <Cell
@@ -675,14 +652,21 @@ const SalesReport = () => {
                     />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => `₱${value}`} />
-                <Legend verticalAlign="bottom" height={36} />
+                <Tooltip
+                  formatter={(val) => `₱${val.toFixed(2)}`}
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "none",
+                    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
+                  }}
+                />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" />
               </PieChart>
             </ResponsiveContainer>
           </div>
-        </main>
-      </DashboardLayout>
-    </>
+        </div>
+      </div>
+    </div>
   );
 };
 
