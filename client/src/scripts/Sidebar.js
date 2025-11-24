@@ -5,6 +5,7 @@ import { Menu } from "lucide-react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { ImHome, ImUsers, ImList } from "react-icons/im";
 import { CgBox } from "react-icons/cg";
+import { RiRefundLine } from "react-icons/ri";
 import {
   FaCashRegister,
   /* FaMoneyBillWave, */
@@ -69,6 +70,12 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
       label: "Sales Report",
       icon: <FaChartLine />,
       path: "/sales-report",
+      roles: ["admin", "owner"],
+    },
+    {
+      label: "Refund",
+      icon: <RiRefundLine />,
+      path: "/refund",
       roles: ["admin", "owner"],
     },
     {

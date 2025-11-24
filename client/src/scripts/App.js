@@ -18,6 +18,7 @@ import SupplierManagement from "../pages/SupplierManagement";
 import CustomerManagement from "../pages/CustomerManagement";
 import SalesManagement from "../pages/SalesManagement";
 import SalesReport from "../pages/SalesReport";
+import Refund from "../pages/Refund";
 import PurchaseOrder from "../pages/PurchaseOrder";
 import Report from "../pages/Report";
 import Notifications from "../pages/Notifications";
@@ -108,6 +109,18 @@ function App() {
               <ProtectedRoute>
                 <DashboardHeader />
                 <SalesReport />
+              </ProtectedRoute>
+            </>
+          }
+        />
+
+        <Route //Refund route
+          path="/refund"
+          element={
+            <>
+              <ProtectedRoute>
+                <DashboardHeader />
+                <Refund />
               </ProtectedRoute>
             </>
           }

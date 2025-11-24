@@ -1,7 +1,7 @@
 const Fuse = require("fuse.js");
 const InventoryItem = require("../models/InventoryItem");
 const Repack = require("../models/Repack");
-const Category = require("../models/Category");
+/* const Category = require("../models/Category"); */
 const Supplier = require("../models/Supplier");
 const Notification = require("../models/Notification");
 const User = require("../models/User");
@@ -11,11 +11,11 @@ const { createLog } = require("../controllers/activityLogController");
 const ActionRequest = require("../models/ActionRequest");
 
 // Helper: compute selling price based on preferred supplier and markup
-const computeSellingPrice = (suppliers, markup) => {
+/* const computeSellingPrice = (suppliers, markup) => {
   const preferred = suppliers.find((s) => s.isPreferred);
   if (!preferred) return 0;
   return preferred.purchasePrice * (1 + markup / 100);
-};
+}; */
 
 // Helper: calculate status based on currentStock, threshold, expirationDate
 const calculateStatus = (currentStock, threshold, expirationDate) => {

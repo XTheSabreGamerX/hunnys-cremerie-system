@@ -17,6 +17,6 @@ router.get("/:id", authenticateToken, getSaleById);
 
 router.post("/", authenticateToken, createSale);
 
-router.post("/:id/refund", authenticateToken, refundSale);
+router.put("/:id/refund", authenticateToken, refundSale);
 
 module.exports = router;
