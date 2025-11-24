@@ -8,6 +8,7 @@ import RefundModal from "../components/RefundModal";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
 
 import "../styles/App.css";
+import "../styles/Refund.css";
 
 const Refund = () => {
   const navigate = useNavigate();
@@ -181,9 +182,9 @@ const Refund = () => {
                     { key: "invoiceNumber", label: "Invoice #" },
                     { key: "customerName", label: "Customer" },
                     { key: "orderType", label: "Order Type" },
-                    { key: "totalAmount", label: "Amount" },
+                    { key: "totalAmount", label: "Total Amount" },
                     { key: "refund.status", label: "Refund Status" },
-                    { key: "createdAt", label: "Created" },
+                    { key: "createdAt", label: "Sale Created" },
                   ].map(({ key, label }) => (
                     <th
                       key={key}
