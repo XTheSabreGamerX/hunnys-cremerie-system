@@ -534,35 +534,14 @@ const batchUpdateStatuses = async () => {
   try {
     const items = await InventoryItem.find({ archived: false });
     const systemUserId = "6891c3c178b2ff675c9cdfd7";
-    const criticalStatuses = ["Low-Stock", "Critical", "Out of Stock"];
 
     for (const item of items) {
-      const oldStatus = item.status;
-
-      // Recalculate status first
-      item.status = calculateStatus(
-        item.currentStock,
-        item.threshold,
-        item.expirationDate
-      );
-
       item.updatedBy = item.updatedBy || systemUserId;
 
       item.$locals = item.$locals || {};
       item.$locals.skipLog = true;
 
-      // Only trigger notification if the status changed to a critical one
-      if (item.status !== oldStatus && criticalStatuses.includes(item.status)) {
-        await createNotification({
-          message: `Inventory item "${item.name}" is now ${item.status}.`,
-          type: "warning",
-          roles: ["admin", "owner", "manager"],
-          isGlobal: true,
-          eventType: "low_stock",
-        });
-      }
-
-      await item.save();
+      await updateItemStatus(item);
     }
 
     console.log("Batch status update complete");
@@ -597,11 +576,11 @@ const generateInventoryTable = ({
         </tr>`;
       for (const item of sec.items) {
         html += `<tr>
-          <td>${item.itemId}</td>
-          <td>${item.name}</td>
-          <td>${item.currentStock}</td>
-          <td>${item.threshold}</td>
-          <td>${item.status}</td>
+          <td>${item.itemId ?? item._id}</td>
+          <td>${item.name ?? "Unknown"}</td>
+          <td>${item.currentStock ?? 0}</td>
+          <td>${item.threshold ?? 0}</td>
+          <td>${item.status ?? "Unknown"}</td>
         </tr>`;
       }
       html += `</table><br/>`;
@@ -615,34 +594,28 @@ const sendDailyInventoryNotifications = async () => {
   try {
     const today = new Date().toDateString();
 
-    // Prevent multiple notifications per day
+    // Prevent duplicate notifications
     const existing = await Notification.findOne({
       type: "InventoryDailySummary",
     }).sort({ createdAt: -1 });
+
     if (existing && new Date(existing.createdAt).toDateString() === today) {
       console.log("Daily inventory notification already sent today.");
       return;
     }
 
-    const items = await InventoryItem.find({});
-    console.log(
-      "All items:",
-      items.map((i) => i.status)
-    );
+    // Fetch all items
+    let items = await InventoryItem.find({ archived: false });
 
-    // Fetch items by status
-    const criticalItems = await InventoryItem.find({
-      status: "Critical",
-      archived: false,
-    });
-    const lowStockItems = await InventoryItem.find({
-      status: "Low-stock",
-      archived: false,
-    });
-    const outOfStockItems = await InventoryItem.find({
-      status: "Out of stock",
-      archived: false,
-    });
+    // Recalculate status for each item using our util
+    for (let i = 0; i < items.length; i++) {
+      items[i] = await updateItemStatus(items[i]);
+    }
+
+    // Group items by status
+    const criticalItems = items.filter((i) => i.status === "Critical");
+    const lowStockItems = items.filter((i) => i.status === "Low-stock");
+    const outOfStockItems = items.filter((i) => i.status === "Out of Stock");
 
     if (
       criticalItems.length === 0 &&
@@ -662,21 +635,20 @@ const sendDailyInventoryNotifications = async () => {
     if (outOfStockItems.length > 0)
       message += `• Out of Stock: ${outOfStockItems.length}\n`;
 
-    // Save notification in DB
     await createNotification({
-      message: message,
-      type: "warning",
+      message,
+      type: "InventoryDailySummary",
       isGlobal: true,
     });
 
-    // Generate HTML table for email
+    // Generate HTML table
     const htmlTable = generateInventoryTable({
       criticalItems,
       lowStockItems,
       outOfStockItems,
     });
 
-    // Send email to all admins/managers/owners
+    // Send email
     const recipients = await User.find({
       role: { $in: ["admin", "owner", "manager"] },
       email: { $exists: true, $ne: "" },
@@ -685,7 +657,7 @@ const sendDailyInventoryNotifications = async () => {
 
     if (adminEmails.length > 0) {
       await transporter.sendMail({
-        from: `"Hunny's Cremerie" <${process.env.EMAIL_USER}>`,
+        from: `"Hunny's Crémerie" <${process.env.EMAIL_USER}>`,
         to: adminEmails.join(","),
         subject: "Daily Inventory Summary",
         html: htmlTable,
