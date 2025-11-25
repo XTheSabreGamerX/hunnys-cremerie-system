@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-// Removed unused nanoid import
 import {
   ShoppingCart,
   Search,
@@ -11,6 +10,7 @@ import {
   Tag,
   ChevronLeft,
   ShoppingBag,
+  Package,
 } from "lucide-react";
 
 import { authFetch, API_BASE } from "../utils/tokenUtils";
@@ -34,15 +34,13 @@ const SalesManagement = () => {
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showMobileCart, setShowMobileCart] = useState(false); // New: Mobile Toggle
+  const [showMobileCart, setShowMobileCart] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  // Removed unused totalItems state
 
   const navigate = useNavigate();
-  // Removed unused nanoid initialization
 
   // --- Auth Check ---
   useEffect(() => {
@@ -79,11 +77,11 @@ const SalesManagement = () => {
         ...item,
         stock: item.currentStock ?? item.stock ?? 0,
         unitPrice: Number(item.sellingPrice ?? item.unitPrice ?? 0),
+        unitName: item.unit?.name || item.unit || "—",
       }));
 
       setInventoryItems(mappedItems);
       setTotalPages(result.totalPages || 1);
-      // Removed setTotalItems call
     } catch (err) {
       console.error("Error fetching inventory:", err);
     }
@@ -237,8 +235,38 @@ const SalesManagement = () => {
     }
   };
 
+  // --- Helper for Status Colors ---
+  const renderStatusBadge = (status) => {
+    let colorClass = "bg-gray-100 text-gray-800";
+
+    if (
+      status === "Well-stocked" ||
+      status === "In Stock" ||
+      status === "Available"
+    ) {
+      colorClass = "bg-[#DCFCE7] text-[#166534]";
+    } else if (
+      status === "Critical" ||
+      status === "Low Stock" ||
+      status === "Low-stock"
+    ) {
+      colorClass = "bg-[#F3F4F6] text-[#1F2937]";
+    } else if (status === "Out of stock") {
+      colorClass = "bg-[#FEE2E2] text-[#991B1B]";
+    }
+
+    return (
+      <span
+        className={`px-2 py-1 rounded-full text-[10px] sm:text-xs font-medium uppercase whitespace-nowrap ${colorClass}`}
+      >
+        {status}
+      </span>
+    );
+  };
+
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] md:flex-row bg-gray-50 overflow-hidden relative">
+    // CHANGED: Uses dvh (dynamic viewport height) to fix mobile/laptop browser bar issues
+    <div className="flex flex-col h-[calc(100dvh-64px)] md:flex-row bg-gray-50 overflow-hidden relative">
       {popupMessage && (
         <PopupMessage
           message={popupMessage}
@@ -247,22 +275,21 @@ const SalesManagement = () => {
         />
       )}
 
-      {/* --- LEFT SIDE: PRODUCT LIST --- */}
-      {/* Hidden on mobile if cart is open */}
+      {/* --- LEFT SIDE: PRODUCT LIST (TABLE VIEW) --- */}
       <div
-        className={`flex-1 flex flex-col p-4 md:p-6 overflow-hidden ${
+        className={`flex-1 flex flex-col p-2 md:p-3 overflow-hidden ${
           showMobileCart ? "hidden md:flex" : "flex"
         }`}
       >
         {/* Header & Search */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 shrink-0">
-          <div className="w-full md:w-auto">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4 shrink-0">
+          <div className="w-full md:w-auto px-1">
             <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
               <ShoppingCart className="w-8 h-8 text-brand-primary" />
               Point of Sale
             </h1>
             <p className="text-gray-500 text-sm hidden md:block">
-              Select items to process a sale.
+              Select items from the list to add to cart.
             </p>
           </div>
 
@@ -281,75 +308,93 @@ const SalesManagement = () => {
           </div>
         </div>
 
-        {/* Product Grid */}
-        <div className="flex-1 overflow-y-auto pr-2 pb-20 md:pb-0">
-          {/* Adjusted grid columns for mobile (2 cols) */}
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
-            {inventoryItems.length === 0 ? (
-              <div className="col-span-full text-center py-12 text-gray-400">
-                No products found.
-              </div>
-            ) : (
-              inventoryItems.map((item) => {
-                const isOutOfStock =
-                  item.stock <= 0 ||
-                  item.status === "Out of stock" ||
-                  item.status === "Expired";
-
-                return (
-                  <div
-                    key={item._id}
-                    onClick={() => !isOutOfStock && handleAddToCart(item)}
-                    className={`bg-white p-3 md:p-4 rounded-xl border shadow-sm transition-all duration-200 flex flex-col justify-between h-36 md:h-40 cursor-pointer active:scale-95 md:active:scale-100
-                                    ${
-                                      isOutOfStock
-                                        ? "opacity-50 cursor-not-allowed bg-gray-50"
-                                        : "hover:border-brand-primary hover:shadow-md"
-                                    }`}
-                  >
-                    <div>
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-bold text-gray-800 line-clamp-2 text-xs md:text-sm leading-tight">
-                          {item.name}
-                        </h3>
-                        {!isOutOfStock && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-bold hidden sm:inline-block">
-                            Stock
-                          </span>
-                        )}
+        {/* Product List Table */}
+        <div className="flex-1 overflow-y-auto pr-1 pb-20 md:pb-0">
+          <div className="bg-white rounded-md shadow-sm border border-gray-200 overflow-x-auto">
+            <table className="w-full text-left text-sm min-w-[600px]">
+              <thead className="bg-[#F9FAFB] text-gray-600 font-medium border-b border-gray-200 sticky top-0 z-10">
+                <tr>
+                  <th className="px-3 py-3 whitespace-nowrap">Item ID</th>
+                  <th className="px-3 py-3">Name</th>
+                  <th className="px-3 py-3 text-center whitespace-nowrap">
+                    Stock
+                  </th>
+                  <th className="px-3 py-3 whitespace-nowrap">Price</th>
+                  <th className="px-3 py-3 whitespace-nowrap">Category</th>
+                  <th className="px-3 py-3 whitespace-nowrap">Unit</th>
+                  <th className="px-3 py-3 whitespace-nowrap">Status</th>
+                  <th className="px-3 py-3 text-right whitespace-nowrap">
+                    Expiration
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {inventoryItems.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" className="py-12 text-center text-gray-400">
+                      <div className="flex flex-col items-center gap-2">
+                        <Package className="w-10 h-10 opacity-20" />
+                        <p>No products found.</p>
                       </div>
-                      <p className="text-[10px] md:text-xs text-gray-500 mt-1 truncate">
-                        {item.category}
-                      </p>
-                    </div>
+                    </td>
+                  </tr>
+                ) : (
+                  inventoryItems.map((item) => {
+                    const isOutOfStock =
+                      item.stock <= 0 ||
+                      item.status === "Out of stock" ||
+                      item.status === "Expired";
 
-                    <div className="flex justify-between items-end mt-2">
-                      <div>
-                        <p className="text-[10px] text-gray-400">Price</p>
-                        <p className="font-bold text-sm md:text-lg text-brand-primary">
-                          ₱{Number(item.unitPrice).toFixed(2)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] text-gray-400">Stock</p>
-                        <p
-                          className={`font-medium text-xs md:text-sm ${
-                            item.stock < 10 ? "text-red-500" : "text-gray-700"
+                    return (
+                      <tr
+                        key={item._id}
+                        onClick={() => !isOutOfStock && handleAddToCart(item)}
+                        className={`transition-colors group h-14 border-b border-gray-50 last:border-none
+                          ${
+                            isOutOfStock
+                              ? "bg-gray-50 opacity-60 cursor-not-allowed"
+                              : "hover:bg-blue-50/50 cursor-pointer"
                           }`}
-                        >
-                          {item.stock}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+                      >
+                        <td className="px-3 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">
+                          {item.itemId || "—"}
+                        </td>
+                        <td className="px-3 py-3 font-medium text-gray-900 min-w-[120px]">
+                          {item.name}
+                        </td>
+                        <td className="px-3 py-3 text-center whitespace-nowrap">
+                          <span className="text-gray-700 font-semibold">
+                            {item.stock}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 font-bold text-gray-800 whitespace-nowrap">
+                          ₱{Number(item.unitPrice).toFixed(2)}
+                        </td>
+                        <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
+                          {item.category}
+                        </td>
+                        <td className="px-3 py-3 text-gray-600 whitespace-nowrap">
+                          {item.unitName}
+                        </td>
+                        <td className="px-3 py-3 whitespace-nowrap">
+                          {renderStatusBadge(item.status)}
+                        </td>
+                        <td className="px-3 py-3 text-right text-gray-600 whitespace-nowrap">
+                          {item.expirationDate
+                            ? new Date(item.expirationDate).toLocaleDateString()
+                            : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
         {/* Pagination */}
-        <div className="mt-4 flex items-center justify-between shrink-0 pb-20 md:pb-0">
+        <div className="mt-3 flex items-center justify-between shrink-0 pb-20 md:pb-0 px-1">
           <span className="text-xs md:text-sm text-gray-500">
             Page {currentPage} / {totalPages}
           </span>
@@ -373,14 +418,13 @@ const SalesManagement = () => {
       </div>
 
       {/* --- RIGHT SIDE: CART --- */}
-      {/* Hidden on mobile unless showMobileCart is true */}
       <div
-        className={`w-full md:w-96 bg-white border-l border-gray-200 flex-col shadow-xl z-20 absolute inset-0 md:relative md:flex ${
+        className={`w-full md:w-80 bg-white border-l border-gray-200 flex-col shadow-xl z-20 absolute inset-0 md:relative md:flex ${
           showMobileCart ? "flex" : "hidden"
         }`}
       >
         {/* Mobile Only: Back Button */}
-        <div className="md:hidden p-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+        <div className="md:hidden p-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
           <button
             onClick={() => setShowMobileCart(false)}
             className="p-2 -ml-2 rounded-full hover:bg-gray-200 text-gray-600"
@@ -393,12 +437,12 @@ const SalesManagement = () => {
         </div>
 
         {/* Desktop Header */}
-        <div className="hidden md:block p-4 border-b border-gray-100 bg-gray-50">
+        <div className="hidden md:block p-3 border-b border-gray-100 bg-gray-50">
           <h2 className="font-bold text-lg text-gray-800">Current Order</h2>
         </div>
 
         {/* Order Details Form */}
-        <div className="p-4 space-y-3 border-b border-gray-100 bg-white">
+        <div className="p-3 space-y-2 border-b border-gray-100 bg-white">
           <div>
             <label className="text-xs font-medium text-gray-500">
               Order Type
@@ -440,7 +484,7 @@ const SalesManagement = () => {
                 </select>
               )}
             </div>
-            <label className="flex items-center gap-2 mt-2 text-xs text-gray-500 cursor-pointer">
+            <label className="flex items-center gap-2 mt-1 text-xs text-gray-500 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isUnregistered}
@@ -466,7 +510,7 @@ const SalesManagement = () => {
         </div>
 
         {/* Cart Items List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white">
+        <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-white">
           {cartItems.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-2">
               <ShoppingCart className="w-12 h-12 opacity-20" />
@@ -476,7 +520,7 @@ const SalesManagement = () => {
             cartItems.map((item) => (
               <div
                 key={item._id}
-                className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100"
+                className="flex items-center justify-between bg-gray-50 p-2 rounded-lg border border-gray-100"
               >
                 <div className="flex-1">
                   <p className="font-medium text-sm text-gray-800 line-clamp-1">
@@ -486,11 +530,11 @@ const SalesManagement = () => {
                     ₱{Number(item.unitPrice).toFixed(2)}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1 bg-white rounded-md border border-gray-200 shadow-sm">
                     <button
                       onClick={() => handleQuantityChange(item._id, -1)}
-                      className="p-1.5 hover:bg-gray-100 text-gray-600"
+                      className="p-1 hover:bg-gray-100 text-gray-600"
                     >
                       <Minus className="w-3 h-3" />
                     </button>
@@ -499,7 +543,7 @@ const SalesManagement = () => {
                     </span>
                     <button
                       onClick={() => handleQuantityChange(item._id, 1)}
-                      className="p-1.5 hover:bg-gray-100 text-gray-600"
+                      className="p-1 hover:bg-gray-100 text-gray-600"
                     >
                       <Plus className="w-3 h-3" />
                     </button>
@@ -516,20 +560,20 @@ const SalesManagement = () => {
           )}
         </div>
 
-        {/* Footer / Checkout */}
-        <div className="p-4 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] text-sm safe-area-bottom">
-          <div className="space-y-1 mb-3">
-            <div className="flex justify-between text-gray-500">
+        {/* Footer / Checkout - INCREASED BOTTOM PADDING (pb-8) */}
+        <div className="px-4 pt-4 pb-8 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] text-sm safe-area-bottom">
+          <div className="space-y-1 mb-2">
+            <div className="flex justify-between text-gray-500 text-xs">
               <span>Subtotal</span>
               <span>₱{Number(rawSubtotal).toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-gray-500">
+            <div className="flex justify-between text-gray-500 text-xs">
               <span>Discount</span>
               <span className="text-green-600">
                 -₱{Number(safeDiscount).toFixed(2)}
               </span>
             </div>
-            <div className="flex justify-between text-gray-500">
+            <div className="flex justify-between text-gray-500 text-xs">
               <span>Tax ({taxRate}%)</span>
               <span>₱{Number(taxAmount).toFixed(2)}</span>
             </div>
@@ -544,7 +588,7 @@ const SalesManagement = () => {
           <button
             onClick={handleSaveSale}
             disabled={loading || cartItems.length === 0}
-            className="w-full py-3 bg-brand-primary text-white font-bold rounded-xl hover:bg-brand-dark transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-lg shadow-brand-primary/30"
+            className="w-full py-2 bg-brand-primary text-white font-bold rounded-xl hover:bg-brand-dark transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-lg shadow-brand-primary/30"
           >
             {loading ? (
               "Processing..."
@@ -558,7 +602,6 @@ const SalesManagement = () => {
       </div>
 
       {/* --- MOBILE FLOATING CART BAR --- */}
-      {/* Only visible on mobile when cart is hidden */}
       {!showMobileCart && (
         <div className="md:hidden fixed bottom-4 left-4 right-4 z-30">
           <button
