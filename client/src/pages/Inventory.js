@@ -1,112 +1,54 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { customAlphabet } from "nanoid/non-secure";
 import { Search, Plus, Edit, Trash2, Eye, Package } from "lucide-react";
 
-import EditModal from "../components/EditModal";
-import ViewModal from "../components/ViewModal";
+// --- MODALS ---
+import InventoryModal from "../components/InventoryModal";
+import InventoryViewModal from "../components/InventoryViewModal";
 import PopupMessage from "../components/PopupMessage";
 import ConfirmationModal from "../components/ConfirmationModal";
+
 import { showToast } from "../components/ToastContainer";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
 
 const Inventory = () => {
   const [items, setItems] = useState([]);
-  // Removed unused cakeItems state
   const [suppliers, setSuppliers] = useState([]);
   const [categories, setCategories] = useState({ inventory: [], cake: [] });
   const [uoms, setUoms] = useState([]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [columnFilter, setColumnFilter] = useState({ field: "", order: "" });
-  // Removed unused setInventoryType
   const [inventoryType] = useState("Inventory");
 
+  // --- Modal States ---
   const [selectedItem, setSelectedItem] = useState(null);
-  const [modalMode, setModalMode] = useState("view");
-  const [pendingEditData, setPendingEditData] = useState(null);
-  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [modalMode, setModalMode] = useState("view"); // 'view', 'add', 'edit'
+
+  // View Modal State
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewedItem, setViewedItem] = useState(null);
+
+  // Delete Confirmation State
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
 
+  // Pagination
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // Popup (Legacy, using Toast mostly now)
   const [popupMessage, setPopupMessage] = useState("");
   const [popupType, setPopupType] = useState("success");
 
   const navigate = useNavigate();
-  // Removed unused location hook
-  const nanoid = customAlphabet("0123456789", 6);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) navigate("/login");
   }, [navigate]);
 
-  // --- Configurations ---
-  const inventoryFields = [
-    {
-      label: "Item Name",
-      name: "name",
-      required: true,
-      placeholder: "e.g. All Purpose Flour",
-    },
-    {
-      label: "Category",
-      name: "category",
-      type: "select",
-      options: (categories.inventory || []).map((c) => ({
-        value: c.name,
-        label: c.name,
-      })), // Server stores Category NAME, not ID
-      required: true,
-    },
-    {
-      label: "Purchase Price",
-      name: "purchasePrice",
-      type: "number",
-      placeholder: "Cost per unit",
-      required: true,
-    },
-    {
-      label: "Unit Price (Selling)",
-      name: "unitPrice",
-      type: "number",
-      required: true,
-      placeholder: "Selling price",
-    },
-    {
-      label: "Unit of Measurement",
-      name: "unit",
-      type: "select",
-      options: uoms.map((u) => ({ value: u._id, label: u.name })),
-      required: true,
-    },
-    {
-      label: "Supplier",
-      name: "supplier",
-      type: "select",
-      options: suppliers.map((s) => ({ value: s._id, label: s.name })),
-    },
-    {
-      label: "Stock Quantity",
-      name: "stock",
-      type: "number",
-      required: true,
-      placeholder: "Current stock count",
-    },
-    {
-      label: "Restock Threshold",
-      name: "restockThreshold",
-      type: "number",
-      placeholder: "Notify when stock reaches this level",
-    },
-    { label: "Expiration Date", name: "expirationDate", type: "date" },
-  ];
-
-  // --- Fetch Data (With Normalization) ---
+  // --- Fetch Data ---
   const fetchItems = useCallback(async () => {
     try {
       let baseUrl = `${API_BASE}/api/${
@@ -118,8 +60,8 @@ const Inventory = () => {
 
       if (searchQuery && searchQuery.trim() !== "")
         params.append("search", searchQuery.trim());
+
       if (columnFilter.field) {
-        // Map frontend sort fields to backend fields if necessary
         let sortField = columnFilter.field;
         if (sortField === "stock") sortField = "currentStock";
         if (sortField === "unitPrice") sortField = "sellingPrice";
@@ -138,20 +80,18 @@ const Inventory = () => {
 
       const rawItems = result.items || [];
 
-      // --- DATA MAPPING (Server -> Client) ---
+      // Normalize Data for Table Display
       const mappedItems = rawItems.map((item) => {
-        // Extract Purchase Price from suppliers array
+        // Normalize Supplier Data for Display
         const mainSupplier =
           item.suppliers && item.suppliers.length > 0 ? item.suppliers[0] : {};
 
         return {
           ...item,
-          // Map Server Fields to Client Fields
           stock: item.currentStock ?? 0,
           unitPrice: item.sellingPrice ?? 0,
           purchasePrice: mainSupplier.purchasePrice ?? 0,
           restockThreshold: item.threshold ?? 0,
-          // Keep Supplier ID for the dropdown
           supplier: mainSupplier.supplier?._id || mainSupplier.supplier || "",
         };
       });
@@ -160,13 +100,12 @@ const Inventory = () => {
         setItems(mappedItems);
         setTotalPages(result.totalPages || 1);
       }
-      // Removed else block for cakeItems since it's unreachable/unused
     } catch (err) {
       console.error("Error fetching inventory:", err);
     }
   }, [page, searchQuery, columnFilter, inventoryType]);
 
-  // Load Settings
+  // --- Load Settings (Dropdowns) ---
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -201,7 +140,6 @@ const Inventory = () => {
   }, [fetchItems]);
 
   // --- Handlers ---
-
   const handleColumnClick = (field) => {
     setColumnFilter((prev) => ({
       field,
@@ -211,73 +149,8 @@ const Inventory = () => {
   };
 
   const handleEditClick = (item) => {
-    // Prepare data for the form (normalize Unit Object to ID)
-    const unitId =
-      item.unit && typeof item.unit === "object" ? item.unit._id : item.unit;
-
-    // Format date for input type="date"
-    let expDate = "";
-    if (item.expirationDate) {
-      expDate = new Date(item.expirationDate).toISOString().split("T")[0];
-    }
-
-    const preparedItem = {
-      ...item,
-      unit: unitId,
-      expirationDate: expDate,
-    };
-
-    setSelectedItem(preparedItem);
+    setSelectedItem(item);
     setModalMode("edit");
-  };
-
-  const saveItem = async (data) => {
-    try {
-      let method = modalMode.includes("add") ? "POST" : "PUT";
-      let url =
-        modalMode === "add"
-          ? `${API_BASE}/api/inventory`
-          : `${API_BASE}/api/inventory/${data._id}`;
-
-      if (modalMode === "add" && !data.itemId) data.itemId = `INV-${nanoid(6)}`;
-
-      // --- DATA MAPPING (Client -> Server) ---
-      const payload = {
-        itemId: data.itemId,
-        name: data.name,
-        // Map Client Fields back to Server Fields
-        currentStock: Number(data.stock),
-        threshold: Number(data.restockThreshold),
-        sellingPrice: Number(data.unitPrice),
-        category: data.category,
-        unit: data.unit,
-        expirationDate: data.expirationDate,
-        // Construct Suppliers Array
-        suppliers: [
-          {
-            supplier: data.supplier,
-            purchasePrice: Number(data.purchasePrice),
-            isPreferred: true,
-          },
-        ],
-      };
-
-      const res = await authFetch(url, {
-        method,
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || "Save failed");
-      }
-
-      showToast({ message: "Saved successfully!", type: "success" });
-      fetchItems();
-      setModalMode("view");
-    } catch (err) {
-      showToast({ message: err.message || "Failed to save", type: "error" });
-    }
   };
 
   const handleDelete = async () => {
@@ -327,6 +200,7 @@ const Inventory = () => {
         onClose={() => setPopupMessage("")}
       />
 
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -347,6 +221,7 @@ const Inventory = () => {
         </div>
       </div>
 
+      {/* Search & Add Actions */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative w-full md:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -371,6 +246,7 @@ const Inventory = () => {
         </button>
       </div>
 
+      {/* Data Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -451,12 +327,14 @@ const Inventory = () => {
                           setIsViewOpen(true);
                         }}
                         className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md"
+                        title="View Details"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleEditClick(item)}
                         className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-md"
+                        title="Edit Item"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
@@ -466,6 +344,7 @@ const Inventory = () => {
                           setIsConfirmOpen(true);
                         }}
                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md"
+                        title="Delete Item"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -477,6 +356,7 @@ const Inventory = () => {
           </table>
         </div>
 
+        {/* Pagination */}
         <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
           <span className="text-sm text-gray-500">
             Page {page} of {totalPages}
@@ -500,60 +380,41 @@ const Inventory = () => {
         </div>
       </div>
 
+      {/* --- MODALS SECTION --- */}
+
+      {/* ADD/EDIT MODAL */}
       {(modalMode === "edit" || modalMode === "add") && (
-        <EditModal
+        <InventoryModal
+          isOpen={true}
           mode={modalMode}
-          modalType="inventory"
-          fields={inventoryFields}
-          item={modalMode === "edit" ? selectedItem : null}
-          onClose={() => setModalMode("view")}
-          onSave={(data) => {
-            setPendingEditData(data);
-            setShowConfirmation(true);
+          item={selectedItem}
+          categories={categories.inventory || []}
+          uoms={uoms}
+          suppliers={suppliers}
+          onItemAdded={() => {
+            fetchItems();
+            setModalMode("view");
           }}
-          allItems={items}
-          setPopupMessage={setPopupMessage}
-          setPopupType={setPopupType}
+          onClose={() => {
+            setModalMode("view");
+            setSelectedItem(null);
+          }}
         />
       )}
 
+      {/* VIEW DETAILS MODAL */}
       {isViewOpen && viewedItem && (
-        <ViewModal
+        <InventoryViewModal
+          isOpen={isViewOpen}
           item={viewedItem}
-          fields={[
-            { name: "name", label: "Item Name" },
-            { name: "stock", label: "Stock" },
-            {
-              name: "purchasePrice",
-              label: "Cost (₱)",
-              render: (val) => `₱${Number(val || 0).toFixed(2)}`,
-            },
-            {
-              name: "unitPrice",
-              label: "Selling Price (₱)",
-              render: (val) => `₱${Number(val || 0).toFixed(2)}`,
-            },
-            { name: "status", label: "Status" },
-          ]}
-          onClose={() => setIsViewOpen(false)}
-          onDelete={() => {
-            setItemToDelete(viewedItem);
-            setIsConfirmOpen(true);
+          onClose={() => {
+            setIsViewOpen(false);
+            setViewedItem(null);
           }}
         />
       )}
 
-      {showConfirmation && (
-        <ConfirmationModal
-          message="Save changes to inventory?"
-          onConfirm={() => {
-            saveItem(pendingEditData);
-            setShowConfirmation(false);
-          }}
-          onCancel={() => setShowConfirmation(false)}
-        />
-      )}
-
+      {/* DELETE CONFIRMATION */}
       {isConfirmOpen && (
         <ConfirmationModal
           message="Are you sure you want to delete this item?"

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { customAlphabet } from "nanoid/non-secure";
-import { X, Plus, Trash2, Star } from "lucide-react";
+import { Plus, Trash2, Star, StarOff, X } from "lucide-react";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
+import { showToast } from "./ToastContainer";
 
 const InventoryModal = ({
   isOpen,
@@ -32,42 +33,44 @@ const InventoryModal = ({
     purchasePrice: 0,
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const nanoid = customAlphabet("0123456789", 6);
 
-  // Initialize Data
+  // ------------------------- EDIT MODE INITIALIZATION -------------------------
   useEffect(() => {
     if (mode === "edit" && item) {
       const categoryId =
-        categories.find((c) => c.name === item.category)?._id ||
-        item.category ||
-        "";
-      const unitId = item.unit?._id || item.unit || "";
+        typeof item.category === "object"
+          ? item.category?._id || ""
+          : categories.find((c) => c.name === item.category)?._id ||
+            item.category ||
+            "";
+
+      const unitId = item.unit?._id || item.unit?.$oid || item.unit || "";
+
       const normalizedSuppliers =
         item.suppliers?.map((s) => ({
-          supplier: s.supplier?._id || s.supplier || "",
+          supplier: s.supplier?._id || s.supplier?.$oid || s.supplier || "",
           purchasePrice: s.purchasePrice,
-          _id: s._id,
+          _id: s._id?.$oid || s._id,
           isPreferred: s.isPreferred || false,
         })) || [];
+
+      const expirationDate = item.expirationDate?.$date
+        ? item.expirationDate.$date.split("T")[0]
+        : item.expirationDate?.split?.("T")[0] || "";
 
       setFormData({
         ...item,
         category: categoryId,
         unit: unitId,
         suppliers: normalizedSuppliers,
-        expirationDate: item.expirationDate
-          ? new Date(item.expirationDate).toISOString().split("T")[0]
-          : "",
+        expirationDate,
         sellingPrice: item.lastManualPrice ?? item.sellingPrice,
+        lastManualPrice: item.lastManualPrice ?? item.sellingPrice,
       });
-    }
-  }, [mode, item, categories]);
-
-  // Reset
-  useEffect(() => {
-    if (!isOpen) {
+    } else {
+      // Reset for Add Mode
       setFormData({
         itemId: "",
         name: "",
@@ -81,76 +84,177 @@ const InventoryModal = ({
         suppliers: [],
         note: "",
       });
-      setTempSupplier({ supplier: "", purchasePrice: 0 });
-      setError("");
     }
-  }, [isOpen]);
+  }, [mode, item, categories, isOpen]);
 
+  // ------------------------- ITEM ID GENERATION -------------------------
+  useEffect(() => {
+    if (
+      mode === "add" &&
+      formData.name &&
+      formData.category &&
+      !formData.itemId
+    ) {
+      const generateItemCode = (name, categoryName) => {
+        const namePart = (name?.substring(0, 3) || "XXX").toUpperCase();
+        const categoryPart = (
+          categoryName?.substring(0, 3) || "XXX"
+        ).toUpperCase();
+        const randomPart = nanoid();
+        return `${namePart}-${categoryPart}-${randomPart}`;
+      };
+      const categoryName =
+        categories.find((c) => c._id === formData.category)?.name || "";
+      setFormData((prev) => ({
+        ...prev,
+        itemId: generateItemCode(prev.name, categoryName),
+      }));
+    }
+  }, [
+    formData.name,
+    formData.category,
+    mode,
+    categories,
+    nanoid,
+    formData.itemId,
+  ]);
+
+  // ------------------------- FORM VALIDATION -------------------------
+  const isFormValid = () => {
+    if (!formData.name.trim() || !formData.category || !formData.unit)
+      return false;
+    if (formData.currentStock < 0 || formData.sellingPrice < 0) return false;
+    if (formData.suppliers.length === 0) return false;
+    return true;
+  };
+
+  // ------------------------- INPUT CHANGE -------------------------
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
     setFormData((prev) => {
       let updated = { ...prev, [name]: value };
-      if (name === "sellingPrice")
-        updated.lastManualPrice = parseFloat(value) || 0;
+
+      if (name === "sellingPrice") {
+        const typedPrice = parseFloat(value) || 0;
+        updated.lastManualPrice = typedPrice;
+      }
+
       if (name === "markup") {
         updated.markup = parseFloat(value) || 0;
         const preferred = prev.suppliers.find((s) => s.isPreferred);
-        if (preferred)
+        if (preferred) {
           updated.sellingPrice =
             preferred.purchasePrice * (1 + updated.markup / 100);
+        }
       }
+
       return updated;
     });
   };
 
+  // ------------------------- ADD / REMOVE SUPPLIER -------------------------
   const handleAddSupplier = () => {
-    if (!tempSupplier.supplier || tempSupplier.purchasePrice <= 0) return;
+    if (!tempSupplier.supplier || tempSupplier.purchasePrice <= 0) {
+      showToast({ message: "Select supplier and valid price.", type: "error" });
+      return;
+    }
+    if (formData.suppliers.some((s) => s.supplier === tempSupplier.supplier)) {
+      showToast({ message: "Supplier already added.", type: "error" });
+      return;
+    }
+
     setFormData((prev) => {
-      const newSuppliers = [
+      const updatedSuppliers = [
         ...prev.suppliers,
         { ...tempSupplier, isPreferred: prev.suppliers.length === 0 },
       ];
-      // Recalculate price if first supplier added
-      const preferred = newSuppliers.find((s) => s.isPreferred);
-      const newPrice = preferred
-        ? preferred.purchasePrice * (1 + prev.markup / 100)
-        : prev.sellingPrice;
-      return { ...prev, suppliers: newSuppliers, sellingPrice: newPrice };
+      const preferred = updatedSuppliers.find((s) => s.isPreferred);
+      return {
+        ...prev,
+        suppliers: updatedSuppliers,
+        sellingPrice: preferred
+          ? preferred.purchasePrice * (1 + prev.markup / 100)
+          : prev.sellingPrice,
+      };
     });
     setTempSupplier({ supplier: "", purchasePrice: 0 });
   };
 
+  const handleRemoveSupplier = (index) => {
+    setFormData((prev) => {
+      const updatedSuppliers = prev.suppliers.filter((_, i) => i !== index);
+      if (
+        !updatedSuppliers.some((s) => s.isPreferred) &&
+        updatedSuppliers.length > 0
+      ) {
+        updatedSuppliers[0].isPreferred = true;
+      }
+      const preferred = updatedSuppliers.find((s) => s.isPreferred);
+      return {
+        ...prev,
+        suppliers: updatedSuppliers,
+        sellingPrice: preferred
+          ? preferred.purchasePrice * (1 + prev.markup / 100)
+          : prev.sellingPrice,
+      };
+    });
+  };
+
+  const handleSetPreferredSupplier = (index) => {
+    setFormData((prev) => {
+      const updatedSuppliers = prev.suppliers.map((s, i) => ({
+        ...s,
+        isPreferred: i === index,
+      }));
+      const preferred = updatedSuppliers.find((s) => s.isPreferred);
+      return {
+        ...prev,
+        suppliers: updatedSuppliers,
+        sellingPrice: preferred.purchasePrice * (1 + prev.markup / 100),
+      };
+    });
+  };
+
+  // ------------------------- SUBMIT -------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    try {
-      const url =
-        mode === "edit"
-          ? `${API_BASE}/api/inventory/${item._id}`
-          : `${API_BASE}/api/inventory`;
-      const method = mode === "edit" ? "PUT" : "POST";
 
-      // Map ID back to Name for backend if needed, or send ID if backend updated
+    try {
+      const isEdit = mode === "edit";
+      const url = isEdit
+        ? `${API_BASE}/api/inventory/${item._id}`
+        : `${API_BASE}/api/inventory`;
+      const method = isEdit ? "PUT" : "POST";
+
       const categoryName =
         categories.find((c) => c._id === formData.category)?.name || "";
 
       const payload = {
         ...formData,
-        category: categoryName, // Backend expects Name string based on your controller
-        threshold: Number(formData.currentStock), // Threshold = Stock logic from your controller
-        itemId: mode === "add" ? `INV-${nanoid()}` : formData.itemId,
+        category: categoryName,
+        threshold: 5,
+        note: formData.note || "",
+        sellingPrice: parseFloat(Number(formData.sellingPrice) || 0).toFixed(2),
+        lastManualPrice: parseFloat(
+          Number(formData.lastManualPrice) || 0
+        ).toFixed(2),
       };
 
       const res = await authFetch(url, {
         method,
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Failed to save");
 
-      onItemAdded(await res.json());
-      onClose();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to save item");
+
+      showToast({ message: "Item saved successfully!", type: "success" });
+      onItemAdded?.(data);
+      onClose?.();
     } catch (err) {
-      setError(err.message);
+      showToast({ message: err.message, type: "error" });
     } finally {
       setLoading(false);
     }
@@ -159,57 +263,102 @@ const InventoryModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+    // CHANGED: Added z-[9999] to cover everything (including sidebar)
+    // CHANGED: Adjusted p-4 to give spacing from screen edges
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      {/* CHANGED: Reduced max-w-2xl to slightly narrower width and reduced internal padding */}
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-xl font-bold text-gray-800">
-            {mode === "edit" ? "Edit Item" : "Add New Item"}
+        {/* CHANGED: Reduced vertical padding (py-3) */}
+        <div className="px-6 py-3 border-b border-gray-100 flex justify-between items-center bg-white shrink-0">
+          <h2 className="text-lg font-bold text-gray-800">
+            {mode === "edit" ? "Edit Inventory Item" : "Add Inventory Item"}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-full hover:bg-gray-100"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="p-6 overflow-y-auto">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">
-              {error}
+        {/* Form Body */}
+        {/* CHANGED: Reduced padding (p-5) and spacing (space-y-4) */}
+        <div className="p-5 overflow-y-auto">
+          <form id="invForm" onSubmit={handleSubmit} className="space-y-4">
+            {/* Row 1: Name */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">
+                Item Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary outline-none transition-all"
+                placeholder="e.g. All Purpose Flour"
+              />
             </div>
-          )}
 
-          <form id="invForm" onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Row 2: Markup & Stock */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Item Name *
+                <label className="block text-xs font-bold text-gray-600 mb-1">
+                  Markup (%)
                 </label>
                 <input
-                  required
-                  type="text"
-                  name="name"
-                  value={formData.name}
+                  type="number"
+                  name="markup"
+                  min="0"
+                  max="100"
+                  value={formData.markup}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-primary outline-none"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary outline-none transition-all"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category *
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Current Stock <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  name="currentStock"
+                  min="0"
+                  value={formData.currentStock}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Row 3: Price, Category, Unit */}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Selling Price ₱ <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  name="sellingPrice"
+                  min="0"
+                  step="0.01"
+                  value={formData.sellingPrice}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary outline-none bg-gray-50"
+                />
+              </div>
+              <div className="col-span-1">
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Category <span className="text-red-500">*</span>
                 </label>
                 <select
-                  required
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-primary outline-none bg-white"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary outline-none bg-white"
                 >
-                  <option value="">Select Category</option>
+                  <option value="">Select</option>
                   {categories.map((c) => (
                     <option key={c._id} value={c._id}>
                       {c.name}
@@ -217,32 +366,17 @@ const InventoryModal = ({
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Stock *
-                </label>
-                <input
-                  required
-                  type="number"
-                  min="0"
-                  name="currentStock"
-                  value={formData.currentStock}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-primary outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Unit *
+              <div className="col-span-1">
+                <label className="block text-xs font-bold text-gray-700 mb-1">
+                  Unit <span className="text-red-500">*</span>
                 </label>
                 <select
-                  required
                   name="unit"
                   value={formData.unit}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-brand-primary outline-none bg-white"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary outline-none bg-white"
                 >
-                  <option value="">Select Unit</option>
+                  <option value="">Select</option>
                   {uoms.map((u) => (
                     <option key={u._id} value={u._id}>
                       {u.name}
@@ -252,62 +386,37 @@ const InventoryModal = ({
               </div>
             </div>
 
-            {/* Pricing */}
-            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Markup (%)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  name="markup"
-                  value={formData.markup}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded-lg outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Selling Price (₱)
-                </label>
-                <input
-                  required
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  name="sellingPrice"
-                  value={formData.sellingPrice}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded-lg outline-none font-bold text-brand-primary"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Expiration
-                </label>
-                <input
-                  type="date"
-                  name="expirationDate"
-                  value={formData.expirationDate}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded-lg outline-none"
-                />
-              </div>
+            {/* Row 4: Expiration */}
+            <div>
+              <label className="block text-xs font-bold text-gray-600 mb-1">
+                Expiration Date
+              </label>
+              <input
+                type="date"
+                name="expirationDate"
+                value={formData.expirationDate}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary outline-none transition-all"
+              />
             </div>
 
-            {/* Suppliers */}
-            <div>
-              <h3 className="text-sm font-bold text-gray-800 mb-2">
-                Suppliers
-              </h3>
-              <div className="flex gap-2 mb-3">
+            {/* Row 5: Suppliers */}
+            <div className="border-t border-gray-100 pt-3">
+              <label className="block text-xs font-bold text-gray-800 mb-2">
+                Suppliers <span className="text-red-500">*</span>
+              </label>
+
+              {/* Add Supplier Inputs */}
+              <div className="flex gap-2 mb-2">
                 <select
                   value={tempSupplier.supplier}
                   onChange={(e) =>
-                    setTempSupplier((p) => ({ ...p, supplier: e.target.value }))
+                    setTempSupplier((prev) => ({
+                      ...prev,
+                      supplier: e.target.value,
+                    }))
                   }
-                  className="flex-1 px-3 py-2 border rounded-lg outline-none bg-white"
+                  className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white outline-none focus:ring-2 focus:ring-brand-primary"
                 >
                   <option value="">Select Supplier</option>
                   {suppliers.map((s) => (
@@ -318,81 +427,118 @@ const InventoryModal = ({
                 </select>
                 <input
                   type="number"
-                  min="0"
                   placeholder="Cost"
+                  min="0"
                   value={tempSupplier.purchasePrice}
                   onChange={(e) =>
-                    setTempSupplier((p) => ({
-                      ...p,
+                    setTempSupplier((prev) => ({
+                      ...prev,
                       purchasePrice: Number(e.target.value),
                     }))
                   }
-                  className="w-32 px-3 py-2 border rounded-lg outline-none"
+                  className="w-20 px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-brand-primary"
                 />
                 <button
                   type="button"
                   onClick={handleAddSupplier}
-                  className="p-2 bg-brand-primary text-white rounded-lg hover:bg-brand-dark"
+                  className="p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center shrink-0"
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="space-y-2">
-                {formData.suppliers.map((s, idx) => (
-                  <div
-                    key={idx}
-                    className="flex justify-between items-center p-2 bg-gray-50 rounded-lg border border-gray-100 text-sm"
-                  >
-                    <span className="font-medium text-gray-700">
-                      {suppliers.find((sup) => sup._id === s.supplier)?.name ||
-                        "Unknown"}
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-gray-600">₱{s.purchasePrice}</span>
-                      {s.isPreferred && (
-                        <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData((p) => ({
-                            ...p,
-                            suppliers: p.suppliers.filter((_, i) => i !== idx),
-                          }));
-                        }}
-                        className="text-red-400 hover:text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-                {formData.suppliers.length === 0 && (
-                  <p className="text-sm text-gray-400 italic">
-                    No suppliers added.
+              {/* List of Added Suppliers */}
+              <div className="space-y-2 max-h-32 overflow-y-auto pr-1 custom-scrollbar">
+                {formData.suppliers.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic text-center py-1">
+                    No suppliers added yet.
                   </p>
+                ) : (
+                  formData.suppliers.map((s, index) => {
+                    const supplierName =
+                      suppliers.find((sup) => sup._id === s.supplier)?.name ||
+                      "Unknown";
+                    return (
+                      <div
+                        key={index}
+                        className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded-lg border border-gray-200 text-xs group hover:border-brand-primary/30 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleSetPreferredSupplier(index)}
+                            className="text-gray-400 hover:text-yellow-500 transition-colors"
+                            title="Set as Preferred Supplier"
+                          >
+                            {s.isPreferred ? (
+                              <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
+                            ) : (
+                              <StarOff className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                          <span className="font-medium text-gray-700 truncate max-w-[150px]">
+                            {supplierName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono text-gray-600 font-semibold">
+                            ₱{s.purchasePrice.toFixed(2)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSupplier(index)}
+                            className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>
+
+            {/* Optional Note */}
+            {mode === "edit" && (
+              <div>
+                <label className="block text-xs font-bold text-gray-600 mb-1">
+                  Edit Note
+                </label>
+                <textarea
+                  name="note"
+                  rows="2"
+                  value={formData.note}
+                  onChange={handleInputChange}
+                  placeholder="Reason for editing..."
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary outline-none transition-all resize-none"
+                />
+              </div>
+            )}
           </form>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+        {/* CHANGED: Reduced padding (py-3) */}
+        <div className="px-6 py-3 border-t border-gray-100 bg-gray-50 flex justify-end gap-3 shrink-0">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-white border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
+            className="px-4 py-2 text-sm bg-white border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             form="invForm"
-            disabled={loading}
-            className="px-4 py-2 bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-dark disabled:opacity-50"
+            disabled={loading || !isFormValid()}
+            className="px-6 py-2 text-sm bg-brand-primary text-white font-medium rounded-lg hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
           >
-            {loading ? "Saving..." : "Save Item"}
+            {loading
+              ? "Saving..."
+              : mode === "edit"
+              ? "Save Changes"
+              : "Add Item"}
           </button>
         </div>
       </div>
