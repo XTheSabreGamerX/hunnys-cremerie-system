@@ -20,7 +20,7 @@ const PurchaseOrderManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  // Removed unused totalItems state
+
   const [sortField, setSortField] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
 
@@ -64,7 +64,6 @@ const PurchaseOrderManagement = () => {
 
       setPurchaseOrders(data.items || []);
       setTotalPages(data.totalPages || 1);
-      // Removed setTotalItems call
     } catch (err) {
       console.error("Error fetching POs:", err);
       showPopup("Failed to load purchase orders.", "error");
@@ -140,14 +139,19 @@ const PurchaseOrderManagement = () => {
     }
   };
 
-  // --- Helper for Status Colors ---
+  // --- Helper for Status Colors (Updated Design) ---
   const renderStatusBadge = (status) => {
     let colorClass = "bg-gray-100 text-gray-800";
-    if (status === "Completed") colorClass = "bg-green-100 text-green-800";
-    else if (status === "Pending") colorClass = "bg-amber-100 text-amber-800";
-    else if (status === "Partially Delivered")
-      colorClass = "bg-blue-100 text-blue-800";
-    else if (status === "Cancelled") colorClass = "bg-red-100 text-red-800";
+
+    if (status === "Completed") {
+      colorClass = "bg-[#DCFCE7] text-[#166534]"; // Green
+    } else if (status === "Pending") {
+      colorClass = "bg-[#FEF3C7] text-[#92400E]"; // Amber
+    } else if (status === "Partially Delivered") {
+      colorClass = "bg-[#DBEAFE] text-[#1E40AF]"; // Blue
+    } else if (status === "Cancelled") {
+      colorClass = "bg-[#FEE2E2] text-[#991B1B]"; // Red
+    }
 
     return (
       <span
@@ -159,7 +163,7 @@ const PurchaseOrderManagement = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="h-[calc(100dvh-64px)] flex flex-col space-y-6 p-6 overflow-hidden">
       {popupMessage && (
         <PopupMessage
           message={popupMessage}
@@ -219,7 +223,7 @@ const PurchaseOrderManagement = () => {
       )}
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
             <Box className="w-8 h-8 text-brand-primary" />
@@ -232,7 +236,7 @@ const PurchaseOrderManagement = () => {
       </div>
 
       {/* Actions */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between shrink-0">
         <div className="relative w-full md:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
@@ -256,10 +260,10 @@ const PurchaseOrderManagement = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex-1 flex flex-col">
+        <div className="overflow-x-auto flex-1">
           <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200">
+            <thead className="bg-gray-50 text-gray-600 font-medium border-b border-gray-200 sticky top-0 z-10">
               <tr>
                 {[
                   { key: "poNumber", label: "PO Number" },
@@ -295,7 +299,7 @@ const PurchaseOrderManagement = () => {
                 purchaseOrders.map((po) => (
                   <tr
                     key={po._id}
-                    className="hover:bg-gray-50/50 transition-colors"
+                    className="hover:bg-gray-50/50 transition-colors group"
                   >
                     <td className="px-6 py-4 font-mono text-xs text-gray-500 font-bold">
                       #{po.poNumber}
@@ -315,7 +319,7 @@ const PurchaseOrderManagement = () => {
                     <td className="px-6 py-4 text-gray-400 text-xs">
                       {new Date(po.updatedAt).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 text-right flex justify-end gap-2">
+                    <td className="px-6 py-4 text-right flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       {po.status !== "Cancelled" &&
                         po.status !== "Completed" && (
                           <button
@@ -348,7 +352,7 @@ const PurchaseOrderManagement = () => {
         </div>
 
         {/* Pagination */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between shrink-0 bg-white">
           <span className="text-sm text-gray-500">
             Page {page} of {totalPages}
           </span>
@@ -356,14 +360,14 @@ const PurchaseOrderManagement = () => {
             <button
               disabled={page === 1}
               onClick={() => setPage((p) => p - 1)}
-              className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
+              className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 transition-colors"
             >
               Prev
             </button>
             <button
               disabled={page === totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-50"
+              className="px-3 py-1 border border-gray-200 rounded hover:bg-gray-50 disabled:opacity-50 transition-colors"
             >
               Next
             </button>
