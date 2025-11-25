@@ -307,6 +307,22 @@
   border-color: #007bff;
 }
 
+/* Senior/PWD and Unregistered checkboxes */
+.pos-order-info label.pos-discount-toggle,
+.pos-order-info label.pos-unregistered-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+.pos-order-info input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
 /* Unregistered toggle checkbox */
 .pos-unregistered-toggle {
   display: flex;
