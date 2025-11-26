@@ -245,7 +245,7 @@ const Sidebar = ({ isCollapsed, toggleSidebar }) => {
 
         {/* --- Navigation Items --- */}
         <div className="flex-1 overflow-y-auto py-4 scrollbar-thin scrollbar-thumb-rose-700 scrollbar-track-transparent">
-          <nav className="flex flex-col gap-1 px-2">
+          <nav className="flex flex-col gap-1 px-2 overflow-x-hidden">
             {sidebarItems.map((item) => {
               if (!item.roles.includes(role)) return null;
               const isActive = location.pathname === item.path;

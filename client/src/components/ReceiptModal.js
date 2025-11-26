@@ -1,23 +1,6 @@
-import React, { useState } from "react";
-import { X, Printer, RotateCcw } from "lucide-react";
-import ConfirmationModal from "../components/ConfirmationModal";
-import PopupMessage from "../components/PopupMessage";
-import { API_BASE } from "../utils/tokenUtils";
+import { X, Printer } from "lucide-react";
 
-const ReceiptModal = ({ sale, onClose, onRefund }) => {
-  // Removed unused loading state
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [popupMessage, setPopupMessage] = useState("");
-  const [popupType, setPopupType] = useState("success");
-
-  const token = localStorage.getItem("token");
-
-  const showPopup = (message, type = "success") => {
-    setPopupMessage(message);
-    setPopupType(type);
-    setTimeout(() => setPopupMessage(""), 2000);
-  };
-
+const ReceiptModal = ({ sale, onClose }) => {
   if (!sale) return null;
 
   const handlePrint = () => {
@@ -43,54 +26,15 @@ const ReceiptModal = ({ sale, onClose, onRefund }) => {
     printWindow.print();
   };
 
-  const handleRefund = async () => {
-    try {
-      const response = await fetch(`${API_BASE}/api/sales/${sale._id}/refund`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          status: "refunded",
-          reason: "Customer Request",
-        }), // Default reason
-      });
-
-      if (!response.ok) throw new Error("Refund failed");
-
-      if (onRefund) onRefund();
-      showPopup("Sale refunded successfully.", "success");
-      setShowConfirm(false);
-      setTimeout(onClose, 2000);
-    } catch (err) {
-      showPopup(err.message, "error");
-    }
-  };
+  console.log(sale.createdBy); // is it an ObjectId?
 
   return (
     <>
-      {popupMessage && (
-        <PopupMessage
-          message={popupMessage}
-          type={popupType}
-          onClose={() => setPopupMessage("")}
-        />
-      )}
-
-      {showConfirm && (
-        <ConfirmationModal
-          message="Are you sure you want to refund this sale?"
-          onConfirm={handleRefund}
-          onCancel={() => setShowConfirm(false)}
-        />
-      )}
-
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
           {/* Header */}
           <div className="flex justify-between items-center px-6 py-4 border-b bg-gray-50">
-            <h2 className="font-bold text-gray-800">Sale Receipt</h2>
+            <h2 className="font-bold text-gray-800">Sales Invoice</h2>
             <button onClick={onClose}>
               <X className="w-5 h-5 text-gray-500 hover:text-gray-700" />
             </button>
@@ -103,10 +47,13 @@ const ReceiptModal = ({ sale, onClose, onRefund }) => {
               className="bg-white p-6 shadow-sm border border-gray-200 w-full font-mono text-sm"
             >
               <h2 className="text-center font-bold text-lg">
-                Hunny's Crémerie
+                Hunny's Crémerie Baking Supplies
               </h2>
               <p className="text-center text-xs text-gray-500 mb-4">
-                12 Torres St. Burgos 1860 Rodriguez, PH
+                12 Torres St. Burgos 1860 Rodriguez, Rizal
+              </p>
+              <p className="text-center text-xs text-gray-500 mb-4">
+                Contact: 0929-439-9979
               </p>
 
               <div className="space-y-1 mb-4 text-xs border-b border-dashed pb-2">
@@ -114,9 +61,24 @@ const ReceiptModal = ({ sale, onClose, onRefund }) => {
                   <span>Inv #:</span> <span>{sale.invoiceNumber}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Date:</span>{" "}
-                  <span>{new Date(sale.createdAt).toLocaleDateString()}</span>
+                  <span>Date:</span>
+                  <span>
+                    {new Date(sale.createdAt).toLocaleDateString("en-PH", {
+                      timeZone: "Asia/Manila",
+                    })}{" "}
+                    {new Date(sale.createdAt).toLocaleTimeString("en-PH", {
+                      timeZone: "Asia/Manila",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}
+                  </span>
                 </div>
+                <div className="flex justify-between">
+                  <span>Cashier:</span>{" "}
+                  <span>{sale.createdBy?.username || "N/A"}</span>
+                </div>
+
                 <div className="flex justify-between">
                   <span>Customer:</span> <span>{sale.customerName}</span>
                 </div>
@@ -136,7 +98,7 @@ const ReceiptModal = ({ sale, onClose, onRefund }) => {
                       <td className="py-1">{item.name}</td>
                       <td className="text-right py-1">{item.quantity}</td>
                       <td className="text-right py-1">
-                        ₱{(item.price * item.quantity).toFixed(2)}
+                        ₱{(item.sellingPrice * item.quantity).toFixed(2)}
                       </td>
                     </tr>
                   ))}
@@ -151,6 +113,10 @@ const ReceiptModal = ({ sale, onClose, onRefund }) => {
                 <div className="flex justify-between">
                   <span>Tax:</span> <span>₱{sale.taxAmount?.toFixed(2)}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span>Discount:</span>{" "}
+                  <span>₱{sale.discount?.toFixed(2)}</span>
+                </div>
                 <div className="flex justify-between font-bold text-sm mt-2 pt-2 border-t border-dashed">
                   <span>Total:</span>
                   <span>₱{sale.totalAmount?.toFixed(2)}</span>
@@ -161,14 +127,6 @@ const ReceiptModal = ({ sale, onClose, onRefund }) => {
 
           {/* Footer Actions */}
           <div className="p-4 border-t bg-white flex justify-between gap-3">
-            {!sale.refund?.status && (
-              <button
-                onClick={() => setShowConfirm(true)}
-                className="flex items-center gap-2 px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 text-sm font-medium"
-              >
-                <RotateCcw className="w-4 h-4" /> Refund
-              </button>
-            )}
             <button
               onClick={handlePrint}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm font-medium"

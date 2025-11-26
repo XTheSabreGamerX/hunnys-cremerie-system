@@ -23,6 +23,11 @@ const saleSchema = new mongoose.Schema(
     taxAmount: { type: Number },
     discount: { type: Number },
     totalAmount: { type: Number, required: true },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     refund: {
       status: {
         type: String,

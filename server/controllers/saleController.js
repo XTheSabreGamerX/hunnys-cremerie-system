@@ -19,6 +19,7 @@ const getAllSalesPaginated = async (req, res) => {
     // Base query (you can add filters here later)
     let allSales = await Sale.find()
       .populate("refund.processedBy", "username")
+      .populate("createdBy", "username")
       .sort(field ? { [field]: order } : { createdAt: -1 });
 
     // No search → Just paginate normally
@@ -180,6 +181,7 @@ const createSale = async (req, res) => {
       taxAmount: req.body.taxAmount,
       totalAmount: req.body.totalAmount,
       discount: req.body.discount,
+      createdBy: req.user.id,
     });
 
     await newSale.save();

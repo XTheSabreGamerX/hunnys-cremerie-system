@@ -221,6 +221,7 @@ const SalesManagement = () => {
         taxRate: applyDiscount ? 0 : Number(taxRate),
         taxAmount: Number(taxAmount.toFixed(2)),
         totalAmount: Number(totalAmount.toFixed(2)),
+        createdBy: localStorage.user ? JSON.parse(localStorage.user)._id : "Unknown",
       };
 
       const res = await authFetch(`${API_BASE}/api/sales`, {
