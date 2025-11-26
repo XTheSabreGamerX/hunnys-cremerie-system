@@ -42,10 +42,10 @@ const DashboardHeader = ({ isCollapsed, toggleSidebar }) => {
   }, []);
 
   // --- Fetch Notifications ---
-  const fetchLatestNotifications = async () => {
-    setLoading(true);
+  // Added 'isBackground' param to prevent loading spinner on auto-updates
+  const fetchLatestNotifications = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     try {
-      // Fetch just the latest 5 for the dropdown
       const res = await authFetch(
         `${API_BASE}/api/notifications?page=1&limit=5`
       );
@@ -55,20 +55,26 @@ const DashboardHeader = ({ isCollapsed, toggleSidebar }) => {
       const list = Array.isArray(data.notifications) ? data.notifications : [];
       setNotifications(list);
 
-      // Count unread (simple client-side count of the fetched batch)
       const unread = list.filter((n) => !n.read).length;
       setUnreadCount(unread);
     } catch (err) {
       console.error("Notification fetch error:", err);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
-  // Initial Fetch & Click Outside Listener
+  // --- Auto-Polling & Click Outside ---
   useEffect(() => {
+    // 1. Initial Load
     fetchLatestNotifications();
 
+    // 2. Auto-Update every 15 seconds (Polling)
+    const intervalId = setInterval(() => {
+      fetchLatestNotifications(true); // true = background update (no spinner)
+    }, 15000);
+
+    // 3. Click Outside Listener
     const handleClickOutside = (event) => {
       if (notifRef.current && !notifRef.current.contains(event.target)) {
         setIsNotifOpen(false);
@@ -76,7 +82,12 @@ const DashboardHeader = ({ isCollapsed, toggleSidebar }) => {
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+
+    // Cleanup on unmount
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
   // --- Mark Read Handler ---

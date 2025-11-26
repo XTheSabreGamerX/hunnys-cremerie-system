@@ -211,14 +211,6 @@ const Inventory = () => {
             Track stock levels, prices, and expiration dates.
           </p>
         </div>
-
-        <div className="flex gap-2 bg-gray-100 p-1 rounded-lg self-start">
-          <button
-            className={`px-4 py-1.5 rounded-md text-sm font-medium bg-white text-brand-primary shadow-sm`}
-          >
-            Raw Ingredients
-          </button>
-        </div>
       </div>
 
       {/* Search & Add Actions */}
