@@ -28,7 +28,7 @@ const Dashboard = () => {
     outOfStockCount: 0,
     expiredCount: 0,
     salesToday: 0,
-    activityLogsToday: 0,
+    purchaseOrdersToday: 0,
   });
 
   const [lineData, setLineData] = useState([]);
@@ -87,11 +87,11 @@ const Dashboard = () => {
       allowedRoles: ["admin", "owner", "manager"],
     },
     {
-      title: "Activity Logs Today",
-      value: stats.activityLogsToday,
+      title: "Purchase Orders Today",
+      value: stats.purchaseOrdersToday,
       icon: <ClipboardList className="w-8 h-8 text-purple-600" />,
       bgColor: "bg-purple-50",
-      link: "/activity-log",
+      link: "/purchase-orders",
       allowedRoles: ["admin", "owner"],
     },
   ];
