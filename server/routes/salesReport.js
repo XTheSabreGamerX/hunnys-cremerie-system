@@ -1,13 +1,32 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { getSalesRecords, getSalesAnalytics, getTotalProfit } = require('../controllers/salesReportController');
-const authenticateToken = require('../middleware/auth');
-const roleCheck = require('../middleware/roleCheck');
+const {
+  getTotalSales,
+  getTotalProfit,
+  getTopSellingItems,
+} = require("../controllers/salesReportController");
+const authenticateToken = require("../middleware/auth");
+const roleCheck = require("../middleware/roleCheck");
 
-router.get('/sales', authenticateToken, roleCheck(['admin', 'owner', 'manager']), getSalesRecords);
+router.get(
+  "/total",
+  authenticateToken,
+  roleCheck(["admin", "owner", "manager"]),
+  getTotalSales
+);
 
-router.get('/sales/analytics', authenticateToken, roleCheck(['admin', 'owner', 'manager']), getSalesAnalytics);
+router.get(
+  "/profit",
+  authenticateToken,
+  roleCheck(["admin", "owner", "manager"]),
+  getTotalProfit
+);
 
-router.get('/profit', authenticateToken, roleCheck(['admin', 'owner', 'manager']), getTotalProfit);
+router.get(
+  "/best-selling",
+  authenticateToken,
+  roleCheck(["admin", "owner", "manager"]),
+  getTopSellingItems
+);
 
 module.exports = router;
