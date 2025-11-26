@@ -5,7 +5,6 @@ import { Search, Plus, Edit, Trash2, Eye, Package } from "lucide-react";
 // --- MODALS ---
 import InventoryModal from "../components/InventoryModal";
 import InventoryViewModal from "../components/InventoryViewModal";
-import PopupMessage from "../components/PopupMessage";
 import ConfirmationModal from "../components/ConfirmationModal";
 
 import { showToast } from "../components/ToastContainer";
@@ -36,10 +35,6 @@ const Inventory = () => {
   // Pagination
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
-  // Popup (Legacy, using Toast mostly now)
-  const [popupMessage, setPopupMessage] = useState("");
-  const [popupType, setPopupType] = useState("success");
 
   const navigate = useNavigate();
 
@@ -194,11 +189,6 @@ const Inventory = () => {
 
   return (
     <div className="space-y-6">
-      <PopupMessage
-        message={popupMessage}
-        type={popupType}
-        onClose={() => setPopupMessage("")}
-      />
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

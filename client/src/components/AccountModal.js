@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { X, UserPlus } from "lucide-react"; // Icons
 import { authFetch, API_BASE } from "../utils/tokenUtils";
 import PopupMessage from "./PopupMessage";

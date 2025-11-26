@@ -35,7 +35,6 @@ const CustomerManagement = () => {
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
   const [columnFilter, setColumnFilter] = useState({ field: "", order: "" });
 
   const nanoid = customAlphabet("0123456789", 6);
@@ -64,7 +63,6 @@ const CustomerManagement = () => {
 
       setCustomers(data.customers || []);
       setTotalPages(data.totalPages || 1);
-      setTotalItems(data.totalItems || 0);
     } catch (err) {
       console.error("Error fetching customers:", err);
       setCustomers([]);

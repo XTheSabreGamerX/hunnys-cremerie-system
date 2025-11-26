@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Trash2, Plus, Search } from "lucide-react";
+import { X, Trash2, Plus } from "lucide-react";
 import { authFetch, API_BASE } from "../utils/tokenUtils";
 import { showToast } from "./ToastContainer";
 

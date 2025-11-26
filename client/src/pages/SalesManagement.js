@@ -8,7 +8,6 @@ import {
   Minus,
   CreditCard,
   Tag,
-  ChevronLeft,
   ShoppingBag,
   Package,
 } from "lucide-react";
@@ -104,7 +103,7 @@ const SalesManagement = () => {
         }
       })
       .catch(() => console.error("Failed to fetch customers"));
-  }, [isUnregistered]);
+  }, [isUnregistered, customerName]);
 
   // --- Cart Logic ---
   const handleAddToCart = (product) => {
