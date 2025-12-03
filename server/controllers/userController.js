@@ -175,19 +175,27 @@ async function sendStaffEmail(email, username, tempPassword) {
   const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: Number(process.env.EMAIL_PORT),
-    secure: false,
+    secure: true,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASSWORD,
     },
   });
 
-  await transporter.sendMail({
-    from: `"Hunnys Crémerie Baking Supplies" <${process.env.EMAIL_USER}>`,
-    to: email,
-    subject: "Your New Staff Account",
-    text: `Hello ${username},\n\nYour account has been created.\nTemporary password: ${tempPassword}\n\nPlease log in and change your password immediately.\n\n*DO NOT REPLY TO THIS EMAIL*`,
-  });
+  try {
+    await transporter.verify();
+    console.log("SMTP Verified");
+
+    await transporter.sendMail({
+      from: `"Hunnys Crémerie Baking Supplies" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Your New Staff Account",
+      text: `Hello ${username},\n\nYour account has been created.\nTemporary password: ${tempPassword}\n\nPlease log in and change your password immediately.\n\n*DO NOT REPLY TO THIS EMAIL*`,
+    });
+    console.log("Email sent to", email);
+  } catch (err) {
+    console.error("Email sending failed:", err);
+  }
 }
 
 module.exports = {
